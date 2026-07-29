@@ -1,0 +1,246 @@
+[
+  {
+    "name": "Microsoft",
+    "website": "https://www.microsoft.com",
+    "board_url": "https://jobs.careers.microsoft.com/global/en/search",
+    "ats": ""
+  },
+  {
+    "name": "Google",
+    "website": "https://careers.google.com",
+    "board_url": "https://www.google.com/about/careers/applications/jobs/results",
+    "ats": ""
+  },
+  {
+    "name": "Amazon",
+    "website": "https://www.amazon.jobs",
+    "board_url": "https://www.amazon.jobs/en/locations/india",
+    "ats": ""
+  },
+  {
+    "name": "Meta",
+    "website": "https://www.metacareers.com",
+    "board_url": "https://www.metacareers.com/jobs",
+    "ats": ""
+  },
+  {
+    "name": "Apple",
+    "website": "https://www.apple.com/careers",
+    "board_url": "https://jobs.apple.com/en-in/search",
+    "ats": ""
+  },
+  {
+    "name": "Oracle",
+    "website": "https://www.oracle.com/careers",
+    "board_url": "https://careers.oracle.com",
+    "ats": ""
+  },
+  {
+    "name": "IBM",
+    "website": "https://www.ibm.com/careers",
+    "board_url": "https://www.ibm.com/careers/india",
+    "ats": ""
+  },
+  {
+    "name": "Adobe",
+    "website": "https://www.adobe.com/careers.html",
+    "board_url": "https://careers.adobe.com/us/en",
+    "ats": ""
+  },
+  {
+    "name": "Salesforce",
+    "website": "https://www.salesforce.com/company/careers/",
+    "board_url": "https://careers.salesforce.com",
+    "ats": ""
+  },
+  {
+    "name": "Uber",
+    "website": "https://www.uber.com/careers",
+    "board_url": "https://www.uber.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "LinkedIn",
+    "website": "https://careers.linkedin.com",
+    "board_url": "https://careers.linkedin.com",
+    "ats": ""
+  },
+  {
+    "name": "Intel",
+    "website": "https://jobs.intel.com",
+    "board_url": "https://jobs.intel.com",
+    "ats": ""
+  },
+  {
+    "name": "Cisco",
+    "website": "https://jobs.cisco.com",
+    "board_url": "https://jobs.cisco.com",
+    "ats": ""
+  },
+  {
+    "name": "Dell",
+    "website": "https://jobs.dell.com",
+    "board_url": "https://jobs.dell.com",
+    "ats": ""
+  },
+  {
+    "name": "SAP",
+    "website": "https://jobs.sap.com",
+    "board_url": "https://jobs.sap.com",
+    "ats": ""
+  },
+  {
+    "name": "Accenture",
+    "website": "https://www.accenture.com/in-en/careers",
+    "board_url": "https://www.accenture.com/in-en/careers",
+    "ats": ""
+  },
+  {
+    "name": "Deloitte",
+    "website": "https://www.deloitte.com/in/en/careers.html",
+    "board_url": "https://www.deloitte.com/in/en/careers.html",
+    "ats": ""
+  },
+  {
+    "name": "Infosys",
+    "website": "https://www.infosys.com/careers",
+    "board_url": "https://www.infosys.com/careers.html",
+    "ats": ""
+  },
+  {
+    "name": "TCS",
+    "website": "https://www.tcs.com/careers",
+    "board_url": "https://www.tcs.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "Wipro",
+    "website": "https://careers.wipro.com",
+    "board_url": "https://careers.wipro.com",
+    "ats": ""
+  },
+  {
+    "name": "HCLTech",
+    "website": "https://www.hcltech.com/careers",
+    "board_url": "https://www.hcltech.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "Flipkart",
+    "website": "https://www.flipkartcareers.com",
+    "board_url": "https://www.flipkartcareers.com",
+    "ats": ""
+  },
+  {
+    "name": "Swiggy",
+    "website": "https://careers.swiggy.com",
+    "board_url": "https://careers.swiggy.com",
+    "ats": ""
+  },
+  {
+    "name": "Zomato",
+    "website": "https://www.zomato.com/careers",
+    "board_url": "https://www.zomato.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "Razorpay",
+    "website": "https://razorpay.com/jobs",
+    "board_url": "https://razorpay.com/jobs/",
+    "ats": ""
+  },
+  {
+    "name": "PhonePe",
+    "website": "https://www.phonepe.com/careers",
+    "board_url": "https://boards.greenhouse.io/phonepe",
+    "ats": "greenhouse",
+    "board": "phonepe"
+  },
+  {
+    "name": "Cred",
+    "website": "https://careers.cred.club",
+    "board_url": "https://jobs.lever.co/cred",
+    "ats": "lever",
+    "board": "cred"
+  },
+  {
+    "name": "Postman",
+    "website": "https://www.postman.com/company/careers",
+    "board_url": "https://boards.greenhouse.io/postman",
+    "ats": "greenhouse",
+    "board": "postman"
+  },
+  {
+    "name": "Freshworks",
+    "website": "https://www.freshworks.com/company/careers",
+    "board_url": "https://www.freshworks.com/company/careers/",
+    "ats": ""
+  },
+  {
+    "name": "Zoho",
+    "website": "https://careers.zohocorp.com",
+    "board_url": "https://careers.zohocorp.com",
+    "ats": ""
+  },
+  {
+    "name": "Paytm",
+    "website": "https://paytm.com/careers",
+    "board_url": "https://paytm.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "Meesho",
+    "website": "https://careers.meesho.com",
+    "board_url": "https://careers.meesho.com",
+    "ats": ""
+  },
+  {
+    "name": "Dream11",
+    "website": "https://www.dream11.com/about-us/careers",
+    "board_url": "https://www.dream11.com/about-us/careers",
+    "ats": ""
+  },
+  {
+    "name": "ShareChat",
+    "website": "https://sharechat.com/careers",
+    "board_url": "https://sharechat.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "BrowserStack",
+    "website": "https://www.browserstack.com/careers",
+    "board_url": "https://www.browserstack.com/careers",
+    "ats": ""
+  },
+  {
+    "name": "Chargebee",
+    "website": "https://www.chargebee.com/careers",
+    "board_url": "https://www.chargebee.com/careers/",
+    "ats": ""
+  },
+  {
+    "name": "Hasura",
+    "website": "https://hasura.io/careers",
+    "board_url": "https://hasura.io/careers",
+    "ats": ""
+  },
+  {
+    "name": "Rippling",
+    "website": "https://www.rippling.com/careers",
+    "board_url": "https://boards.greenhouse.io/rippling",
+    "ats": "greenhouse",
+    "board": "rippling"
+  },
+  {
+    "name": "Atlassian",
+    "website": "https://www.atlassian.com/company/careers",
+    "board_url": "https://www.atlassian.com/company/careers",
+    "ats": ""
+  },
+  {
+    "name": "NVIDIA",
+    "website": "https://www.nvidia.com/en-us/about-nvidia/careers",
+    "board_url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite",
+    "ats": "workday"
+  }
+]

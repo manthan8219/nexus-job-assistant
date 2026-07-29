@@ -1,0 +1,9 @@
+# Core — always installed
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+beautifulsoup4>=4.12.0
+
+# Scraper backends — installed individually via the app's backend picker:
+#   scrapegraphai>=1.13.0   (ScrapeGraphAI)
+#   crawl4ai>=0.3.0         (Crawl4AI)
+#   playwright>=1.44.0      (Playwright raw)

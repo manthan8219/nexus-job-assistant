@@ -1,0 +1,23 @@
+# Build output
+nexus
+/dist/
+
+# Go
+*.test
+*.out
+vendor/
+
+# Data / secrets
+*.db
+*.db-shm
+*.db-wal
+.env
+config.json
+
+# Scraper venv + cache
+internal/scraper/py/__pycache__/
+internal/scraper/py/venv/
+*.pyc
+
+# macOS
+.DS_Store

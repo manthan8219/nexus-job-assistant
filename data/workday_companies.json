@@ -1,0 +1,22 @@
+[
+  { "name": "NVIDIA",               "url": "https://nvidia.wd5.myworkdayjobs.com/NVIDIAExternalCareerSite" },
+  { "name": "Adobe",                "url": "https://adobe.wd5.myworkdayjobs.com/external_experienced" },
+  { "name": "23andMe",              "url": "https://23andme.wd5.myworkdayjobs.com/23" },
+  { "name": "Walmart",              "url": "https://walmart.wd5.myworkdayjobs.com/WalmartExternal" },
+  { "name": "Target",               "url": "https://target.wd5.myworkdayjobs.com/targetcareers" },
+  { "name": "Boeing",               "url": "https://boeing.wd1.myworkdayjobs.com/EXTERNAL_CAREERS" },
+  { "name": "General Electric",     "url": "https://ge.wd5.myworkdayjobs.com/GE_External" },
+  { "name": "Pfizer",               "url": "https://pfizer.wd1.myworkdayjobs.com/PfizerCareers" },
+  { "name": "CVS Health",           "url": "https://cvshealth.wd1.myworkdayjobs.com/CVS_Health_Careers" },
+  { "name": "McDonald's",           "url": "https://mcdonalds.wd1.myworkdayjobs.com/External" },
+  { "name": "Dell",                 "url": "https://dell.wd1.myworkdayjobs.com/External" },
+  { "name": "HP Inc",               "url": "https://hp.wd5.myworkdayjobs.com/ExternalCareersSite" },
+  { "name": "Mastercard",           "url": "https://mastercard.wd1.myworkdayjobs.com/CorporateCareers" },
+  { "name": "Johnson & Johnson",    "url": "https://jnj.wd5.myworkdayjobs.com/JJC" },
+  { "name": "Roche",                "url": "https://roche.wd3.myworkdayjobs.com/roche-ext" },
+  { "name": "Rolls-Royce",          "url": "https://rollsroyce.wd3.myworkdayjobs.com/Rolls-Royce" },
+  { "name": "Thermo Fisher",        "url": "https://thermofisher.wd5.myworkdayjobs.com/Ext" },
+  { "name": "Splunk",               "url": "https://splunk.wd5.myworkdayjobs.com/Splunk" },
+  { "name": "Salesforce",           "url": "https://salesforce.wd1.myworkdayjobs.com/External_Career_Site" },
+  { "name": "Workday",              "url": "https://workday.wd5.myworkdayjobs.com/Workday" }
+]

@@ -1,0 +1,22 @@
+[
+  { "name": "Canva",               "identifier": "Canva" },
+  { "name": "Klarna",              "identifier": "Klarna" },
+  { "name": "Revolut",             "identifier": "Revolut" },
+  { "name": "Delivery Hero",       "identifier": "DeliveryHero" },
+  { "name": "N26",                 "identifier": "N26" },
+  { "name": "Criteo",              "identifier": "Criteo" },
+  { "name": "Doctolib",            "identifier": "Doctolib" },
+  { "name": "HelloFresh",          "identifier": "HelloFresh" },
+  { "name": "Zalando",             "identifier": "Zalando" },
+  { "name": "Auto1 Group",         "identifier": "AUTO1Group" },
+  { "name": "Celonis",             "identifier": "Celonis" },
+  { "name": "Personio",            "identifier": "Personio" },
+  { "name": "Paysafe",             "identifier": "Paysafe" },
+  { "name": "Trade Republic",      "identifier": "TradeRepublic" },
+  { "name": "Scalable Capital",    "identifier": "ScalableCapital" },
+  { "name": "Yelp",                "identifier": "Yelp" },
+  { "name": "Pandora",             "identifier": "Pandora" },
+  { "name": "Bosch",               "identifier": "Bosch" },
+  { "name": "Siemens Healthineers","identifier": "SiemensHealthineers" },
+  { "name": "Henkel",              "identifier": "Henkel" }
+]
