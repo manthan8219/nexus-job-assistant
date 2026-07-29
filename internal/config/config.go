@@ -60,6 +60,13 @@ type Config struct {
 	CompanyBlocklist string `json:"company_blocklist,omitempty"` // comma-separated company names to skip
 	// WorkAuth: authorized | citizen | need_sponsorship | unspecified
 	WorkAuth string `json:"work_auth,omitempty"`
+	// NoticePeriodDays and OfficeDaysPerWeek answer the two custom
+	// screening questions that came up repeatedly in real applications
+	// (Lever/Greenhouse "notice period?" and "days per week in office?")
+	// but had no home in the profile — free text since notice periods
+	// are sometimes described as "immediate" rather than a number.
+	NoticePeriodDays  string `json:"notice_period_days,omitempty"`
+	OfficeDaysPerWeek string `json:"office_days_per_week,omitempty"`
 	// CoverLetterMode: off | template | ai
 	CoverLetterMode string `json:"cover_letter_mode,omitempty"`
 	CoverLetterText string `json:"cover_letter_text,omitempty"` // used when mode=template

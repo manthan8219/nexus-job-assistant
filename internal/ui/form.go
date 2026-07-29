@@ -57,6 +57,8 @@ const (
 	fApplyDelaySec    // Apply Safety — seconds between real applies
 	fCompanyBlocklist // Apply Safety — comma-separated companies to skip
 	fWorkAuth         // Apply Safety — work authorization
+	fNoticePeriod     // Apply Safety — notice period, answers common screening questions
+	fOfficeDays       // Apply Safety — days/week willing to work onsite
 	fCoverLetterMode  // Apply Safety — off | template | ai
 	fCoverLetterText  // Apply Safety — template body
 	fScraperTargets   // Career Scraper — comma-separated company:url pairs
@@ -98,6 +100,8 @@ var fieldLabels = [fieldCount]string{
 	"Delay Between Applies (sec)",
 	"Company Blocklist",
 	"Work Authorization",
+	"Notice Period",
+	"Days/Week in Office",
 	"Cover Letter",
 	"Cover Letter Template",
 	"Career Page Targets",
@@ -132,6 +136,8 @@ var fieldPlaceholders = [fieldCount]string{
 	"3",
 	"Acme Staffing, Example Corp",
 	"",
+	"30, or Immediate",
+	"3",
 	"",
 	"I am excited to apply for…",
 	"Stripe:https://stripe.com/jobs, Linear:https://linear.app/careers",
@@ -548,7 +554,8 @@ func NewFormModel(cfg *config.Config, skipResumeCheck bool) FormModel {
 	m.initApplySafetyFromCfg(
 		cfg.ApplyConsent, cfg.ApplyConsentAt,
 		cfg.MaxAppsPerRun, cfg.MaxAppsPerDay, cfg.ApplyDelaySec,
-		cfg.CompanyBlocklist, cfg.WorkAuth, cfg.CoverLetterMode, cfg.CoverLetterText,
+		cfg.CompanyBlocklist, cfg.WorkAuth, cfg.NoticePeriodDays, cfg.OfficeDaysPerWeek,
+		cfg.CoverLetterMode, cfg.CoverLetterText,
 	)
 	m.initOutreachFromCfg(cfg)
 	m.inputs[fCoverLetterText].CharLimit = 4000
@@ -785,16 +792,6 @@ func (m FormModel) handleKey(msg tea.KeyMsg) (FormModel, tea.Cmd) {
 		switch key {
 		case "ctrl+g":
 			return m.startJobTitlesSuggest(strings.TrimSpace(m.inputs[fJobTitles].Value()))
-		case "ctrl+enter":
-			// Force-add as a single literal title (skip LLM).
-			val := strings.TrimSpace(m.inputs[fJobTitles].Value())
-			if val != "" {
-				m.jobTitleTags = mergeJobTitleTags(m.jobTitleTags, []string{val})
-				m.inputs[fJobTitles].SetValue("")
-				m.clampJobTitleCursor()
-				return m, m.saveCmd()
-			}
-			return m, nil
 		case "up", "k", "left", "h":
 			// Vertical list: ↑/↓ move among titles when not typing.
 			if m.inputs[fJobTitles].Value() == "" && len(m.jobTitleTags) > 0 {
@@ -824,10 +821,12 @@ func (m FormModel) handleKey(msg tea.KeyMsg) (FormModel, tea.Cmd) {
 		case "enter":
 			val := strings.TrimSpace(m.inputs[fJobTitles].Value())
 			if val != "" {
-				// AI on → treat text as "what I want" and expand to titles.
-				if m.aiAssist {
-					return m.startJobTitlesSuggest(val)
-				}
+				// Enter always adds the literal text as typed — ctrl+g is the
+				// explicit "expand this via AI" action. (Enter used to hand
+				// off to AI expansion here when AI Assist was on, with
+				// ctrl+enter as the only literal-add escape hatch — but most
+				// terminals don't send a distinct sequence for ctrl+enter, so
+				// that path silently never fired for most users.)
 				m.jobTitleTags = mergeJobTitleTags(m.jobTitleTags, []string{val})
 				m.inputs[fJobTitles].SetValue("")
 				m.jobTitleCursor = len(m.jobTitleTags) - 1
@@ -1740,6 +1739,8 @@ func (m FormModel) toConfig() *config.Config {
 		ApplyDelaySec:         parsePositiveInt(m.inputs[fApplyDelaySec].Value(), 3),
 		CompanyBlocklist:      strings.TrimSpace(m.inputs[fCompanyBlocklist].Value()),
 		WorkAuth:              m.workAuth,
+		NoticePeriodDays:      strings.TrimSpace(m.inputs[fNoticePeriod].Value()),
+		OfficeDaysPerWeek:     strings.TrimSpace(m.inputs[fOfficeDays].Value()),
 		CoverLetterMode:       m.coverLetterMode,
 		CoverLetterText:       m.inputs[fCoverLetterText].Value(),
 		OutreachConsent:       m.outreachConsent,
@@ -2433,7 +2434,15 @@ func pullLocalLLMCmd(baseURL, model string) tea.Cmd {
 
 func (m FormModel) renderLocalLLMPicker(active bool) string {
 	selected := strings.TrimSpace(m.inputs[fLocalLLMModel].Value())
-	hw := mutedStyle.Render(fmt.Sprintf("machine: %dGB RAM · %s", m.llmMachine.RAMGB, m.llmMachine.CPU))
+	hwText := fmt.Sprintf("machine: %dGB RAM · %s", m.llmMachine.RAMGB, m.llmMachine.CPU)
+	if m.llmMachine.GPUName != "" {
+		if m.llmMachine.GPUVRAMGB > 0 {
+			hwText += fmt.Sprintf(" · %s (%dGB VRAM)", m.llmMachine.GPUName, m.llmMachine.GPUVRAMGB)
+		} else {
+			hwText += " · " + m.llmMachine.GPUName
+		}
+	}
+	hw := mutedStyle.Render(hwText)
 	if !active {
 		if m.llmOffline {
 			return mutedStyle.Render("— runtime not running") + "  " + hw
@@ -2801,7 +2810,6 @@ func (m FormModel) renderSalary(active bool) string {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
 
 // updateLocationAC refreshes city suggestions for Target Locations.
 func (m *FormModel) updateLocationAC(input string) {

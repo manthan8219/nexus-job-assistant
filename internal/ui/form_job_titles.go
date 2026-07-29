@@ -212,7 +212,7 @@ func (m FormModel) renderJobTitlesActive() string {
 
 	var help string
 	if m.aiAssist {
-		help = "↑↓ select title  ·  backspace/x remove selected  ·  type description + enter = AI expand  ·  ctrl+enter add one"
+		help = "↑↓ select title  ·  backspace/x remove selected  ·  type title + enter to add  ·  ctrl+g = expand a description via AI"
 	} else {
 		help = "↑↓ select title  ·  backspace/x remove  ·  type title + enter to add  ·  enable AI Assist to expand a description"
 	}

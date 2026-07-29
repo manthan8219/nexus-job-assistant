@@ -130,6 +130,15 @@ RESUME TEXT:
 """`
 }
 
+// Complete routes a raw prompt to whichever AI backend AIOptions selects
+// (local Ollama or a cloud API key) and returns the raw completion text.
+// Exported for callers outside this package that need free-form AI
+// generation without the resume-specific prompt templates (e.g.
+// application question answering).
+func Complete(ctx context.Context, ai AIOptions, prompt string) (string, error) {
+	return complete(ctx, ai, prompt)
+}
+
 func complete(ctx context.Context, ai AIOptions, prompt string) (string, error) {
 	switch strings.ToLower(ai.Provider) {
 	case "api":

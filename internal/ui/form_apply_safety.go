@@ -23,7 +23,7 @@ var coverLetterOptions = []struct{ value, label string }{
 	{"ai", "AI draft (when Assist is on)"},
 }
 
-func (m *FormModel) initApplySafetyFromCfg(cfgApplyConsent bool, consentAt string, maxRun, maxDay, delay int, blocklist, workAuth, coverMode, coverText string) {
+func (m *FormModel) initApplySafetyFromCfg(cfgApplyConsent bool, consentAt string, maxRun, maxDay, delay int, blocklist, workAuth, noticePeriod, officeDays, coverMode, coverText string) {
 	m.applyConsent = cfgApplyConsent
 	m.applyConsentAt = consentAt
 	if m.applyConsent {
@@ -44,6 +44,8 @@ func (m *FormModel) initApplySafetyFromCfg(cfgApplyConsent bool, consentAt strin
 	m.inputs[fMaxPerDay].SetValue(strconv.Itoa(maxDay))
 	m.inputs[fApplyDelaySec].SetValue(strconv.Itoa(delay))
 	m.inputs[fCompanyBlocklist].SetValue(blocklist)
+	m.inputs[fNoticePeriod].SetValue(noticePeriod)
+	m.inputs[fOfficeDays].SetValue(officeDays)
 	m.inputs[fCoverLetterText].SetValue(coverText)
 
 	m.workAuth = workAuth
