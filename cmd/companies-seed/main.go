@@ -22,6 +22,7 @@ func main() {
 	url := flag.String("url", companies.OpenJobsDefaultURL, "OpenJobs JSON URL")
 	skipOpenJobs := flag.Bool("skip-openjobs", false, "only import Nexus board lists")
 	skipBoards := flag.Bool("skip-boards", false, "only import OpenJobs")
+	skipYC := flag.Bool("skip-yc", false, "skip Y Combinator company directory import")
 	flag.Parse()
 
 	db, err := companies.OpenDefault()
@@ -31,7 +32,7 @@ func main() {
 	defer db.Close()
 
 	if !*skipOpenJobs {
-		fmt.Println("Source 1/3 — OpenJobs (public hire-country dataset)…")
+		fmt.Println("Source 1/4 — OpenJobs (public hire-country dataset)…")
 		n, err := db.RefreshFromOpenJobs(*url)
 		if err != nil {
 			fail(err)
@@ -39,19 +40,28 @@ func main() {
 		fmt.Printf("  upserted %d rows from OpenJobs\n", n)
 	}
 	if !*skipBoards {
-		fmt.Println("Source 2/3 — Nexus embedded ATS board lists…")
+		fmt.Println("Source 2/4 — Nexus embedded ATS board lists…")
 		n, err := db.ImportNexusEmbeddedBoards()
 		if err != nil {
 			fail(err)
 		}
 		fmt.Printf("  upserted %d rows from Nexus boards\n", n)
 	}
-	fmt.Println("Source 3/3 — India priority employers (Microsoft, Google, Flipkart, …)…")
+	fmt.Println("Source 3/4 — India priority employers (Microsoft, Google, Flipkart, …)…")
 	n, err := db.ImportIndiaEmployers()
 	if err != nil {
 		fail(err)
 	}
 	fmt.Printf("  upserted %d India-priority employers\n", n)
+
+	if !*skipYC {
+		fmt.Println("Source 4/4 — Y Combinator company directory (startup-tagged, no ATS)…")
+		n, err := db.RefreshFromYCombinator("")
+		if err != nil {
+			fail(err)
+		}
+		fmt.Printf("  upserted %d YC-backed companies\n", n)
+	}
 
 	total, _ := db.Count()
 	fmt.Printf("Database now has %d companies\n", total)

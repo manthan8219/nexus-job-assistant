@@ -24,15 +24,21 @@ type companySavedMsg struct {
 	Name string
 }
 
+type companiesRefreshedMsg struct {
+	N   int
+	Err error
+}
+
 type CompaniesTabModel struct {
 	width, height int
 
 	items   []companies.Company
 	total   int
 	cursor  int
-	err     string
-	status  string
-	loading bool
+	err        string
+	status     string
+	loading    bool
+	refreshing bool
 
 	search    textinput.Model
 	country   textinput.Model
@@ -111,6 +117,17 @@ func (m CompaniesTabModel) reload() tea.Cmd {
 	}
 }
 
+// refreshFromNetwork re-pulls OpenJobs + Y Combinator + embedded sources
+// from the network, regardless of whether they were already seeded.
+// This runs as a bubbletea Cmd (its own goroutine) since it can take
+// 1-2 minutes end to end.
+func (m CompaniesTabModel) refreshFromNetwork() tea.Cmd {
+	return func() tea.Msg {
+		n, err := companies.RefreshCompanies()
+		return companiesRefreshedMsg{N: n, Err: err}
+	}
+}
+
 func (m CompaniesTabModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -139,6 +156,17 @@ func (m CompaniesTabModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
+
+	case companiesRefreshedMsg:
+		m.refreshing = false
+		if msg.Err != nil {
+			m.err = "refresh: " + msg.Err.Error()
+			return m, nil
+		}
+		m.err = ""
+		m.status = fmt.Sprintf("refreshed — %d companies upserted from network", msg.N)
+		m.loading = true
+		return m, m.reload()
 
 	case companySavedMsg:
 		if msg.Err != nil {
@@ -178,6 +206,14 @@ func (m CompaniesTabModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.loading = true
 			m.status = "refreshing…"
 			return m, m.reload()
+		case "R":
+			if m.refreshing {
+				return m, nil
+			}
+			m.refreshing = true
+			m.status = "fetching companies from network (OpenJobs + Y Combinator)… this can take a minute or two"
+			m.err = ""
+			return m, m.refreshFromNetwork()
 		case "j", "down":
 			if m.cursor < len(m.items)-1 {
 				m.cursor++
@@ -335,7 +371,7 @@ func (m CompaniesTabModel) View() string {
 
 	var b strings.Builder
 	b.WriteString("\n  " + labelStyle.Render("COMPANIES") + "  " + m.resultsSummary() + "\n")
-	b.WriteString("  " + mutedStyle.Render("OpenJobs + ATS boards + India priority + manual. Use c for country, / for name.") + "\n\n")
+	b.WriteString("  " + mutedStyle.Render("OpenJobs + ATS boards + India priority + Y Combinator + manual. Use c for country, / for name, R to refetch.") + "\n\n")
 
 	if m.adding {
 		b.WriteString("  " + labelStyle.Render("ADD COMPANY") + "\n")
@@ -457,5 +493,8 @@ func (m CompaniesTabModel) FooterHint() string {
 	if m.CapturesKeys() {
 		return "filtering  ·  enter apply  ·  esc done  ·  ctrl+c quit"
 	}
-	return "/ name search  ·  c country (India)  ·  a add  ·  j/k move  ·  esc tab mode  ·  ctrl+c quit"
+	if m.refreshing {
+		return "fetching from network…  ·  ctrl+c quit"
+	}
+	return "/ name search  ·  c country (India)  ·  a add  ·  r reload  ·  R refetch from network  ·  j/k move  ·  esc tab mode  ·  ctrl+c quit"
 }

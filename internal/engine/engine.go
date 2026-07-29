@@ -207,6 +207,15 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 		providers = append(providers, ppt)
 	}
 
+	// TODO(india-providers): scaffolded but not yet implemented — see
+	// internal/provider/{instahyre,hirist,cutshort}/provider.go
+	// for status notes. Wire in with providers = append(providers, X.New())
+	// once each Search() is implemented against a confirmed endpoint.
+
+	// TODO(workatastartup): scaffolded but not yet implemented — see
+	// internal/provider/workatastartup/provider.go. Requires a logged-in
+	// session; unofficial endpoint, keep request volume low once built.
+
 	jv, err := jobvite.New(data.JobviteCompaniesJSON)
 	if err != nil {
 	} else {

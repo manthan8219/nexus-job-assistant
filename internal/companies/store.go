@@ -17,17 +17,39 @@ type DB struct {
 	db *sql.DB
 }
 
-// OpenDefault opens ~/.nexus/companies.db (creates dir + schema).
-func OpenDefault() (*DB, error) {
+// defaultDBPath returns ~/.nexus/companies.db, creating the directory if needed.
+func defaultDBPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	dir := filepath.Join(home, ".nexus")
 	if err := os.MkdirAll(dir, 0700); err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "companies.db"), nil
+}
+
+// OpenDefault opens ~/.nexus/companies.db (creates dir + schema).
+func OpenDefault() (*DB, error) {
+	path, err := defaultDBPath()
+	if err != nil {
 		return nil, err
 	}
-	return Open(filepath.Join(dir, "companies.db"))
+	db, err := Open(path)
+	if err != nil {
+		return nil, err
+	}
+	db.ensureSeeded(path)
+	return db, nil
+}
+
+// CountBySource returns how many companies came from a given source tag
+// (e.g. "ycombinator", "openjobs").
+func (s *DB) CountBySource(source string) (int, error) {
+	var n int
+	err := s.db.QueryRow(`SELECT COUNT(1) FROM companies WHERE source = ?`, source).Scan(&n)
+	return n, err
 }
 
 // Open opens (or creates) a SQLite company DB at path.
