@@ -316,7 +316,6 @@ func TrimForPrompt(s string, max int) string {
 	return s[:max] + "\n…[truncated]"
 }
 
-
 func completeImprove(ctx context.Context, ai AIOptions, prompt string) (string, error) {
 	switch strings.ToLower(ai.Provider) {
 	case "api":

@@ -14,9 +14,9 @@ import (
 // Result holds the outcome of analyzing a resume file.
 type Result struct {
 	Valid    bool
-	FileType string // "PDF", "DOCX", "DOC"
-	Message  string // shown on success, e.g. "PDF · 10 resume keywords found"
-	Err      string // shown on failure
+	FileType string   // "PDF", "DOCX", "DOC"
+	Message  string   // shown on success, e.g. "PDF · 10 resume keywords found"
+	Err      string   // shown on failure
 	Profile  *Profile // optional AI career profile when AI Assist is enabled
 }
 

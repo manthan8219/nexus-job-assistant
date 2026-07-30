@@ -8,12 +8,12 @@ type arbResponse struct {
 }
 
 type arbJob struct {
-	Slug      string `json:"slug"`
-	Company   string `json:"company_name"`
-	Title     string `json:"title"`
-	Remote    bool   `json:"remote"`
-	URL       string `json:"url"`
-	Location  string `json:"location"`
+	Slug        string `json:"slug"`
+	Company     string `json:"company_name"`
+	Title       string `json:"title"`
+	Remote      bool   `json:"remote"`
+	URL         string `json:"url"`
+	Location    string `json:"location"`
 	CreatedAt   int64  `json:"created_at"` // epoch seconds
 	Description string `json:"description"`
 }

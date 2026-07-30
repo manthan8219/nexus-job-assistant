@@ -146,7 +146,7 @@ func GenerateWithReview(ctx context.Context, genAI, checkAI resume.AIOptions, in
 			bestScore = review.Score
 			best = draft
 			bestReview = review
-	}
+		}
 		if review.Pass && review.Score >= minScore {
 			return draft, review, attempt, nil
 		}

@@ -12,9 +12,9 @@ type hnSearchHit struct {
 }
 
 type hnItemResponse struct {
-	ID       int64        `json:"id"`
-	Title    string       `json:"title"`
-	Children []hnChild    `json:"children"`
+	ID       int64     `json:"id"`
+	Title    string    `json:"title"`
+	Children []hnChild `json:"children"`
 }
 
 type hnChild struct {

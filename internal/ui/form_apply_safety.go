@@ -148,10 +148,10 @@ func (m FormModel) renderApplyConsent(active bool) string {
 	if active {
 		style = primaryStyle
 	}
-	line := style.Render(yes+"   "+no)
+	line := style.Render(yes + "   " + no)
 	help := mutedStyle.Render("Required before Auto Apply. ←→ toggle")
 	if m.applyConsent && m.applyConsentAt != "" {
-		help = mutedStyle.Render("Consent recorded "+m.applyConsentAt+"  ·  ←→ toggle")
+		help = mutedStyle.Render("Consent recorded " + m.applyConsentAt + "  ·  ←→ toggle")
 	}
 	return line + "\n    " + help
 }

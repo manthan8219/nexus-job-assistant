@@ -140,6 +140,8 @@ func (d *DiscordNotifier) buildPayload(ev Event) *discordWebhookPayload {
 		return d.runCompletePayload(ev)
 	case EventDailySummary, EventWeeklySummary:
 		return d.summaryPayload(ev)
+	case EventReplyReceived:
+		return d.replyReceivedPayload(ev)
 	case EventCustom:
 		return d.customPayload(ev)
 	default:
@@ -190,6 +192,20 @@ func (d *DiscordNotifier) jobFailedPayload(ev Event) *discordWebhookPayload {
 	}
 	e := d.embed(colorRed, "❌ Application Failed", desc)
 	e.Fields = append(e.Fields, discordField{Name: "Reason", Value: ev.Reason})
+	p.Embeds = []discordEmbed{e}
+	return p
+}
+
+func (d *DiscordNotifier) replyReceivedPayload(ev Event) *discordWebhookPayload {
+	p := d.basePayload()
+	desc := fmt.Sprintf("**%s** replied", ev.ReplyFrom)
+	if ev.Company != "" {
+		desc += fmt.Sprintf(" — **%s** @ **%s**", ev.JobTitle, ev.Company)
+	}
+	if ev.ReplySubject != "" {
+		desc += "\n✉️ " + ev.ReplySubject
+	}
+	e := d.embed(colorGreen, "📬 Reply Received — respond now!", desc)
 	p.Embeds = []discordEmbed{e}
 	return p
 }

@@ -12,7 +12,7 @@ type Project struct {
 	Repo      string    `json:"repo,omitempty"`
 	Period    string    `json:"period,omitempty"` // e.g. "2024 – 2025" or "Jan 2025 – Present"
 	Role      string    `json:"role,omitempty"`   // e.g. Backend Engineer
-	Summary   string    `json:"summary"`         // Claude / freeform context paste
+	Summary   string    `json:"summary"`          // Claude / freeform context paste
 	Bullets   []string  `json:"bullets,omitempty"`
 	Stack     []string  `json:"stack,omitempty"`
 	Skills    []string  `json:"skills,omitempty"`

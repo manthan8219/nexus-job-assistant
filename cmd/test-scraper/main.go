@@ -15,10 +15,10 @@ import (
 )
 
 func main() {
-	url     := flag.String("url",     "https://linear.app/careers", "career page URL to scrape")
-	company := flag.String("company", "Linear",                      "company name")
-	title   := flag.String("title",   "",                            "filter by title keyword (optional)")
-	verbose := flag.Bool("v",         false,                         "print raw JSON from service")
+	url := flag.String("url", "https://linear.app/careers", "career page URL to scrape")
+	company := flag.String("company", "Linear", "company name")
+	title := flag.String("title", "", "filter by title keyword (optional)")
+	verbose := flag.Bool("v", false, "print raw JSON from service")
 	flag.Parse()
 
 	// 1. Check service health
@@ -101,11 +101,17 @@ func main() {
 	fmt.Printf("  found %d jobs (backend: %s):\n\n", len(result.Jobs), result.Backend)
 	for i, j := range result.Jobs {
 		loc := j.Location
-		if loc == "" { loc = "—" }
+		if loc == "" {
+			loc = "—"
+		}
 		remote := ""
-		if j.Remote { remote = " [remote]" }
+		if j.Remote {
+			remote = " [remote]"
+		}
 		dept := ""
-		if j.Department != "" { dept = "  · " + j.Department }
+		if j.Department != "" {
+			dept = "  · " + j.Department
+		}
 		fmt.Printf("  %2d. %s%s\n      %s%s\n      %s\n\n", i+1, j.Title, dept, loc, remote, j.ApplyURL)
 	}
 }

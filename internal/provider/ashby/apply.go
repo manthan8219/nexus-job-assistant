@@ -70,13 +70,13 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 	w := multipart.NewWriter(&body)
 
 	fields := map[string]string{
-		"apiKey":                                      apiKey,
-		"jobPostingId":                                job.ID,
-		"applicationForm[_systemfield_firstName]":     profile.FirstName,
-		"applicationForm[_systemfield_lastName]":      profile.LastName,
-		"applicationForm[_systemfield_email]":         profile.Email,
-		"applicationForm[_systemfield_phone]":         profile.Phone,
-		"applicationForm[_systemfield_linkedIn]":      "https://linkedin.com/in/" + profile.LinkedInID,
+		"apiKey":       apiKey,
+		"jobPostingId": job.ID,
+		"applicationForm[_systemfield_firstName]": profile.FirstName,
+		"applicationForm[_systemfield_lastName]":  profile.LastName,
+		"applicationForm[_systemfield_email]":     profile.Email,
+		"applicationForm[_systemfield_phone]":     profile.Phone,
+		"applicationForm[_systemfield_linkedIn]":  "https://linkedin.com/in/" + profile.LinkedInID,
 	}
 
 	for name, value := range fields {

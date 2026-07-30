@@ -15,6 +15,7 @@ import (
 const browserUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 
 var feedBase = "https://www.arbeitnow.com/api/job-board-api"
+
 const trustedHost = "www.arbeitnow.com"
 
 // fetchPage requests one page of the Arbeitnow API.
@@ -81,14 +82,14 @@ func normalizeJob(j arbJob) *provider.Job {
 	}
 
 	return &provider.Job{
-		ID:       j.Slug,
-		Title:    title,
-		Company:  company,
-		Board:    "arbeitnow",
-		Location: location,
-		Remote:   j.Remote,
-		URL:      parsed.String(),
-		PostedAt: postedAt,
+		ID:          j.Slug,
+		Title:       title,
+		Company:     company,
+		Board:       "arbeitnow",
+		Location:    location,
+		Remote:      j.Remote,
+		URL:         parsed.String(),
+		PostedAt:    postedAt,
 		Provider:    "arbeitnow",
 		Description: j.Description,
 	}

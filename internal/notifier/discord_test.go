@@ -44,7 +44,7 @@ func TestDiscord_JobApplied_ProducesValidPayload(t *testing.T) {
 func TestDiscord_JobFailed_IncludesReason(t *testing.T) {
 	d := NewDiscordNotifier("https://discord.com/api/webhooks/xxx")
 	ev := Event{
-		Kind:    EventJobFailed,
+		Kind:     EventJobFailed,
 		JobTitle: "Backend Engineer",
 		Company:  "Startup Inc",
 		Reason:   "Resume not accepted",
@@ -229,7 +229,7 @@ type mockNotifier struct {
 	send func(ctx context.Context, ev Event) error
 }
 
-func (m *mockNotifier) Name() string  { return m.name }
+func (m *mockNotifier) Name() string                             { return m.name }
 func (m *mockNotifier) Send(ctx context.Context, ev Event) error { return m.send(ctx, ev) }
 
 func TestMultiNotifier_FansOut(t *testing.T) {

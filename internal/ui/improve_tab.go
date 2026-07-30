@@ -24,9 +24,9 @@ type improveDoneMsg struct {
 type ImproveTabModel struct {
 	width, height int
 
-	formatIdx  int
-	selected   map[resume.Format]bool
-	target     textinput.Model
+	formatIdx   int
+	selected    map[resume.Format]bool
+	target      textinput.Model
 	focusTarget bool
 
 	generating bool
@@ -38,10 +38,10 @@ type ImproveTabModel struct {
 	lastOut   *resume.ImproveOutput
 
 	// readiness inputs refreshed by hub before view/generate
-	ai        resume.AIOptions
+	ai         resume.AIOptions
 	resumePath string
-	profile   *resume.Profile
-	projects  []workcontext.Project
+	profile    *resume.Profile
+	projects   []workcontext.Project
 }
 
 func NewImproveTabModel() ImproveTabModel {

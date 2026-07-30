@@ -16,17 +16,17 @@ type RefreshUsageMsg struct{ Snap usage.Snapshot }
 type usageTickMsg struct{}
 
 type LogsModel struct {
-	width      int
-	height     int
-	lines      []string // all lines (raw, styled)
-	rawLines   []string // all lines (unstyled, for filtering)
-	viewport   viewport.Model
-	ready      bool
-	atBottom   bool
-	usage      usage.Snapshot
-	usageOK    bool
-	filtering  bool   // true = filter input active
-	filter     string // current filter string
+	width     int
+	height    int
+	lines     []string // all lines (raw, styled)
+	rawLines  []string // all lines (unstyled, for filtering)
+	viewport  viewport.Model
+	ready     bool
+	atBottom  bool
+	usage     usage.Snapshot
+	usageOK   bool
+	filtering bool   // true = filter input active
+	filter    string // current filter string
 }
 
 func NewLogsModel() LogsModel {
@@ -91,22 +91,22 @@ func (m LogsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.atBottom = true
 			}
 			return m, nil
-			case "/":
-				m.filtering = true
+		case "/":
+			m.filtering = true
+			return m, nil
+		case "esc":
+			if m.filtering {
+				m.filtering = false
+				m.filter = ""
+				m.rebuildContent()
 				return m, nil
-			case "esc":
-				if m.filtering {
-					m.filtering = false
-					m.filter = ""
-					m.rebuildContent()
-					return m, nil
-				}
-			case "backspace":
-				if m.filtering && len(m.filter) > 0 {
-					m.filter = m.filter[:len(m.filter)-1]
-					m.rebuildContent()
-					return m, nil
-				}
+			}
+		case "backspace":
+			if m.filtering && len(m.filter) > 0 {
+				m.filter = m.filter[:len(m.filter)-1]
+				m.rebuildContent()
+				return m, nil
+			}
 		}
 		if m.filtering {
 			// append typed chars to filter

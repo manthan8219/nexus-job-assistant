@@ -14,8 +14,8 @@ import (
 const apiURL = "https://himalayas.app/jobs/api?limit=50"
 
 type himJob struct {
-	Title          string   `json:"title"`
-	ApplicationURL string   `json:"applicationUrl"`
+	Title          string `json:"title"`
+	ApplicationURL string `json:"applicationUrl"`
 	Company        struct {
 		Name string `json:"name"`
 	} `json:"company"`
@@ -78,7 +78,9 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 			continue
 		}
 		postedAt := time.Time{}
-		if j.PubDate > 0 { postedAt = time.Unix(j.PubDate, 0) }
+		if j.PubDate > 0 {
+			postedAt = time.Unix(j.PubDate, 0)
+		}
 		jobs = append(jobs, provider.Job{
 			Title:       title,
 			Company:     j.Company.Name,

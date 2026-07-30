@@ -9,12 +9,12 @@ import (
 
 func TestToProviderJob(t *testing.T) {
 	j := jcyJob{
-		ID:       42,
-		Title:    "Senior Rust Engineer",
-		URL:      "https://jobicy.com/jobs/42",
-		Company:  "Rust Inc",
-		Geo:      "Worldwide",
-		PubDate:  "2026-07-28T12:00:00Z",
+		ID:      42,
+		Title:   "Senior Rust Engineer",
+		URL:     "https://jobicy.com/jobs/42",
+		Company: "Rust Inc",
+		Geo:     "Worldwide",
+		PubDate: "2026-07-28T12:00:00Z",
 	}
 	pj := toProviderJob(j)
 	if pj == nil {

@@ -59,14 +59,14 @@ func toProviderJob(j rokJob) *provider.Job {
 	postedAt, _ := time.Parse(time.RFC3339, j.Date)
 
 	return &provider.Job{
-		ID:       j.ID,
-		Title:    title,
-		Company:  company,
-		Board:    "remoteok",
-		Location: strings.TrimSpace(j.Location),
-		Remote:   true, // RemoteOK only lists remote jobs
-		URL:      url,
-		PostedAt: postedAt,
+		ID:          j.ID,
+		Title:       title,
+		Company:     company,
+		Board:       "remoteok",
+		Location:    strings.TrimSpace(j.Location),
+		Remote:      true, // RemoteOK only lists remote jobs
+		URL:         url,
+		PostedAt:    postedAt,
 		Provider:    "remoteok",
 		Description: j.Description,
 	}

@@ -8,12 +8,12 @@ type jcyResponse struct {
 }
 
 type jcyJob struct {
-	ID       int      `json:"id"`
-	Title    string   `json:"jobTitle"`
-	URL      string   `json:"url"`
-	Company  string   `json:"companyName"`
-	Geo      string   `json:"jobGeo"`
-	PubDate  string   `json:"pubDate"` // ISO 8601
-	Industry     []string `json:"jobIndustry,omitempty"`
+	ID          int      `json:"id"`
+	Title       string   `json:"jobTitle"`
+	URL         string   `json:"url"`
+	Company     string   `json:"companyName"`
+	Geo         string   `json:"jobGeo"`
+	PubDate     string   `json:"pubDate"` // ISO 8601
+	Industry    []string `json:"jobIndustry,omitempty"`
 	Description string   `json:"jobDescription"`
 }

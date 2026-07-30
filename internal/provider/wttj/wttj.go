@@ -30,8 +30,8 @@ type wttjSearchResponse struct {
 }
 
 type wttjEnv struct {
-	PublicAlgoliaApplicationID  string `json:"PUBLIC_ALGOLIA_APPLICATION_ID"`
-	PublicAlgoliaAPIKeyClient   string `json:"PUBLIC_ALGOLIA_API_KEY_CLIENT"`
+	PublicAlgoliaApplicationID string `json:"PUBLIC_ALGOLIA_APPLICATION_ID"`
+	PublicAlgoliaAPIKeyClient  string `json:"PUBLIC_ALGOLIA_API_KEY_CLIENT"`
 }
 
 // Client implements provider.Provider for Welcome to the Jungle.

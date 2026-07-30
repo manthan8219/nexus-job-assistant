@@ -19,9 +19,9 @@ type RuntimeOption struct {
 func SetupOptions() []RuntimeOption {
 	return []RuntimeOption{
 		{
-			ID:          "start-ollama",
-			Label:       "Start Ollama",
-			Hint:        "if already installed but not running",
+			ID:    "start-ollama",
+			Label: "Start Ollama",
+			Hint:  "if already installed but not running",
 		},
 		{
 			ID:          "install-ollama",

@@ -18,7 +18,7 @@ func completeOpenAI(ctx context.Context, apiKey, prompt string) (string, error) 
 			{"role": "system", "content": "Return only a single valid JSON object. No markdown."},
 			{"role": "user", "content": prompt},
 		},
-		"temperature": 0.1,
+		"temperature":     0.1,
 		"response_format": map[string]string{"type": "json_object"},
 	})
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(payload))

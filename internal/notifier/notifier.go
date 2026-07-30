@@ -18,15 +18,16 @@ import (
 type EventKind string
 
 const (
-	EventJobApplied       EventKind = "job_applied"
-	EventJobFailed        EventKind = "job_failed"
-	EventCAPTCHA          EventKind = "captcha"
-	EventError            EventKind = "error"
-	EventDailySummary     EventKind = "daily_summary"
-	EventWeeklySummary    EventKind = "weekly_summary"
-	EventCustom           EventKind = "custom"
-	EventRunStarted       EventKind = "run_started"
-	EventRunComplete      EventKind = "run_complete"
+	EventJobApplied    EventKind = "job_applied"
+	EventJobFailed     EventKind = "job_failed"
+	EventCAPTCHA       EventKind = "captcha"
+	EventError         EventKind = "error"
+	EventDailySummary  EventKind = "daily_summary"
+	EventWeeklySummary EventKind = "weekly_summary"
+	EventCustom        EventKind = "custom"
+	EventRunStarted    EventKind = "run_started"
+	EventRunComplete   EventKind = "run_complete"
+	EventReplyReceived EventKind = "reply_received"
 )
 
 // Event carries all data a notifier might need to build a message.
@@ -35,12 +36,12 @@ type Event struct {
 	Timestamp time.Time
 
 	// ── job-related fields (populated for job_applied / job_failed) ──
-	JobTitle   string
-	Company    string
-	Location   string
-	Provider   string
-	Status     string // "applied", "failed", "skipped"
-	Reason     string // failure / skip reason
+	JobTitle string
+	Company  string
+	Location string
+	Provider string
+	Status   string // "applied", "failed", "skipped"
+	Reason   string // failure / skip reason
 
 	// ── summary fields (populated for daily / weekly summary) ──
 	TotalApplied int
@@ -51,6 +52,10 @@ type Event struct {
 
 	// ── CAPTCHA ──
 	CAPTCHAURL string
+
+	// ── reply_received (a human answered an outreach email / application) ──
+	ReplyFrom    string // sender address of the reply
+	ReplySubject string // subject line of the reply
 
 	// ── custom ──
 	Title   string

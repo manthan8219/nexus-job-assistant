@@ -235,3 +235,95 @@ func trimIntent(s string, n int) string {
 	}
 	return s[:n-1] + "…"
 }
+
+// handleJobTitlesKey handles keys while the Job Titles tag field is focused:
+// choosing add/replace for pending AI titles, cursor movement among tags,
+// add/remove, and ctrl+g AI expansion. Returns ok=false to fall through to
+// field navigation.
+func (m FormModel) handleJobTitlesKey(key string) (FormModel, tea.Cmd, bool) {
+	// Pending AI titles: choose add vs replace before anything else.
+	if len(m.jobTitlesPending) > 0 {
+		switch key {
+		case "a", "A":
+			n := len(m.jobTitlesPending)
+			m.jobTitleTags = mergeJobTitleTags(m.jobTitleTags, m.jobTitlesPending)
+			m.jobTitlesPending = nil
+			m.jobTitleCursor = 0
+			m.notifyBanner = fmt.Sprintf("✓ Added %d titles (kept existing)", n)
+			return m, m.saveCmd(), true
+		case "r", "R":
+			n := len(m.jobTitlesPending)
+			m.jobTitleTags = append([]string(nil), m.jobTitlesPending...)
+			m.jobTitlesPending = nil
+			m.jobTitleCursor = 0
+			m.notifyBanner = fmt.Sprintf("✓ Replaced with %d new titles", n)
+			return m, m.saveCmd(), true
+		case "esc", "n", "N":
+			m.jobTitlesPending = nil
+			m.notifyBanner = "Discarded AI titles"
+			return m, nil, true
+		default:
+			return m, nil, true // ignore other keys until chosen
+		}
+	}
+	switch key {
+	case "ctrl+g":
+		m, cmd := m.startJobTitlesSuggest(strings.TrimSpace(m.inputs[fJobTitles].Value()))
+		return m, cmd, true
+	case "up", "k", "left", "h":
+		// Vertical list: ↑/↓ move among titles when not typing.
+		if m.inputs[fJobTitles].Value() == "" && len(m.jobTitleTags) > 0 {
+			m.clampJobTitleCursor()
+			if m.jobTitleCursor > 0 {
+				m.jobTitleCursor--
+				return m, nil, true
+			}
+			// First title: ↑ leaves field; hj/← stay put (don't type into input).
+			if key == "up" {
+				break // fall through to previous-field nav
+			}
+			return m, nil, true
+		}
+	case "down", "j", "right", "l":
+		if m.inputs[fJobTitles].Value() == "" && len(m.jobTitleTags) > 0 {
+			m.clampJobTitleCursor()
+			if m.jobTitleCursor < len(m.jobTitleTags)-1 {
+				m.jobTitleCursor++
+				return m, nil, true
+			}
+			if key == "down" {
+				break // fall through to next-field nav
+			}
+			return m, nil, true
+		}
+	case "enter":
+		val := strings.TrimSpace(m.inputs[fJobTitles].Value())
+		if val != "" {
+			// Enter always adds the literal text as typed — ctrl+g is the
+			// explicit "expand this via AI" action. (Enter used to hand
+			// off to AI expansion here when AI Assist was on, with
+			// ctrl+enter as the only literal-add escape hatch — but most
+			// terminals don't send a distinct sequence for ctrl+enter, so
+			// that path silently never fired for most users.)
+			m.jobTitleTags = mergeJobTitleTags(m.jobTitleTags, []string{val})
+			m.inputs[fJobTitles].SetValue("")
+			m.jobTitleCursor = len(m.jobTitleTags) - 1
+			return m, m.saveCmd(), true
+		}
+		// Empty enter with saved intent + AI → regenerate
+		if m.aiAssist && strings.TrimSpace(m.jobIntent) != "" {
+			m, cmd := m.startJobTitlesSuggest("")
+			return m, cmd, true
+		}
+		// Empty → fall through to next field
+	case "backspace", "x", "delete":
+		if m.inputs[fJobTitles].Value() == "" && len(m.jobTitleTags) > 0 {
+			m.clampJobTitleCursor()
+			idx := m.jobTitleCursor
+			m.jobTitleTags = append(m.jobTitleTags[:idx], m.jobTitleTags[idx+1:]...)
+			m.clampJobTitleCursor()
+			return m, m.saveCmd(), true
+		}
+	}
+	return m, nil, false
+}

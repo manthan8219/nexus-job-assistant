@@ -14,7 +14,7 @@ const (
 	colorGreyMid     = "#9CA3AF"
 	colorGreen       = "#059669"
 	colorRed         = "#DC2626"
-	colorOrange       = "#D97706"
+	colorOrange      = "#D97706"
 )
 
 // Adaptive text colors — flip based on terminal background.

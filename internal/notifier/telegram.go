@@ -164,6 +164,16 @@ func (t *TelegramNotifier) buildMessage(ev Event) string {
 			ev.TotalApplied, ev.TotalFailed, ev.TotalSkipped,
 		)
 
+	case EventReplyReceived:
+		msg := fmt.Sprintf("📬 <b>Reply Received — respond now!</b>\n<b>%s</b> replied", htmlEscape(ev.ReplyFrom))
+		if ev.Company != "" {
+			msg += fmt.Sprintf(" — <b>%s</b> @ <b>%s</b>", htmlEscape(ev.JobTitle), htmlEscape(ev.Company))
+		}
+		if ev.ReplySubject != "" {
+			msg += "\n✉️ " + htmlEscape(ev.ReplySubject)
+		}
+		return msg
+
 	case EventCustom:
 		title := ev.Title
 		if title == "" {

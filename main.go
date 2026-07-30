@@ -10,6 +10,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 	"github.com/manthan8219/nexus-job-assistant/internal/ui"
 )
@@ -25,6 +26,9 @@ USAGE:
 MODES:
   (no flags)        Launch the interactive TUI dashboard
   --run             Run the apply engine once and exit
+  --check-replies   Check Gmail for replies to outreach, update the pipeline
+                    (stops follow-ups on reply, records rejections), send any
+                    due follow-ups, and notify Discord/Telegram
 
 ENGINE FLAGS:
   --limit N         Max applications per run (default: 10)
@@ -62,18 +66,19 @@ DATA:
 
 func main() {
 	// Flags
-	runMode      := flag.Bool("run",              false, "run the apply engine once and exit")
-	dryRun       := flag.Bool("dry-run",          false, "search jobs without applying")
-	noLimit      := flag.Bool("no-limit",         false, "remove per-run application cap")
-	verbose      := flag.Bool("verbose",          false, "print detailed logs")
-	showVersion  := flag.Bool("version",          false, "print version and exit")
-	skipResume   := flag.Bool("skip-resume-check", false, "skip resume file validation in the TUI")
-	testNotify   := flag.Bool("test-notify",       false, "send a test notification to all configured channels and exit")
-	limit        := flag.Int("limit",             10,    "max applications per run")
-	delay        := flag.Int("delay",             8,     "min seconds between applications")
-	providerName := flag.String("provider",       "",    "run only this provider (e.g. greenhouse)")
-	configPath   := flag.String("config",         "",    "path to config file")
-	companiesPath := flag.String("companies",     "",    "path to companies JSON file")
+	runMode := flag.Bool("run", false, "run the apply engine once and exit")
+	dryRun := flag.Bool("dry-run", false, "search jobs without applying")
+	noLimit := flag.Bool("no-limit", false, "remove per-run application cap")
+	verbose := flag.Bool("verbose", false, "print detailed logs")
+	showVersion := flag.Bool("version", false, "print version and exit")
+	skipResume := flag.Bool("skip-resume-check", false, "skip resume file validation in the TUI")
+	testNotify := flag.Bool("test-notify", false, "send a test notification to all configured channels and exit")
+	checkReplies := flag.Bool("check-replies", false, "check Gmail for outreach replies, update pipeline, send due follow-ups")
+	limit := flag.Int("limit", 10, "max applications per run")
+	delay := flag.Int("delay", 8, "min seconds between applications")
+	providerName := flag.String("provider", "", "run only this provider (e.g. greenhouse)")
+	configPath := flag.String("config", "", "path to config file")
+	companiesPath := flag.String("companies", "", "path to companies JSON file")
 
 	flag.Usage = func() { fmt.Print(helpText) }
 	flag.Parse()
@@ -90,6 +95,16 @@ func main() {
 			os.Exit(1)
 		}
 		runTestNotify(cfg)
+		return
+	}
+
+	if *checkReplies {
+		cfg, err := loadConfig(*configPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "config: %v\n", err)
+			os.Exit(1)
+		}
+		runReplyCheck(cfg)
 		return
 	}
 
@@ -151,10 +166,18 @@ type engineOpts struct {
 func runEngine(cfg *config.Config, opts engineOpts) {
 	// Validate required config fields
 	missing := []string{}
-	if cfg.FirstName == ""        { missing = append(missing, "first_name") }
-	if cfg.LastName == ""         { missing = append(missing, "last_name") }
-	if cfg.Email == ""            { missing = append(missing, "email") }
-	if cfg.TargetJobTitles == ""  { missing = append(missing, "target_job_titles") }
+	if cfg.FirstName == "" {
+		missing = append(missing, "first_name")
+	}
+	if cfg.LastName == "" {
+		missing = append(missing, "last_name")
+	}
+	if cfg.Email == "" {
+		missing = append(missing, "email")
+	}
+	if cfg.TargetJobTitles == "" {
+		missing = append(missing, "target_job_titles")
+	}
 	if len(missing) > 0 {
 		fmt.Fprintf(os.Stderr, "error: missing required config fields: %v\n", missing)
 		fmt.Fprintf(os.Stderr, "run 'nexus' to open the TUI and fill in your profile\n")
@@ -180,9 +203,9 @@ func runEngine(cfg *config.Config, opts engineOpts) {
 	} else {
 		eng.MaxPerRun = opts.limit
 	}
-	eng.MinDelay   = opts.minDelay
-	eng.DryRun     = opts.dryRun
-	eng.Verbose    = opts.verbose
+	eng.MinDelay = opts.minDelay
+	eng.DryRun = opts.dryRun
+	eng.Verbose = opts.verbose
 	eng.OnlyProvider = opts.providerName
 
 	if opts.dryRun {
@@ -210,7 +233,6 @@ func loadConfig(path string) (*config.Config, error) {
 	}
 	return config.Load()
 }
-
 
 func runTestNotify(cfg *config.Config) {
 	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
@@ -241,4 +263,45 @@ func runTestNotify(cfg *config.Config) {
 		os.Exit(1)
 	}
 	fmt.Println("✓ Test notification sent successfully")
+}
+
+// runReplyCheck is the one-shot response-loop pass: scan the inbox for
+// replies to outreach, stop answered sequences, record outcomes, alert on
+// human replies, then fire any follow-ups whose scheduled time has arrived.
+func runReplyCheck(cfg *config.Config) {
+	fetcher := outreach.NewGmailIMAPFetcher(cfg)
+	if fetcher == nil {
+		fmt.Fprintln(os.Stderr, "error: reply check needs your Email + Gmail app password (Config → Outreach)")
+		os.Exit(1)
+	}
+	st, err := store.Open()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "store: %v\n", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+
+	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
+	mn := notifier.FromConfig(&notifier.NotifyConfig{
+		DiscordWebhookURL: discordURL,
+		TelegramBotToken:  tgToken,
+		TelegramChatID:    tgChatID,
+		EnabledChannels:   channels,
+	})
+
+	fmt.Println("⚡ Nexus — checking inbox for replies…")
+	rep, err := outreach.RunReplyCheck(context.Background(), cfg, st, mn, fetcher,
+		func(line string) { fmt.Println("  " + line) })
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "reply check: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Printf("Scanned %d message(s) · %d human repl(ies) · %d rejection(s)\n",
+		rep.Scanned, len(rep.HumanReplies), len(rep.Rejections))
+
+	sent, fuErrs := outreach.SendDueFollowUps(cfg, func(line string) { fmt.Println("  " + line) })
+	fmt.Printf("Follow-ups sent: %d\n", sent)
+	for _, e := range append(rep.Errors, fuErrs...) {
+		fmt.Fprintln(os.Stderr, "  ⚠ "+e)
+	}
 }

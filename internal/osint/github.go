@@ -173,16 +173,16 @@ func fetchGitHubOrgMembers(ctx context.Context, client *http.Client, org, compan
 		}
 
 		contacts = append(contacts, Contact{
-			Company:   company,
-			Domain:    domain,
-			Name:      user.Name,
-			Title:     title,
-			Email:     primaryEmail,
-			EmailType: emailType,
-			Source:    "github",
+			Company:    company,
+			Domain:     domain,
+			Name:       user.Name,
+			Title:      title,
+			Email:      primaryEmail,
+			EmailType:  emailType,
+			Source:     "github",
 			Confidence: conf,
-			FoundAt:   now,
-			Notes:     ghNote + noteExtra,
+			FoundAt:    now,
+			Notes:      ghNote + noteExtra,
 		})
 	}
 

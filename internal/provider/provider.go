@@ -58,20 +58,18 @@ func MatchesLocation(jobLocation string, remote bool, criteria SearchCriteria) b
 	return len(criteria.Locations) == 0
 }
 
-
-
 // Job is a normalized job listing across all providers.
 type Job struct {
 	ID          string
 	Title       string
-	Company     string    // human-readable company name
-	Board       string    // provider board token / slug
+	Company     string // human-readable company name
+	Board       string // provider board token / slug
 	Location    string
 	Remote      bool
-	URL         string    // canonical apply URL — used as dedup key
+	URL         string // canonical apply URL — used as dedup key
 	PostedAt    time.Time
-	Provider    string    // "greenhouse", "lever", etc.
-	Description string    // plain-text or HTML job description (optional)
+	Provider    string // "greenhouse", "lever", etc.
+	Description string // plain-text or HTML job description (optional)
 }
 
 // SearchCriteria is built from the user's config.

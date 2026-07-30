@@ -7,21 +7,21 @@ import (
 
 func TestAliasResolveIndianITHubs(t *testing.T) {
 	cases := map[string]string{
-		"bangalore":  "Bengaluru, India",
-		"Bangalore":  "Bengaluru, India",
-		"gurgaon":    "Gurugram, India",
-		"bombay":     "Mumbai, India",
-		"calcutta":   "Kolkata, India",
-		"madras":     "Chennai, India",
-		"poona":      "Pune, India",
-		"trivandrum": "Thiruvananthapuram, India",
-		"kochi":      "Cochin, India",
-		"mysore":     "Mysuru, India",
-		"mangalore":  "Mangaluru, India",
-		"hubli":      "Hubballi, India",
-		"vizag":      "Visakhapatnam, India",
+		"bangalore":   "Bengaluru, India",
+		"Bangalore":   "Bengaluru, India",
+		"gurgaon":     "Gurugram, India",
+		"bombay":      "Mumbai, India",
+		"calcutta":    "Kolkata, India",
+		"madras":      "Chennai, India",
+		"poona":       "Pune, India",
+		"trivandrum":  "Thiruvananthapuram, India",
+		"kochi":       "Cochin, India",
+		"mysore":      "Mysuru, India",
+		"mangalore":   "Mangaluru, India",
+		"hubli":       "Hubballi, India",
+		"vizag":       "Visakhapatnam, India",
 		"pondicherry": "Puducherry, India",
-		"baroda":     "Vadodara, India",
+		"baroda":      "Vadodara, India",
 	}
 	for in, want := range cases {
 		c, ok := Resolve(in)

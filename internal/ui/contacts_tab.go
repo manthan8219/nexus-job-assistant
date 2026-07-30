@@ -36,7 +36,7 @@ var contactsSubLabels = [contactsSubCount]string{"Search", "Saved"}
 type contactsMode int
 
 const (
-	contactsModeInput     contactsMode = iota
+	contactsModeInput contactsMode = iota
 	contactsModeResults
 	contactsModeSearching
 	contactsModeIdle // unfocused — esc propagates to app TAB MODE

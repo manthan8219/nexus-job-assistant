@@ -16,11 +16,11 @@ import (
 
 // CrawlResult is what comes back for each company after a crawl attempt.
 type CrawlResult struct {
-	Company    string
-	CareerURL  string // discovered or existing BoardURL
-	JobsFound  int
-	JobsSaved  int    // new (not already in store)
-	Err        error
+	Company   string
+	CareerURL string // discovered or existing BoardURL
+	JobsFound int
+	JobsSaved int // new (not already in store)
+	Err       error
 }
 
 // CrawlCompanies discovers career pages for each company (using Website / BoardURL),
@@ -122,11 +122,11 @@ func scrapeViaService(ctx context.Context, company, careerURL string, keywords [
 		Keywords []string `json:"title_keywords"`
 	}
 	type jobResult struct {
-		Title     string `json:"title"`
-		Company   string `json:"company"`
-		Location  string `json:"location"`
-		ApplyURL  string `json:"apply_url"`
-		Remote    bool   `json:"remote"`
+		Title    string `json:"title"`
+		Company  string `json:"company"`
+		Location string `json:"location"`
+		ApplyURL string `json:"apply_url"`
+		Remote   bool   `json:"remote"`
 	}
 	type resp struct {
 		Jobs  []jobResult `json:"jobs"`

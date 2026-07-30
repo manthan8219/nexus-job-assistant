@@ -29,27 +29,27 @@ const (
 
 // Item is one outreach attempt tied to a job application.
 type Item struct {
-	ID            string    `json:"id"`
-	Channel       Channel   `json:"channel"`
-	JobURL        string    `json:"job_url"`
-	Company       string    `json:"company"`
-	Role          string    `json:"role"`
-	Provider      string    `json:"provider,omitempty"`
-	ContactName   string    `json:"contact_name,omitempty"`
-	ContactEmail  string    `json:"contact_email,omitempty"`
-	ContactTitle  string    `json:"contact_title,omitempty"`
-	ContactSource string    `json:"contact_source,omitempty"` // hunter | apollo | github | osint | pattern | manual
-	LinkedInURL   string    `json:"linkedin_url,omitempty"`
-	Subject       string    `json:"subject,omitempty"`
-	Body          string    `json:"body"`
-	Status        Status    `json:"status"`
-	Error         string    `json:"error,omitempty"`
+	ID            string  `json:"id"`
+	Channel       Channel `json:"channel"`
+	JobURL        string  `json:"job_url"`
+	Company       string  `json:"company"`
+	Role          string  `json:"role"`
+	Provider      string  `json:"provider,omitempty"`
+	ContactName   string  `json:"contact_name,omitempty"`
+	ContactEmail  string  `json:"contact_email,omitempty"`
+	ContactTitle  string  `json:"contact_title,omitempty"`
+	ContactSource string  `json:"contact_source,omitempty"` // hunter | apollo | github | osint | pattern | manual
+	LinkedInURL   string  `json:"linkedin_url,omitempty"`
+	Subject       string  `json:"subject,omitempty"`
+	Body          string  `json:"body"`
+	Status        Status  `json:"status"`
+	Error         string  `json:"error,omitempty"`
 	// Auto is true when the background pipeline created/processed this item.
 	Auto bool `json:"auto,omitempty"`
 	// AI review metadata (0 / empty when template-drafted or review disabled).
-	ReviewScore int    `json:"review_score,omitempty"`
-	ReviewNotes string `json:"review_notes,omitempty"`
-	Attempts    int    `json:"attempts,omitempty"`
+	ReviewScore int       `json:"review_score,omitempty"`
+	ReviewNotes string    `json:"review_notes,omitempty"`
+	Attempts    int       `json:"attempts,omitempty"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	SentAt      time.Time `json:"sent_at,omitempty"`

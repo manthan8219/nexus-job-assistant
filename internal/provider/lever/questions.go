@@ -14,17 +14,17 @@ import (
 // Question is one custom application question extracted from a Lever
 // apply page's embedded card schema.
 type Question struct {
-	FieldName string   // e.g. "cards[<cardId>][field2]" — the POST field name
-	Type      string   // "text" | "textarea" | "dropdown" | "multiple-select" | ...
-	Text      string   // the question prompt shown to the applicant
+	FieldName string // e.g. "cards[<cardId>][field2]" — the POST field name
+	Type      string // "text" | "textarea" | "dropdown" | "multiple-select" | ...
+	Text      string // the question prompt shown to the applicant
 	Required  bool
 	Options   []string // choice text for dropdown/multiple-select; empty for free text
 }
 
 // FormInfo is everything discovered about a Lever job's apply form.
 type FormInfo struct {
-	Questions        []Question
-	RequiresCaptcha  bool // hCaptcha present — cannot be solved by a plain HTTP POST
+	Questions       []Question
+	RequiresCaptcha bool // hCaptcha present — cannot be solved by a plain HTTP POST
 }
 
 // cardField mirrors the JSON Lever embeds in each hidden

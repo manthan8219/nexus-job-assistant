@@ -74,14 +74,14 @@ func toProviderJob(j jcyJob) *provider.Job {
 	}
 
 	return &provider.Job{
-		ID:       fmt.Sprintf("%d", j.ID),
-		Title:    title,
-		Company:  company,
-		Board:    "jobicy",
-		Location: strings.TrimSpace(j.Geo),
-		Remote:   true, // Jobicy is a remote-only aggregator
-		URL:      parsed.String(),
-		PostedAt: postedAt,
+		ID:          fmt.Sprintf("%d", j.ID),
+		Title:       title,
+		Company:     company,
+		Board:       "jobicy",
+		Location:    strings.TrimSpace(j.Geo),
+		Remote:      true, // Jobicy is a remote-only aggregator
+		URL:         parsed.String(),
+		PostedAt:    postedAt,
 		Provider:    "jobicy",
 		Description: j.Description,
 	}

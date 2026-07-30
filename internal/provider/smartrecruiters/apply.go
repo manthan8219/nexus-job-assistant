@@ -15,12 +15,12 @@ import (
 )
 
 type srCandidatePayload struct {
-	FirstName   string        `json:"firstName"`
-	LastName    string        `json:"lastName"`
-	Email       string        `json:"email"`
-	PhoneNumber string        `json:"phoneNumber"`
-	Web         srWebLinks    `json:"web"`
-	Resume      *srResume     `json:"resume,omitempty"`
+	FirstName   string     `json:"firstName"`
+	LastName    string     `json:"lastName"`
+	Email       string     `json:"email"`
+	PhoneNumber string     `json:"phoneNumber"`
+	Web         srWebLinks `json:"web"`
+	Resume      *srResume  `json:"resume,omitempty"`
 }
 
 type srWebLinks struct {

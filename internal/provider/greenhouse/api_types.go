@@ -10,12 +10,12 @@ type jobsResponse struct {
 }
 
 type ghJob struct {
-	ID          int64        `json:"id"`
-	Title       string       `json:"title"`
-	UpdatedAt   string       `json:"updated_at"`
-	Location    ghLocation   `json:"location"`
-	Content     string       `json:"content"` // HTML job description when ?content=true
-	Questions   []ghQuestion `json:"questions"` // populated when ?content=true
+	ID        int64        `json:"id"`
+	Title     string       `json:"title"`
+	UpdatedAt string       `json:"updated_at"`
+	Location  ghLocation   `json:"location"`
+	Content   string       `json:"content"`   // HTML job description when ?content=true
+	Questions []ghQuestion `json:"questions"` // populated when ?content=true
 }
 
 type ghLocation struct {

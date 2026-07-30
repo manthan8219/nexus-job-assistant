@@ -239,7 +239,6 @@ func (w *Worker) process(app store.Application) {
 		"Open Nexus → Outreach → Email and press Enter to send, or set Setup → Automation mode to Auto for free-will sending.")
 }
 
-
 // composeInput assembles everything the generator/reviewer LLMs need.
 func (w *Worker) composeInput(cfg *config.Config, it Item, description string, contact Contact) ComposeInput {
 	full := strings.TrimSpace(cfg.FirstName + " " + cfg.LastName)
@@ -353,4 +352,3 @@ func (w *Worker) notify(cfg *config.Config, title string, it Item, message strin
 		Fields:    fields,
 	})
 }
-

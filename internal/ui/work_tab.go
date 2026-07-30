@@ -55,11 +55,11 @@ type WorkTabModel struct {
 	detailOK bool
 
 	// form
-	inputs   [wfCount]textinput.Model
-	summary  textarea.Model
+	inputs    [wfCount]textinput.Model
+	summary   textarea.Model
 	formFocus int // 0..wfCount-1 = inputs, wfCount = summary
-	editID   string
-	isNew    bool
+	editID    string
+	isNew     bool
 }
 
 func NewWorkTabModel() WorkTabModel {

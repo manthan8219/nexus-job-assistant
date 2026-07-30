@@ -98,4 +98,3 @@ func toProviderJob(j ghJob, company Company) provider.Job {
 		Description: textutil.HTMLToPlain(j.Content),
 	}
 }
-

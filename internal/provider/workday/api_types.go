@@ -12,15 +12,15 @@ type wdayRequestBody struct {
 
 // wdayResponse is the paginated response from the CXS API.
 type wdayResponse struct {
-	Total       int            `json:"total"`
-	JobPostings []wdayPosting  `json:"jobPostings"`
+	Total       int           `json:"total"`
+	JobPostings []wdayPosting `json:"jobPostings"`
 }
 
 type wdayPosting struct {
-	Title         string `json:"title"`
-	ExternalPath  string `json:"externalPath"`
-	LocationsText string `json:"locationsText"`
-	PostedOn      string `json:"postedOn"` // e.g. "Posted Today", "Posted 5 Days Ago"
+	Title         string   `json:"title"`
+	ExternalPath  string   `json:"externalPath"`
+	LocationsText string   `json:"locationsText"`
+	PostedOn      string   `json:"postedOn"` // e.g. "Posted Today", "Posted 5 Days Ago"
 	BulletFields  []string `json:"bulletFields,omitempty"`
 }
 

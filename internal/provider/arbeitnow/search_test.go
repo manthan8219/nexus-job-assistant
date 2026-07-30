@@ -12,7 +12,7 @@ func TestNormalizeJob(t *testing.T) {
 	j := arbJob{
 		Slug: "go-engineer-123", Company: "Acme",
 		Title: "Go Engineer", Remote: true,
-		URL: "https://www.arbeitnow.com/job/go-engineer-123",
+		URL:      "https://www.arbeitnow.com/job/go-engineer-123",
 		Location: "Berlin", CreatedAt: 1722000000,
 	}
 	pj := normalizeJob(j)

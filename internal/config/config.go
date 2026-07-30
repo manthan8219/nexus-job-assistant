@@ -8,32 +8,32 @@ import (
 
 type Config struct {
 	// Personal
-	FirstName          string `json:"first_name"`
-	LastName           string `json:"last_name"`
-	Email              string `json:"email"`
-	Phone              string `json:"phone"`
-	LinkedInID         string `json:"linkedin_id"`
-	ResumePath         string `json:"resume_path"`
-	City               string `json:"city"`
-	YearsOfExperience  string `json:"years_of_experience"`
+	FirstName         string `json:"first_name"`
+	LastName          string `json:"last_name"`
+	Email             string `json:"email"`
+	Phone             string `json:"phone"`
+	LinkedInID        string `json:"linkedin_id"`
+	ResumePath        string `json:"resume_path"`
+	City              string `json:"city"`
+	YearsOfExperience string `json:"years_of_experience"`
 
 	// Job Preferences
-	TargetJobTitles    string `json:"target_job_titles"`   // comma-separated
-	JobIntent          string `json:"job_intent,omitempty"` // free-text: what kind of job they want
-	WorkType           string `json:"work_type"`           // Remote / Onsite / Hybrid
-	TargetLocations    string `json:"target_locations"`    // comma-separated
-	Currency           string `json:"currency"`            // USD, INR, EUR, GBP, CAD, AUD, SGD
-	MinSalary          string `json:"min_salary"`          // raw number
+	TargetJobTitles string `json:"target_job_titles"`    // comma-separated
+	JobIntent       string `json:"job_intent,omitempty"` // free-text: what kind of job they want
+	WorkType        string `json:"work_type"`            // Remote / Onsite / Hybrid
+	TargetLocations string `json:"target_locations"`     // comma-separated
+	Currency        string `json:"currency"`             // USD, INR, EUR, GBP, CAD, AUD, SGD
+	MinSalary       string `json:"min_salary"`           // raw number
 
 	// Provider API keys — optional, activates providers that require auth
 	// Keys: "linkedin", "indeed", etc.
-	ProviderKeys       map[string]string `json:"provider_keys,omitempty"`
+	ProviderKeys map[string]string `json:"provider_keys,omitempty"`
 
 	// AI
 	// AIAssist enables AI-powered improvements (cover letters, answers, matching, etc.).
-	AIAssist   bool   `json:"ai_assist,omitempty"`
+	AIAssist bool `json:"ai_assist,omitempty"`
 	// AIProvider is "local" (Ollama etc.) or "api" (Anthropic/OpenAI). Empty when AIAssist is off.
-	AIProvider string `json:"ai_provider,omitempty"`
+	AIProvider    string `json:"ai_provider,omitempty"`
 	AnthropicKey  string `json:"anthropic_key,omitempty"`
 	OpenAIKey     string `json:"openai_key,omitempty"`
 	LocalLLMURL   string `json:"local_llm_url,omitempty"`
@@ -44,22 +44,22 @@ type Config struct {
 	// Channel IDs from notifier.Available(). Empty = all configured channels fire.
 	NotifyChannels    []string `json:"notify_channels,omitempty"`
 	DiscordWebhookURL string   `json:"discord_webhook_url,omitempty"`
-	TelegramBotToken  string `json:"telegram_bot_token,omitempty"` // Bot token from @BotFather
-	TelegramChatID    string `json:"telegram_chat_id,omitempty"`   // Chat/channel ID to send to
-	GmailAppPassword string `json:"gmail_app_password,omitempty"` // Gmail SMTP app password (16-char)
-	HunterKey        string `json:"hunter_key,omitempty"`         // Hunter.io — find recruiter emails
-	ApolloKey        string `json:"apollo_key,omitempty"`          // Apollo.io — contact database
+	TelegramBotToken  string   `json:"telegram_bot_token,omitempty"` // Bot token from @BotFather
+	TelegramChatID    string   `json:"telegram_chat_id,omitempty"`   // Chat/channel ID to send to
+	GmailAppPassword  string   `json:"gmail_app_password,omitempty"` // Gmail SMTP app password (16-char)
+	HunterKey         string   `json:"hunter_key,omitempty"`         // Hunter.io — find recruiter emails
+	ApolloKey         string   `json:"apollo_key,omitempty"`         // Apollo.io — contact database
 
 	// Apply Safety — consent + rate limits (required for responsible auto-apply)
 	// ApplyConsent means the user acknowledged Nexus may submit applications on their behalf.
-	ApplyConsent bool   `json:"apply_consent,omitempty"`
+	ApplyConsent   bool   `json:"apply_consent,omitempty"`
 	ApplyConsentAt string `json:"apply_consent_at,omitempty"` // RFC3339 when consent was given
-	MaxAppsPerRun int    `json:"max_apps_per_run,omitempty"` // 0 = default 10
-	MaxAppsPerDay int    `json:"max_apps_per_day,omitempty"` // 0 = default 25
-	ApplyDelaySec int    `json:"apply_delay_sec,omitempty"`  // pause between real applies; 0 = default 3
+	MaxAppsPerRun  int    `json:"max_apps_per_run,omitempty"` // 0 = default 10
+	MaxAppsPerDay  int    `json:"max_apps_per_day,omitempty"` // 0 = default 25
+	ApplyDelaySec  int    `json:"apply_delay_sec,omitempty"`  // pause between real applies; 0 = default 3
 	// MinFitScore gates auto-apply: jobs scoring below it (when AI fit scoring
 	// is active) are recorded as skipped instead of applied. 0 = off.
-	MinFitScore int `json:"min_fit_score,omitempty"`
+	MinFitScore      int    `json:"min_fit_score,omitempty"`
 	CompanyBlocklist string `json:"company_blocklist,omitempty"` // comma-separated company names to skip
 	// WorkAuth: authorized | citizen | need_sponsorship | unspecified
 	WorkAuth string `json:"work_auth,omitempty"`
@@ -80,8 +80,8 @@ type Config struct {
 	// Outreach — email + LinkedIn follow-up after apply/queue
 	OutreachConsent   bool   `json:"outreach_consent,omitempty"`
 	OutreachConsentAt string `json:"outreach_consent_at,omitempty"`
-	MaxEmailsPerDay   int    `json:"max_emails_per_day,omitempty"`    // 0 = default 10
-	MaxLinkedInPerDay int    `json:"max_linkedin_per_day,omitempty"`  // 0 = default 10
+	MaxEmailsPerDay   int    `json:"max_emails_per_day,omitempty"`   // 0 = default 10
+	MaxLinkedInPerDay int    `json:"max_linkedin_per_day,omitempty"` // 0 = default 10
 	EmailSubjectTpl   string `json:"email_subject_tpl,omitempty"`
 	EmailBodyTpl      string `json:"email_body_tpl,omitempty"`
 	LinkedInMsgTpl    string `json:"linkedin_msg_tpl,omitempty"`

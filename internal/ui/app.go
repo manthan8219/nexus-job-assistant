@@ -14,6 +14,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/enrich"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
@@ -42,6 +43,25 @@ var tabLabels = [tabCount]string{"Dashboard", "Config", "Resume", "Jobs", "Compa
 type AppendLogMsg struct{ Line string }
 type EngineResultMsg struct{ Result engine.Result }
 type EngineDoneMsg struct{ Err error }
+
+// historyOutcomeSavedMsg confirms a pipeline outcome was persisted.
+type historyOutcomeSavedMsg struct{ Line string }
+
+// OutreachReplyCheckRequestMsg asks App to run an inbox reply check now
+// (emitted by the Outreach tab's "c" key).
+type OutreachReplyCheckRequestMsg struct{}
+
+// replyCheckDoneMsg carries the result of a reply-check pass.
+type replyCheckDoneMsg struct {
+	Text       string
+	Err        error
+	Replies    int
+	Rejections int
+	Background bool // fired by the ticker — stay silent when nothing found
+}
+
+// replyCheckTickMsg fires the background inbox watch.
+type replyCheckTickMsg struct{}
 type RefreshStatsMsg struct {
 	Applied, Skipped, Failed int
 	AppliedToday             int
@@ -154,7 +174,7 @@ func (m AppModel) activeProviders() []string {
 }
 
 func (m AppModel) Init() tea.Cmd {
-	return tea.Batch(textinput.Blink, m.loadStats(), m.loadHistory(), m.config.InitCmd(), m.resumeHub.Init(), m.companiesTab.Init(), m.outreach.Init())
+	return tea.Batch(textinput.Blink, m.loadStats(), m.loadHistory(), m.config.InitCmd(), m.resumeHub.Init(), m.companiesTab.Init(), m.outreach.Init(), scheduleReplyCheckTick())
 }
 
 // ── Update ───────────────────────────────────────────────────────────────────
@@ -410,6 +430,52 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case HistoryEnrichRequestMsg:
 		return m, m.enrichHistoryCmd(msg)
+
+	case HistoryOutcomeRequestMsg:
+		if m.st == nil {
+			return m, nil
+		}
+		st := m.st
+		return m, func() tea.Msg {
+			if err := st.SetOutcome(msg.App.ID, msg.Outcome); err != nil {
+				return AppendLogMsg{Line: "[pipeline] outcome failed: " + err.Error()}
+			}
+			label := string(msg.Outcome)
+			if label == "" {
+				label = "waiting"
+			}
+			return historyOutcomeSavedMsg{Line: fmt.Sprintf("[pipeline] %s @ %s → %s", msg.App.Role, msg.App.Company, label)}
+		}
+
+	case historyOutcomeSavedMsg:
+		var logSub tea.Model
+		var logCmd tea.Cmd
+		logSub, logCmd = m.logs.Update(AppendLogMsg{Line: msg.Line})
+		m.logs = logSub.(LogsModel)
+		return m, tea.Batch(logCmd, m.loadHistory())
+
+	case OutreachReplyCheckRequestMsg:
+		return m, m.replyCheckCmd(false)
+
+	case replyCheckDoneMsg:
+		if msg.Background && msg.Err == nil && msg.Replies == 0 && msg.Rejections == 0 {
+			return m, nil // background watch, nothing new — stay silent
+		}
+		if msg.Err != nil {
+			m.outreach.errText = "reply check: " + msg.Err.Error()
+		} else {
+			m.outreach.status = msg.Text
+			m.outreach.errText = ""
+		}
+		var logSub tea.Model
+		var logCmd tea.Cmd
+		logSub, logCmd = m.logs.Update(AppendLogMsg{Line: "[replies] " + msg.Text})
+		m.logs = logSub.(LogsModel)
+		return m, tea.Batch(logCmd, m.loadHistory(), loadOutreachCmd())
+
+	case replyCheckTickMsg:
+		// Background inbox watch — silent unless something changed.
+		return m, m.replyCheckCmd(true)
 
 	case historyEnrichProgressMsg:
 		if msg.Line != "" {
@@ -1246,14 +1312,63 @@ func (m AppModel) loadUsage() tea.Cmd {
 	}
 }
 
-// loadHistory queries the store for all applications.
+// replyCheckInterval is how often the TUI watches the inbox for replies.
+const replyCheckInterval = 10 * time.Minute
+
+// replyCheckCmd runs one inbox reply-check pass. In background mode it also
+// reschedules the watch; failures to configure (no Gmail creds yet) keep the
+// watch alive so it starts working once credentials exist.
+func (m AppModel) replyCheckCmd(background bool) tea.Cmd {
+	cfg := m.config.toConfig()
+	fetcher := outreach.NewGmailIMAPFetcher(cfg)
+	if fetcher == nil || m.st == nil {
+		if background {
+			return scheduleReplyCheckTick()
+		}
+		return func() tea.Msg {
+			return replyCheckDoneMsg{Err: fmt.Errorf("needs Email + Gmail app password (Config → Outreach)")}
+		}
+	}
+	st := m.st
+	var mn notifier.MultiNotifier
+	if m.eng != nil {
+		mn = m.eng.Notifier
+	}
+	run := func() tea.Msg {
+		rep, err := outreach.RunReplyCheck(context.Background(), cfg, st, mn, fetcher, nil)
+		if err != nil {
+			return replyCheckDoneMsg{Err: err, Background: background}
+		}
+		text := fmt.Sprintf("scanned %d · replies %d · rejections %d",
+			rep.Scanned, len(rep.HumanReplies), len(rep.Rejections))
+		if len(rep.Errors) > 0 {
+			text += " · " + rep.Errors[0]
+		}
+		return replyCheckDoneMsg{
+			Text: text, Background: background,
+			Replies: len(rep.HumanReplies), Rejections: len(rep.Rejections),
+		}
+	}
+	if background {
+		return tea.Batch(run, scheduleReplyCheckTick())
+	}
+	return run
+}
+
+// scheduleReplyCheckTick arms the next background inbox watch.
+func scheduleReplyCheckTick() tea.Cmd {
+	return tea.Tick(replyCheckInterval, func(time.Time) tea.Msg { return replyCheckTickMsg{} })
+}
+
+// loadHistory queries the store for all applications plus the outcome funnel.
 func (m AppModel) loadHistory() tea.Cmd {
 	if m.st == nil {
 		return nil
 	}
 	return func() tea.Msg {
 		apps, _ := m.st.List()
-		return RefreshHistoryMsg{Apps: apps}
+		outcomes, _ := m.st.OutcomeStats()
+		return RefreshHistoryMsg{Apps: apps, Outcomes: outcomes}
 	}
 }
 

@@ -7,13 +7,13 @@ type srResponse struct {
 }
 
 type srPosting struct {
-	ID       string     `json:"id"`
-	Name     string     `json:"name"`
-	UUID     string     `json:"uuid"`
-	Company  srCompany  `json:"company"`
-	Location srLocation `json:"location"`
-	TypeOfEmployment srTyp `json:"typeOfEmployment"`
-	ReleasedDate string `json:"releasedDate"`
+	ID               string     `json:"id"`
+	Name             string     `json:"name"`
+	UUID             string     `json:"uuid"`
+	Company          srCompany  `json:"company"`
+	Location         srLocation `json:"location"`
+	TypeOfEmployment srTyp      `json:"typeOfEmployment"`
+	ReleasedDate     string     `json:"releasedDate"`
 }
 
 type srCompany struct {

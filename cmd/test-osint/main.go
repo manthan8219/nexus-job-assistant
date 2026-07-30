@@ -3,9 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/manthan8219/nexus-job-assistant/internal/osint"
 	"os"
 	"time"
-	"github.com/manthan8219/nexus-job-assistant/internal/osint"
 )
 
 func main() {

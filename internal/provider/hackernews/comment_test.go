@@ -100,7 +100,6 @@ func TestParseComment_HTML(t *testing.T) {
 	}
 }
 
-
 func TestParseComment_Empty(t *testing.T) {
 	if pc := parseComment("", ""); pc != nil {
 		t.Error("expected nil for empty text")

@@ -44,8 +44,8 @@ const (
 type outreachUIMode int
 
 const (
-	outBrowse outreachUIMode = iota
-	outConfirmAction // y/n before sending/opening
+	outBrowse        outreachUIMode = iota
+	outConfirmAction                // y/n before sending/opening
 	outEditContact
 	outRunning // auto-run in progress between ticks
 )
@@ -279,7 +279,7 @@ func (m OutreachHubModel) FooterHint() string {
 	case outreachSubSetup:
 		return "↑↓ fields  •  ←→ / space change  •  auto-saves  •  tab → Email"
 	case outreachSubEmail:
-		return "g build queue  •  enter process next  •  a auto-run remaining  •  e fix To:  •  tab cycles"
+		return "g build queue  •  enter process next  •  a auto-run  •  c check replies  •  e fix To:  •  tab cycles"
 	case outreachSubLinkedIn:
 		return "g build queue  •  enter open browser  •  a auto-run remaining  •  tab cycles"
 	default:
@@ -524,6 +524,12 @@ func (m OutreachHubModel) handleChannelKey(key string) (tea.Model, tea.Cmd) {
 		return m.fireNext(true)
 	case "enter", "s":
 		return m.fireNext(false)
+	case "c":
+		if m.sub != outreachSubEmail {
+			return m, nil
+		}
+		m.status = "Checking inbox for replies…"
+		return m, func() tea.Msg { return OutreachReplyCheckRequestMsg{} }
 	case "e":
 		if m.sub != outreachSubEmail {
 			return m, nil
@@ -824,7 +830,7 @@ func (m OutreachHubModel) renderChecks(checks []outreach.Check) string {
 		}
 		b.WriteString(fmt.Sprintf("  %s %s\n", mark, c.Label))
 		if !c.OK && c.FixHint != "" {
-			b.WriteString(mutedStyle.Render("      → " + c.FixHint) + "\n")
+			b.WriteString(mutedStyle.Render("      → "+c.FixHint) + "\n")
 		}
 	}
 	return b.String()
@@ -859,7 +865,13 @@ func (m OutreachHubModel) viewEmail(w int) string {
 			b.WriteString(mutedStyle.Render("To: ") + primaryStyle.Render(to) + "\n")
 		}
 		b.WriteString(mutedStyle.Render("Subject: ") + primaryStyle.Render(it.Subject) + "\n")
-		b.WriteString(mutedStyle.Render("Status: ") + primaryStyle.Render(string(it.Status)) + "\n")
+		statusText := string(it.Status)
+		if it.Status == outreach.StatusFollowUpDue {
+			statusText = fmt.Sprintf("follow-up #%d %s", it.FollowUpStep, outreach.FollowUpDueIn(it, time.Now()))
+		} else if it.Status == outreach.StatusReplied {
+			statusText = "replied ✓ — sequence stopped"
+		}
+		b.WriteString(mutedStyle.Render("Status: ") + primaryStyle.Render(statusText) + "\n")
 		b.WriteString("\n" + labelStyle.Render("Body") + "\n")
 		b.WriteString(wrapBody(it.Body, w))
 	}

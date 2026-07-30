@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	maxPages = 3   // pages to paginate through (100 per page)
+	maxPages = 3 // pages to paginate through (100 per page)
 	perPage  = 100
 )
 

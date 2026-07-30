@@ -21,11 +21,11 @@ import (
 //     apply.go/upload.go implement that flow:
 //
 //     GET  /embed/job_app?for={board}&token={id}&_data=routes/embed.job_app
-//          → form schema (questions), submitPath, anti-replay "fingerprint"
+//     → form schema (questions), submitPath, anti-replay "fingerprint"
 //     GET  /uncacheable_attributes/presigned_fields?fields[]=resume
-//          → S3 presigned POST data for the resume upload (see upload.go)
+//     → S3 presigned POST data for the resume upload (see upload.go)
 //     POST {submitPath}  JSON {"job_application": {...}, "fingerprint": ...}
-//          → submits the application (see apply.go)
+//     → submits the application (see apply.go)
 //
 // Most boards additionally enforce an invisible reCAPTCHA Enterprise check at
 // submit time (HTTP 400 when the token is missing, 428 when it is invalid).

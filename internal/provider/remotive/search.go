@@ -63,14 +63,14 @@ func toProviderJob(j remJob) *provider.Job {
 	}
 
 	return &provider.Job{
-		ID:       fmt.Sprintf("%d", j.ID),
-		Title:    title,
-		Company:  company,
-		Board:    "remotive",
-		Location: strings.TrimSpace(j.Location),
-		Remote:   true, // Remotive is a remote-only board
-		URL:      url,
-		PostedAt: postedAt,
+		ID:          fmt.Sprintf("%d", j.ID),
+		Title:       title,
+		Company:     company,
+		Board:       "remotive",
+		Location:    strings.TrimSpace(j.Location),
+		Remote:      true, // Remotive is a remote-only board
+		URL:         url,
+		PostedAt:    postedAt,
 		Provider:    "remotive",
 		Description: j.Description,
 	}

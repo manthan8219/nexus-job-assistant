@@ -360,3 +360,97 @@ func (m FormModel) renderAIProvider(active bool) string {
 	help := mutedStyle.Render("   ←→ pick · enter confirm · tab next")
 	return localLabel + "   " + apiLabel + help
 }
+
+// handleAIAssistKey handles the AI Assist yes/no toggle. Returns ok=false for
+// navigation keys (after applying the choice) so they fall through to field nav.
+func (m FormModel) handleAIAssistKey(key string) (FormModel, tea.Cmd, bool) {
+	switch key {
+	case "left", "h":
+		m.aiAssistCursor = 0
+		m.applyAIAssistChoice()
+		cmd := m.saveCmd()
+		if m.needsAIProfile() {
+			path := strings.TrimSpace(m.inputs[fResumePath].Value())
+			var c tea.Cmd
+			m, c = m.startResumeAnalysis(path)
+			return m, tea.Batch(cmd, c), true
+		}
+		return m, cmd, true
+	case "right", "l":
+		m.aiAssistCursor = 1
+		m.applyAIAssistChoice()
+		return m, m.saveCmd(), true
+	case " ", "enter":
+		m.applyAIAssistChoice()
+		cmd := m.saveCmd()
+		if m.needsAIProfile() {
+			path := strings.TrimSpace(m.inputs[fResumePath].Value())
+			var c tea.Cmd
+			m, c = m.startResumeAnalysis(path)
+			return m, tea.Batch(cmd, c), true
+		}
+		return m, cmd, true
+	case "tab", "down", "shift+tab", "up":
+		m.applyAIAssistChoice()
+		return m, nil, false // fall through to nav; analyze after nav if needed
+	default:
+		return m, nil, true
+	}
+}
+
+// handleAIProviderKey handles the Local LLM vs API Keys selector. Returns
+// ok=false for navigation keys (after applying the choice) so they fall through.
+func (m FormModel) handleAIProviderKey(key string) (FormModel, tea.Cmd, bool) {
+	switch key {
+	case "left", "h":
+		m.aiProviderCursor = 0
+		m.applyAIProviderChoice()
+		cmd := m.saveCmd()
+		if m.aiProvider == "local" {
+			return m, tea.Batch(cmd, refreshLocalLLMCmd(m.inputs[fLocalLLMURL].Value())), true
+		}
+		return m, cmd, true
+	case "right", "l":
+		m.aiProviderCursor = 1
+		m.applyAIProviderChoice()
+		return m, m.saveCmd(), true
+	case " ", "enter":
+		m.applyAIProviderChoice()
+		cmd := m.saveCmd()
+		if m.aiProvider == "local" {
+			return m, tea.Batch(cmd, refreshLocalLLMCmd(m.inputs[fLocalLLMURL].Value())), true
+		}
+		return m, cmd, true
+	case "tab", "down", "shift+tab", "up":
+		m.applyAIProviderChoice()
+		return m, nil, false // fall through to nav (refresh kicked after nav if local — see below)
+	default:
+		return m, nil, true
+	}
+}
+
+// handleLocalLLMKey handles the Local LLM model picker / offline setup menu.
+// Returns ok=false for unhandled keys so they fall through to field navigation.
+func (m FormModel) handleLocalLLMKey(key string) (FormModel, tea.Cmd, bool) {
+	switch key {
+	case "tab":
+		m.focused = m.nextVisibleField(m.focused, +1)
+		if !isCustomField(m.focused) {
+			m.inputs[m.focused].Focus()
+		}
+		return m, tea.Batch(textinput.Blink, m.saveCmd()), true
+	case "shift+tab", "esc":
+		m.focused = m.nextVisibleField(m.focused, -1)
+		if !isCustomField(m.focused) {
+			m.inputs[m.focused].Focus()
+		}
+		return m, tea.Batch(textinput.Blink, m.saveCmd()), true
+	default:
+		if m.llmOffline {
+			m, cmd := m.handleLLMSetupKey(key)
+			return m, cmd, true
+		}
+		m, cmd := m.handleLLMPickerKey(key)
+		return m, cmd, true
+	}
+}

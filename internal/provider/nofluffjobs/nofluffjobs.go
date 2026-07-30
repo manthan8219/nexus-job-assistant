@@ -21,11 +21,11 @@ type nfjLocation struct {
 }
 
 type nfjPosting struct {
-	URL          string      `json:"url"`
-	Title        string      `json:"title"`
-	Name         string      `json:"name"`
-	Location     nfjLocation `json:"location"`
-	FullyRemote  bool        `json:"fullyRemote"`
+	URL         string      `json:"url"`
+	Title       string      `json:"title"`
+	Name        string      `json:"name"`
+	Location    nfjLocation `json:"location"`
+	FullyRemote bool        `json:"fullyRemote"`
 }
 
 type nfjResponse struct {

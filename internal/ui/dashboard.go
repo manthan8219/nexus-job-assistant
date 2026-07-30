@@ -23,18 +23,18 @@ type DashRecent struct {
 }
 
 type DashboardModel struct {
-	width  int
-	height int
-	status string // "idle" | "running" | "done" | "error"
-	errMsg string
-	applied int
-	skipped int
-	failed  int
-	lastJob string
-	dryRun  bool
-	providers []string
-	progress  map[string]string
-	autoApply bool
+	width      int
+	height     int
+	status     string // "idle" | "running" | "done" | "error"
+	errMsg     string
+	applied    int
+	skipped    int
+	failed     int
+	lastJob    string
+	dryRun     bool
+	providers  []string
+	progress   map[string]string
+	autoApply  bool
 	hasConsent bool
 
 	// Mission Control snapshot (filled by AppModel)

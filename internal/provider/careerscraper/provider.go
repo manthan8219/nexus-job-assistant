@@ -62,9 +62,9 @@ func (p *Provider) Search(ctx context.Context, c provider.SearchCriteria) ([]pro
 	}
 
 	type scrapeRequest struct {
-		URL            string   `json:"url"`
-		Company        string   `json:"company"`
-		TitleKeywords  []string `json:"title_keywords"`
+		URL           string   `json:"url"`
+		Company       string   `json:"company"`
+		TitleKeywords []string `json:"title_keywords"`
 	}
 	type batchRequest struct {
 		Targets []scrapeRequest `json:"targets"`

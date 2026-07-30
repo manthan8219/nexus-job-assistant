@@ -3,8 +3,8 @@
 package scraper
 
 import (
-	_ "embed"
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
