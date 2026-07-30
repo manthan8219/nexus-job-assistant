@@ -88,7 +88,7 @@ go run ./cmd/test-scraper                   # run a cmd/ utility
 go mod tidy           # after adding/removing any import
 ```
 
-After editing: run `gofmt -w .` on changed files, then `go build ./... && go vet ./... && go test ./...`.
+After editing: run `gofmt -w .` on changed files, then `go build ./... && go vet ./... && go test ./...` — or just run `./scripts/verify.ps1` (`./scripts/verify.sh` on POSIX shells), which wraps the same chain.
 
 ---
 
@@ -230,7 +230,7 @@ If you introduce a design pattern that is not already established in this codeba
 
 ## 8. Architecture Rules (where code goes)
 
-- **New job board / ATS** → new package under `internal/provider/<name>/`. Copy the *pattern* of an existing provider (e.g. `greenhouse`, `lever`), not its code. Register it in the single registry/discovery point the engine uses — nowhere else.
+- **New job board / ATS** → new package under `internal/provider/<name>/`. Follow `internal/provider/TEMPLATE.md` for the interface contract and a minimal skeleton — copy the *pattern* of an existing provider (e.g. `greenhouse`, `lever`), not its code. Register it in the single registry/discovery point the engine uses — nowhere else.
 - **New notification channel** → implement `notifier.Notifier` in `internal/notifier/`, wire it in `notifier.FromConfig`.
 - **New CLI utility** → `cmd/<tool>/main.go`. Keep it thin: flags + calling into `internal/`. Real logic never lives in `cmd/` or root `main.go`.
 - **Shared text/location logic** → `internal/textutil` / `internal/geo`. **Persistence** → `internal/store` or `internal/companies` only. UI never opens the DB; providers never touch the UI.

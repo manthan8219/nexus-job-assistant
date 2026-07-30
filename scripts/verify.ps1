@@ -1,0 +1,9 @@
+# Runs the full verification chain required by AGENTS.md §4 before any change is considered done.
+$ErrorActionPreference = "Stop"
+
+gofmt -w .
+go vet ./...
+go build ./...
+go test ./...
+
+Write-Host "verify: all checks passed" -ForegroundColor Green

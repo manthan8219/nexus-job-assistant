@@ -1,5 +1,11 @@
 # Build output
 nexus
+nexus.exe
+nexus-job-assistant.exe
+/test-apply
+/test-scraper
+/test-osint
+/test-crawl
 /dist/
 
 # Go
@@ -21,5 +27,3 @@ internal/scraper/py/venv/
 
 # macOS
 .DS_Store
-`nnexus.exe
-`nnexus-job-assistant.exe
