@@ -7,7 +7,7 @@ Summary of the non-negotiables (details in AGENTS.md):
 
 1. **Read & search before writing** — reuse existing packages/helpers (`internal/textutil`, `internal/geo`, `internal/config`); never duplicate code (strict DRY).
 2. **YAGNI** — build only what was asked: no speculative features, no unrequested files, no one-caller abstractions.
-3. **SOLID design** — small single-purpose packages/functions; extend via interfaces (providers, notifiers); accept interfaces, return structs; inject dependencies.
+3. **SOLID design + design patterns** — small single-purpose packages/functions; extend via interfaces (providers, notifiers); accept interfaces, return structs; inject dependencies. Use patterns (Strategy, Factory, Provider/Plugin, Decorator, Repository) intentionally where they create clear extension points — never speculatively (balance with YAGNI).
 4. **Idiomatic Go** — gofmt-clean, go vet-clean; errors handled first and wrapped with `%w`; `context.Context` first param; doc comments on all exported symbols.
 5. **Architecture** — new job board → `internal/provider/<name>/`; new notifier → `notifier.Notifier`; thin `cmd/` binaries; no logic in `main.go`; respect layering `ui → engine → provider/store`.
 6. **TUI safety** — never print to stdout/stderr from `internal/` packages; return errors and emit events instead.

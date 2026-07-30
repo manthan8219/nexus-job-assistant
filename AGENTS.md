@@ -167,6 +167,46 @@ These five principles (Robert C. Martin) govern all design in this repo. Rule Ze
 
 ---
 
+## 6b. Design Patterns for Extensibility
+
+> *Use design patterns intentionally — where they create a clear extension point for future code. Never add a pattern speculatively ("just in case"). YAGNI (§2 rule 4) still applies: the pattern must solve a real, present need that has a high likelihood of growing.*
+
+### Patterns already in use in this codebase
+
+| Pattern | Where | Why |
+|---|---|---|
+| **Provider / Plugin** | `internal/provider/<name>/` | Each job board implements the same interface; adding a new board means dropping in a new package, zero changes to existing providers. |
+| **Strategy** | `internal/notifier/` (Notifier interface) | Each notification channel (Discord, Telegram, …) is a pluggable strategy behind `Notifier.Send()`. The engine picks strategies at runtime from config. |
+| **Strategy** | `internal/scraper/py/` (LLMExtractionStrategy) | Extraction method is a strategy passed to the crawler; swap models without changing crawl logic. |
+| **Factory / Factory Method** | `notifier.FromConfig()` | Constructs the right set of `Notifier` implementations based on config — callers never instantiate concrete notifiers directly. |
+| **Dependency Injection** | `engine.New(cfg, store, companies)`, `notifier.FromConfig()` | Dependencies are injected through constructors, not created internally. Enables testing with fakes. |
+| **Repository** | `internal/store/`, `internal/companies/` | Data access abstracted behind a store interface; the rest of the code queries companies/applications through it, not SQL directly. |
+
+### When to reach for a pattern
+
+Consider a design pattern when you see **two or more** of these signals:
+
+1. **You are adding a new implementation of an existing interface.** That's already a Strategy pattern — lean into it.
+2. **You are writing a switch/if-else chain that dispatches on type or name.** That's a smell for a Strategy, Factory, or Registry pattern — extract the variant into its own type.
+3. **You need to construct a family of related objects based on config or context.** Use a Factory (constructor function) or Factory Method, never a `switch` scattered across callers.
+4. **You are wrapping behavior around a core operation (logging, retry, timing).** The Decorator pattern (a struct wrapping an interface) is idiomatic Go — see `http.RoundTripper` wrappers.
+5. **You need to notify multiple consumers when something happens, without the producer knowing them.** The Observer pattern (via channels or callback slices) is appropriate — but prefer Go channels over a generic `Observer` interface.
+6. **An algorithm has a fixed skeleton but steps vary.** Template Method (a function that accepts interface-typed callbacks/strategies for its variable steps) keeps the structure in one place.
+
+### Balancing patterns with YAGNI
+
+- **✅ Do use a pattern** when you already have a second concrete variant and a third is likely (the "Rule of Three" from §7 applies here too).
+- **✅ Do use a pattern** when the interface/abstraction is the *simplest* correct expression of the code (e.g., accepting `io.Reader` instead of `*os.File` is just good Go, not over-engineering).
+- **❌ Don't add a pattern** for a single concrete use "because we might need it later." Duplication is cheaper than the wrong abstraction (§3).
+- **❌ Don't add a pattern** that requires new exported types, interfaces, or registration points unless the current code genuinely needs the flexibility it provides.
+- **❌ Don't use reflection, `any`-based generics, or complex object hierarchies** to force a pattern. Go patterns are simple: interfaces, structs, functions, closures, channels.
+
+### Adding a new pattern
+
+If you introduce a design pattern that is not already established in this codebase, document it in the relevant package doc comment and mention it in your report (§16). The guiding principle: **the pattern should make the code simpler and more obviously correct, not more abstract.**
+
+---
+
 ## 7. DRY & Reuse Playbook (the "no duplicate code" contract)
 
 **Before writing any new helper, run this checklist:**
