@@ -106,8 +106,17 @@ func Search(query string, limit int) []City {
 		*dest = append(*dest, c)
 	}
 
-	// Alias hits first — prefix / 1-edit typos ("bangl" → bangalore → Bengaluru)
+	// Exact alias match first (deterministic, not subject to map iteration order).
+	if display, ok := cityAliases[q]; ok {
+		if c, ok := Resolve(display); ok {
+			add(c, &aliased)
+		}
+	}
+	// Fuzzy alias hits — prefix / 1-edit typos ("bangl" → bangalore → Bengaluru).
 	for alias, display := range cityAliases {
+		if alias == q {
+			continue // already handled above
+		}
 		if !aliasMatches(alias, q) {
 			continue
 		}

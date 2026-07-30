@@ -87,7 +87,7 @@ func (m FormModel) renderBackendCatalog() string {
 		}
 		b.WriteString("\n    " + mark + line)
 	}
-	b.WriteString("\n    " + mutedStyle.Render("↑↓ move · enter install · tab next"))
+	b.WriteString("\n    " + mutedStyle.Render("j/k move · enter install · tab next"))
 	return b.String()
 }
 
@@ -116,7 +116,7 @@ func (m FormModel) renderScraperSetupMenu() string {
 			}
 			b.WriteString("\n    " + mark + line)
 		}
-		b.WriteString("\n    " + mutedStyle.Render("↑↓ move · enter run · tab next"))
+		b.WriteString("\n    " + mutedStyle.Render("j/k move · enter run · tab next"))
 		return b.String()
 	}
 
@@ -158,6 +158,10 @@ func (m FormModel) renderScraperSetupMenu() string {
 // (step 1) and the backend catalog picker (step 2), plus shared tab/shift+tab
 // navigation. Returns ok=false for unhandled keys so they fall through to nav.
 func (m FormModel) handleScraperKey(key string) (FormModel, tea.Cmd, bool) {
+	// up/down always advance the form field — j/k navigate within the widget.
+	if key == "up" || key == "down" {
+		return m, nil, false
+	}
 	venvReady := scraper.Installed()
 	// When running: always show catalog so user can install more backends
 	if !m.scraperOffline {

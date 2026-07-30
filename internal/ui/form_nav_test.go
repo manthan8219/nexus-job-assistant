@@ -162,11 +162,16 @@ func TestNotifyChannels_TabAdvancesPastWidget(t *testing.T) {
 	if m.focused != fApplyConsent {
 		t.Errorf("tab from notify channels: want fApplyConsent(%d), got %d", fApplyConsent, m.focused)
 	}
-	// Last visible Apply Safety field wraps to first (cover letter text hidden when mode=off).
+	// Cover letter text is hidden (mode=off), so next visible field is fScraperTargets.
 	m.focused = fCoverLetterMode
 	m = pressKey(m, "tab")
+	if m.focused != fScraperTargets {
+		t.Errorf("tab from fCoverLetterMode: want fScraperTargets(%d), got %d", fScraperTargets, m.focused)
+	}
+	// Tab from the last field (fScraperTargets) wraps back to first.
+	m = pressKey(m, "tab")
 	if m.focused != fFirstName {
-		t.Errorf("tab from last Apply Safety field: want wrap to fFirstName(%d), got %d", fFirstName, m.focused)
+		t.Errorf("tab from fScraperTargets: want wrap to fFirstName(%d), got %d", fFirstName, m.focused)
 	}
 }
 
