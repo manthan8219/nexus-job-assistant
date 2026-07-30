@@ -34,6 +34,8 @@ func (m OutreachHubModel) View() string {
 		b.WriteString(m.viewEmail(w))
 	case outreachSubLinkedIn:
 		b.WriteString(m.viewLinkedIn(w))
+	case outreachSubSent:
+		b.WriteString(m.viewSent(w))
 	}
 
 	if m.errText != "" {
@@ -53,6 +55,7 @@ func (m OutreachHubModel) renderStepStrip() string {
 		m.consent,
 		emailOK && len(outreach.Pending(m.items, outreach.ChannelEmail)) > 0,
 		liOK && len(outreach.Pending(m.items, outreach.ChannelLinkedIn)) > 0,
+		len(m.logEntries) > 0,
 	}
 	parts := make([]string, 0, 6)
 	for i, label := range outreachSubLabels {
@@ -114,6 +117,12 @@ func (m OutreachHubModel) renderNextAction() string {
 			line = "Queue ready · enter opens the next LinkedIn search (message copied for paste if needed)."
 		} else {
 			line = "Queue ready · enter asks, then opens LinkedIn in the browser."
+		}
+	case m.sub == outreachSubSent:
+		if m.logLoading {
+			line = "Loading sent log…"
+		} else {
+			line = fmt.Sprintf("%d sent actions recorded. Press r to refresh.", len(m.logEntries))
 		}
 	}
 	return lipgloss.NewStyle().Foreground(lipgloss.Color(colorOrange)).Render("→ " + line)
@@ -305,6 +314,90 @@ func wrapBody(s string, w int) string {
 			line = line[maxW:]
 		}
 		b.WriteString(primaryStyle.Render(line) + "\n")
+	}
+	return b.String()
+}
+
+func (m OutreachHubModel) viewSent(w int) string {
+	var b strings.Builder
+	b.WriteString(labelStyle.Render("Sent outreach"))
+	b.WriteString("\n")
+	b.WriteString(mutedStyle.Render("Audit log of every email sent and LinkedIn action taken by Nexus."))
+	b.WriteString("\n\n")
+	if m.logLoading {
+		b.WriteString(mutedStyle.Render("Loading…"))
+		return b.String()
+	}
+	if len(m.logEntries) == 0 {
+		b.WriteString(mutedStyle.Render("No sent outreach yet. Send emails or open LinkedIn from the Email / LinkedIn tabs."))
+		return b.String()
+	}
+
+	const dateW, chanW, statusW, nameW = 10, 9, 8, 20
+	compW := w - dateW - chanW - statusW - nameW - 10
+	if compW < 10 {
+		compW = 10
+	}
+
+	hdr := fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s",
+		dateW, "Date", chanW, "Channel", statusW, "Status", nameW, "Contact", "Company / Role")
+	b.WriteString(mutedStyle.Render(hdr))
+	b.WriteString("\n")
+	b.WriteString(mutedStyle.Render(strings.Repeat("─", min(w-2, 90))))
+	b.WriteString("\n")
+
+	visH := m.height - 14
+	if visH < 3 {
+		visH = 3
+	}
+	start := 0
+	if m.logCursor >= visH {
+		start = m.logCursor - visH + 1
+	}
+	end := start + visH
+	if end > len(m.logEntries) {
+		end = len(m.logEntries)
+	}
+
+	for i := start; i < end; i++ {
+		e := m.logEntries[i]
+		date := e.CreatedAt.Format("2006-01-02")
+		if e.SentAt.Year() > 2000 {
+			date = e.SentAt.Format("2006-01-02")
+		}
+		ch := e.Channel
+		if len(ch) > chanW {
+			ch = ch[:chanW]
+		}
+		status := e.Status
+		if len(status) > statusW {
+			status = status[:statusW]
+		}
+		contact := e.ContactName
+		if contact == "" {
+			contact = e.ContactEmail
+		}
+		if len(contact) > nameW {
+			contact = contact[:nameW-1] + "…"
+		}
+		company := e.Company
+		if e.Role != "" {
+			company = e.Company + " · " + e.Role
+		}
+		if len(company) > compW {
+			company = company[:compW-1] + "…"
+		}
+		row := fmt.Sprintf("%-*s  %-*s  %-*s  %-*s  %s",
+			dateW, date, chanW, ch, statusW, status, nameW, contact, company)
+		if i == m.logCursor {
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(colorPurple)).Bold(true).Render("▸ " + row))
+		} else {
+			b.WriteString("  " + row)
+		}
+		b.WriteString("\n")
+	}
+	if len(m.logEntries) > visH {
+		b.WriteString(mutedStyle.Render(fmt.Sprintf("  ↕ showing %d–%d of %d  ·  r refresh", start+1, end, len(m.logEntries))))
 	}
 	return b.String()
 }

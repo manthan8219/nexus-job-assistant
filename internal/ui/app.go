@@ -107,13 +107,15 @@ type AppModel struct {
 }
 
 func NewAppModel(cfg *config.Config, st *store.Store, eng *engine.Engine, opts AppOptions) AppModel {
+	outreachHub := NewOutreachHubModel()
+	outreachHub.st = st // wire store so Sent tab can load the audit log
 	return AppModel{
 		config:       NewFormModel(cfg, opts.SkipResumeCheck),
 		dashboard:    NewDashboardModel(),
 		resumeHub:    NewResumeHubModel(),
 		history:      NewHistoryModel(),
 		companiesTab: NewCompaniesTabModel(),
-		outreach:     NewOutreachHubModel(),
+		outreach:     outreachHub,
 		contacts:     NewContactsTabModel(),
 		logs:         NewLogsModel(),
 		eng:          eng,

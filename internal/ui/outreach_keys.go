@@ -76,15 +76,51 @@ func (m OutreachHubModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "tab", "]":
-		return m.NextSub(), nil
+		m = m.NextSub()
+		if m.sub == outreachSubSent {
+			m.logLoading = true
+			return m, m.loadLogCmd()
+		}
+		return m, nil
 	case "shift+tab", "[":
-		return m.PrevSub(), nil
+		m = m.PrevSub()
+		if m.sub == outreachSubSent {
+			m.logLoading = true
+			return m, m.loadLogCmd()
+		}
+		return m, nil
 	}
 
 	if m.sub == outreachSubSetup {
 		return m.handleSetupKey(key)
 	}
+	if m.sub == outreachSubSent {
+		return m.handleSentKey(key)
+	}
 	return m.handleChannelKey(key)
+}
+
+func (m OutreachHubModel) handleSentKey(key string) (OutreachHubModel, tea.Cmd) {
+	switch key {
+	case "j", "down":
+		if m.logCursor < len(m.logEntries)-1 {
+			m.logCursor++
+		}
+	case "k", "up":
+		if m.logCursor > 0 {
+			m.logCursor--
+		}
+	case "g":
+		m.logCursor = 0
+	case "G":
+		if len(m.logEntries) > 0 {
+			m.logCursor = len(m.logEntries) - 1
+		}
+	case "r":
+		m.logLoading = true
+		return m, m.loadLogCmd()
+	}
+	return m, nil
 }
 
 func (m OutreachHubModel) handleSetupKey(key string) (tea.Model, tea.Cmd) {

@@ -157,6 +157,17 @@ func loadOutreachCmd() tea.Cmd {
 	}
 }
 
+func (m OutreachHubModel) loadLogCmd() tea.Cmd {
+	if m.st == nil {
+		return nil
+	}
+	st := m.st
+	return func() tea.Msg {
+		entries, err := st.ListOutreachLog(200)
+		return outreachLogLoadedMsg{Entries: entries, Err: err}
+	}
+}
+
 func (m *OutreachHubModel) SetConfig(cfg *config.Config) {
 	m.cfg = cfg
 	m.consent = cfg.OutreachConsent
@@ -269,8 +280,10 @@ func (m OutreachHubModel) FooterHint() string {
 		return "g build queue  ·  enter process next  ·  a auto-run  ·  c check replies  ·  e fix To:  ·  tab cycles"
 	case outreachSubLinkedIn:
 		return "g build queue  ·  enter open browser  ·  a auto-run remaining  ·  tab cycles"
+	case outreachSubSent:
+		return "j/k move  ·  r refresh  ·  tab cycles"
 	default:
-		return "tab cycles Setup/Email/LinkedIn"
+		return "tab cycles"
 	}
 }
 
@@ -283,6 +296,14 @@ func (m OutreachHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.items = msg.Items
 		m.building = false
 		m.clampCursor()
+		return m, nil
+	case outreachLogLoadedMsg:
+		m.logLoading = false
+		if msg.Err == nil {
+			m.logEntries = msg.Entries
+		} else {
+			m.errText = msg.Err.Error()
+		}
 		return m, nil
 	case outreachErrMsg:
 		m.errText = msg.Err.Error()
