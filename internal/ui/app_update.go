@@ -513,10 +513,8 @@ func (m AppModel) handleAppKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "enter":
 			return m.exitChromeNav()
 		case "esc":
-			if m.activeTab == TabConfig || m.activeTab == TabHistory || m.activeTab == TabCompanies || m.activeTab == TabResume {
-				am, cmd := m.exitChromeNav()
-				_ = am
-				return m, cmd
+			if m.activeTab == TabConfig || m.activeTab == TabHistory || m.activeTab == TabCompanies || m.activeTab == TabResume || m.activeTab == TabContacts {
+				return m.exitChromeNav()
 			}
 			return m, nil
 		case "left", "h", "shift+tab":
@@ -578,6 +576,20 @@ func (m AppModel) handleAppKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		sub, cmd = m.outreach.Update(msg)
 		m.outreach = sub.(OutreachHubModel)
+		return m, cmd
+	}
+	if m.activeTab == TabResume && m.resumeHub.CapturesKeys() {
+		var sub tea.Model
+		var cmd tea.Cmd
+		sub, cmd = m.resumeHub.Update(msg)
+		m.resumeHub = sub.(ResumeHubModel)
+		return m, cmd
+	}
+	if m.activeTab == TabContacts && m.contacts.CapturesKeys() {
+		var sub tea.Model
+		var cmd tea.Cmd
+		sub, cmd = m.contacts.Update(msg)
+		m.contacts = sub.(ContactsTabModel)
 		return m, cmd
 	}
 	if key == "esc" {

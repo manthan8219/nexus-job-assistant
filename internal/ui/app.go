@@ -180,6 +180,10 @@ func (m AppModel) enterChromeNav() AppModel {
 		m.companiesTab.country.Blur()
 		m.companiesTab.searching = false
 	}
+	if m.activeTab == TabContacts {
+		m.contacts.companyInput.Blur()
+		m.contacts.domainInput.Blur()
+	}
 	return m
 }
 
