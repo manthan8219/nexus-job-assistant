@@ -501,6 +501,13 @@ func (m AppModel) handleOutreachMsgs(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m AppModel) handleAppKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	key := msg.String()
+	// Global quit / suspend — always handled regardless of mode or tab.
+	if key == "ctrl+c" {
+		return m, tea.Quit
+	}
+	if key == "ctrl+z" {
+		return m, tea.Suspend
+	}
 	if m.chromeNav {
 		switch key {
 		case "enter":
