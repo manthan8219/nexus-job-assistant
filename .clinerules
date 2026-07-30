@@ -1,0 +1,19 @@
+# Cline Rules — Nexus Job Assistant
+
+**Single source of truth: `AGENTS.md` at the repository root.**
+Read it in full before writing or modifying any code, and follow every rule in it.
+
+Summary of the non-negotiables (details in AGENTS.md):
+
+1. **Read & search before writing** — reuse existing packages/helpers (`internal/textutil`, `internal/geo`, `internal/config`); never duplicate code (strict DRY).
+2. **YAGNI** — build only what was asked: no speculative features, no unrequested files, no one-caller abstractions.
+3. **SOLID design** — small single-purpose packages/functions; extend via interfaces (providers, notifiers); accept interfaces, return structs; inject dependencies.
+4. **Idiomatic Go** — gofmt-clean, go vet-clean; errors handled first and wrapped with `%w`; `context.Context` first param; doc comments on all exported symbols.
+5. **Architecture** — new job board → `internal/provider/<name>/`; new notifier → `notifier.Notifier`; thin `cmd/` binaries; no logic in `main.go`; respect layering `ui → engine → provider/store`.
+6. **TUI safety** — never print to stdout/stderr from `internal/` packages; return errors and emit events instead.
+7. **Network discipline** — shared `http.Client`, explicit timeouts, bounded retries with backoff, one provider's failure never aborts the run.
+8. **Idempotency & safety** — never apply to the same job twice (check store first); never bypass apply consent/rate limits; no hardcoded secrets.
+9. **Complete code only** — no TODOs, stubs, or placeholders.
+10. **Tests** — table-driven `*_test.go` for every behavior change; hermetic (no network, `t.TempDir()`, fakes); `-race` for concurrency.
+11. **Verify before done** — `gofmt -l .`, `go vet ./...`, `go build ./...`, `go test ./...` must all pass.
+12. **Ask before irreversible** — schema/config-breaking changes, deletions, consent-logic changes, new dependencies.
