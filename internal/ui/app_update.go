@@ -36,6 +36,8 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleScraperScanProgressMsg(msg)
 	case scraperScanDoneMsg:
 		return m.handleScraperScanDoneMsg(msg)
+	case logsManualRefreshMsg:
+		return m, m.loadUsage()
 	case usageTickMsg:
 		return m.handleUsageTickMsg(msg)
 	case RefreshUsageMsg:

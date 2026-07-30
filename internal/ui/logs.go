@@ -15,6 +15,9 @@ type RefreshUsageMsg struct{ Snap usage.Snapshot }
 
 type usageTickMsg struct{}
 
+// logsManualRefreshMsg bubbles up from LogsModel when the user presses "r".
+type logsManualRefreshMsg struct{}
+
 type LogsModel struct {
 	width     int
 	height    int
@@ -85,6 +88,8 @@ func (m LogsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.rebuildContent()
 			}
 			return m, nil
+		case "r":
+			return m, func() tea.Msg { return logsManualRefreshMsg{} }
 		case "G", "end":
 			if m.ready {
 				m.viewport.GotoBottom()
