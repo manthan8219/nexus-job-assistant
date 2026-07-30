@@ -244,6 +244,10 @@ func (m OutreachHubModel) handleChannelKey(key string) (tea.Model, tea.Cmd) {
 			return outreachAutoTickMsg{Channel: m.channelForSub(), Gen: gen}
 		}))
 		return m, tea.Batch(cmds...)
+	case "c":
+		if m.sub == outreachSubEmail {
+			return m, func() tea.Msg { return OutreachReplyCheckRequestMsg{} }
+		}
 	case "e":
 		if item, ok := m.selected(); ok {
 			m.ui = outEditContact
