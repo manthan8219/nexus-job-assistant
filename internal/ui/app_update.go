@@ -90,7 +90,19 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m AppModel) handleWindowSizeMsg(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	m.width, m.height = msg.Width, msg.Height
-	return m, nil
+	// Forward to every sub-model so viewports and layout helpers get the
+	// correct dimensions immediately (not just on the next keypress).
+	var cmds []tea.Cmd
+	forward := func(sub tea.Model, cmd tea.Cmd) tea.Model { cmds = append(cmds, cmd); return sub }
+	m.dashboard = forward(m.dashboard.Update(msg)).(DashboardModel)
+	m.config = forward(m.config.Update(msg)).(FormModel)
+	m.resumeHub = forward(m.resumeHub.Update(msg)).(ResumeHubModel)
+	m.history = forward(m.history.Update(msg)).(HistoryModel)
+	m.companiesTab = forward(m.companiesTab.Update(msg)).(CompaniesTabModel)
+	m.outreach = forward(m.outreach.Update(msg)).(OutreachHubModel)
+	m.contacts = forward(m.contacts.Update(msg)).(ContactsTabModel)
+	m.logs = forward(m.logs.Update(msg)).(LogsModel)
+	return m, tea.Batch(cmds...)
 }
 
 func (m AppModel) handleAppendLogMsg(msg AppendLogMsg) (tea.Model, tea.Cmd) {

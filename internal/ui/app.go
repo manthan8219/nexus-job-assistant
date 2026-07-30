@@ -206,8 +206,15 @@ func (m AppModel) switchTab(next int) (AppModel, tea.Cmd) {
 	var cmds []tea.Cmd
 	if next == TabConfig {
 		m.config.loadResumeLibrary()
-		m.config = m.config.BlurAll()
-		m.chromeNav = true
+		if m.chromeNav {
+			// Already in chrome nav: blur form so user presses Enter to start editing.
+			m.config = m.config.BlurAll()
+		} else {
+			// Programmatic switch (startup / profile guard): focus the form directly.
+			var focusCmd tea.Cmd
+			m.config, focusCmd = m.config.FocusCurrent()
+			cmds = append(cmds, focusCmd)
+		}
 	}
 	if next == TabDashboard {
 		cmds = append(cmds, m.loadStats())
