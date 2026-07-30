@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/usage"
+	"github.com/manthan8219/nexus-job-assistant/internal/usage"
 )
 
 type RefreshUsageMsg struct{ Snap usage.Snapshot }

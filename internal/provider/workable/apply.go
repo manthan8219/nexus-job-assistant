@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 type workableCandidateRequest struct {

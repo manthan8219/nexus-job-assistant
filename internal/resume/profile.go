@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/localllm"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/localllm"
 )
 
 // ScoredItem is a labeled 1–10 score for charts.
@@ -42,6 +43,22 @@ type AIOptions struct {
 	LocalModel   string
 	OpenAIKey    string
 	AnthropicKey string
+}
+
+// AIOptionsFromConfig builds AIOptions from the persisted user config so
+// callers outside the engine (e.g. outreach UI) don't duplicate the mapping.
+func AIOptionsFromConfig(cfg *config.Config) AIOptions {
+	if cfg == nil {
+		return AIOptions{}
+	}
+	return AIOptions{
+		Enabled:      cfg.AIAssist,
+		Provider:     cfg.AIProvider,
+		LocalURL:     cfg.LocalLLMURL,
+		LocalModel:   cfg.LocalLLMModel,
+		OpenAIKey:    cfg.OpenAIKey,
+		AnthropicKey: cfg.AnthropicKey,
+	}
 }
 
 // AnalyzeFull validates the file, then optionally builds an AI profile.

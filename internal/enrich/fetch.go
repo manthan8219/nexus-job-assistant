@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/scraper"
-	"github.com/manthanmanthan/nexus/internal/textutil"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/textutil"
 )
 
 var (

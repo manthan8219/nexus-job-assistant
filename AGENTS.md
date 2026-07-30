@@ -10,7 +10,7 @@
 
 **Nexus** is a Go CLI/TUI application that automates job searching and applying.
 
-- **Language:** Go 1.26+ (module: `github.com/manthanmanthan/nexus`)
+- **Language:** Go 1.26+ (module: `github.com/manthan8219/nexus-job-assistant`)
 - **UI:** Bubble Tea TUI (`charmbracelet/bubbletea`, `lipgloss`) — *the TUI owns the terminal in TUI mode* (§11)
 - **Storage:** SQLite via `modernc.org/sqlite` (data in `~/.nexus/`)
 - **Browser automation:** `playwright-go` (form filling / applying)

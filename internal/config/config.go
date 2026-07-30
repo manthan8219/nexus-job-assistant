@@ -57,6 +57,9 @@ type Config struct {
 	MaxAppsPerRun int    `json:"max_apps_per_run,omitempty"` // 0 = default 10
 	MaxAppsPerDay int    `json:"max_apps_per_day,omitempty"` // 0 = default 25
 	ApplyDelaySec int    `json:"apply_delay_sec,omitempty"`  // pause between real applies; 0 = default 3
+	// MinFitScore gates auto-apply: jobs scoring below it (when AI fit scoring
+	// is active) are recorded as skipped instead of applied. 0 = off.
+	MinFitScore int `json:"min_fit_score,omitempty"`
 	CompanyBlocklist string `json:"company_blocklist,omitempty"` // comma-separated company names to skip
 	// WorkAuth: authorized | citizen | need_sponsorship | unspecified
 	WorkAuth string `json:"work_auth,omitempty"`
@@ -88,6 +91,40 @@ type Config struct {
 	LinkedInMode string `json:"linkedin_mode,omitempty"`
 	// LinkedInSessionCookie reserved for deeper LinkedIn automation (optional).
 	LinkedInSessionCookie string `json:"linkedin_session_cookie,omitempty"`
+
+	// ── Outreach pipeline (auto find → AI draft → AI review → approve/send) ──
+	// OutreachAutoQueue starts the email pipeline automatically whenever an
+	// application is recorded (engine apply or queue build).
+	OutreachAutoQueue bool `json:"outreach_auto_queue,omitempty"`
+	// OutreachAICompose lets an LLM write the email (falls back to templates when off/unavailable).
+	OutreachAICompose bool `json:"outreach_ai_compose,omitempty"`
+	// OutreachAIReview lets a second LLM check email quality before it is marked ready.
+	OutreachAIReview bool `json:"outreach_ai_review,omitempty"`
+	// OutreachGenModel overrides the local model used to write emails (empty = LocalLLMModel).
+	OutreachGenModel string `json:"outreach_gen_model,omitempty"`
+	// OutreachCheckModel overrides the local model used to review emails (empty = same as generator).
+	OutreachCheckModel string `json:"outreach_check_model,omitempty"`
+	// OutreachMinScore is the 0-100 quality score the reviewer must give to pass (0 = default 70).
+	OutreachMinScore int `json:"outreach_min_score,omitempty"`
+	// OutreachMaxRetries caps regenerate→review loops per email (0 = default 3).
+	OutreachMaxRetries int `json:"outreach_max_retries,omitempty"`
+	// OutreachSMTPVerify enables SMTP probing of guessed pattern addresses (slow; off by default).
+	OutreachSMTPVerify bool `json:"outreach_smtp_verify,omitempty"`
+	// OutreachFollowUpsOff disables the automatic +3/+7/+14-day follow-up
+	// sequence after each sent outreach email. Follow-ups are on by default
+	// (they respect the same daily caps and stop on reply detection).
+	OutreachFollowUpsOff bool `json:"outreach_follow_ups_off,omitempty"`
+	// ReplyLookbackDays caps how far back reply detection scans the inbox
+	// (0 = default 45 days).
+	ReplyLookbackDays int `json:"reply_lookback_days,omitempty"`
+
+	// Gmail OAuth — send from the user's Gmail via the Gmail API using a token
+	// instead of an SMTP app password. Get a refresh token with: nexus-gmailauth
+	// (see cmd/gmailauth). When GmailOAuthRefreshToken is set it takes
+	// precedence over GmailAppPassword.
+	GmailOAuthClientID     string `json:"gmail_oauth_client_id,omitempty"`
+	GmailOAuthClientSecret string `json:"gmail_oauth_client_secret,omitempty"`
+	GmailOAuthRefreshToken string `json:"gmail_oauth_refresh_token,omitempty"`
 }
 
 func Dir() (string, error) {

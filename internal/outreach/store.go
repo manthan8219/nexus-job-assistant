@@ -115,7 +115,7 @@ func CountSentToday(ch Channel) (int, error) {
 	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 	n := 0
 	for _, it := range items {
-		if it.Channel != ch || it.Status != StatusSent {
+		if it.Channel != ch || !countedAsSent(it.Status) {
 			continue
 		}
 		if !it.SentAt.IsZero() && !it.SentAt.Before(start) {
@@ -123,4 +123,16 @@ func CountSentToday(ch Channel) (int, error) {
 		}
 	}
 	return n, nil
+}
+
+// countedAsSent reports whether the status implies a real send happened.
+// Follow-up states count too — an item that sent follow-up #1 today sits in
+// followup_due, and it must still count toward the daily cap.
+func countedAsSent(s Status) bool {
+	switch s {
+	case StatusSent, StatusFollowUpDue, StatusSequenceDone, StatusReplied, StatusOpened:
+		return true
+	default:
+		return false
+	}
 }

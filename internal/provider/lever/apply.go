@@ -10,7 +10,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // submitApplication attempts to apply to a Lever job on behalf of the user.

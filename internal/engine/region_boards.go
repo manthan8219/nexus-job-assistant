@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/companies"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/geo"
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/companies"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/geo"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // countriesFromConfig extracts ISO2 codes from Config target locations

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/data"
+	"github.com/manthan8219/nexus-job-assistant/data"
 )
 
 type indiaEmployer struct {

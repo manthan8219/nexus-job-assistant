@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // Aggregator APIs like RemoteOK reject non-browser user agents.

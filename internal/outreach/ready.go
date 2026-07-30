@@ -3,7 +3,7 @@ package outreach
 import (
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 // Check is one readiness row for the Setup UI.
@@ -17,12 +17,16 @@ func EmailReady(cfg *config.Config) []Check {
 	if cfg == nil {
 		return []Check{{OK: false, Label: "Config", FixHint: "Open Config and fill your profile"}}
 	}
-	hasFinder := strings.TrimSpace(cfg.HunterKey) != "" || strings.TrimSpace(cfg.ApolloKey) != ""
+	gmailAuth := strings.TrimSpace(cfg.GmailAppPassword) != "" || HasGmailOAuth(cfg)
+	finderLabel := "Contact finding: careers@/hr@ patterns"
+	if strings.TrimSpace(cfg.HunterKey) != "" || strings.TrimSpace(cfg.ApolloKey) != "" {
+		finderLabel = "Contact finding: Hunter/Apollo + GitHub + OSINT + patterns"
+	}
 	return []Check{
 		{cfg.OutreachConsent, "Outreach consent", "Turn on consent under Outreach → Setup"},
 		{strings.TrimSpace(cfg.Email) != "", "Your email (From address)", "Set Email in Config → Personal"},
-		{strings.TrimSpace(cfg.GmailAppPassword) != "", "Gmail app password", "Config → Outreach → Gmail App Password"},
-		{hasFinder, "Contact finder (Hunter / Apollo)", "Config → Outreach → API key so Nexus can find recruiter emails automatically"},
+		{gmailAuth, "Gmail auth (app password or OAuth token)", "Config → Outreach → Gmail App Password, or run nexus-gmailauth"},
+		{true, finderLabel, "Optional: add Hunter/Apollo keys in Config → Outreach for better recruiter emails"},
 		{strings.TrimSpace(cfg.FirstName) != "" && strings.TrimSpace(cfg.LastName) != "", "Your name for signature", "Config → Personal Information"},
 	}
 }

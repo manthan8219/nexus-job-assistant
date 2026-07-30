@@ -10,12 +10,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/data"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/provider/greenhouse"
-	"github.com/manthanmanthan/nexus/internal/provider/lever"
-	"github.com/manthanmanthan/nexus/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/data"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/greenhouse"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
 func main() {

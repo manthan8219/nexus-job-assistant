@@ -6,8 +6,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/resume"
-	"github.com/manthanmanthan/nexus/internal/workcontext"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/workcontext"
 )
 
 const (

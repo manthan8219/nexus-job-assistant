@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // fetchOrgAPIKey fetches the Ashby org API key embedded in the job board page HTML.

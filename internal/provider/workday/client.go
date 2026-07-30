@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 const (

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
 // fitFormHeight keeps Config inside the terminal body by showing a window

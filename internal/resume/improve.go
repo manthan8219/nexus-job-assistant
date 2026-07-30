@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/localllm"
-	"github.com/manthanmanthan/nexus/internal/workcontext"
+	"github.com/manthan8219/nexus-job-assistant/internal/localllm"
+	"github.com/manthan8219/nexus-job-assistant/internal/workcontext"
 )
 
 // Format is an export target for an improved resume.
@@ -215,27 +215,34 @@ func resumesDir() (string, error) {
 	return dir, os.MkdirAll(dir, 0700)
 }
 
-func improvePrompt(in ImproveInput) string {
-	var projects strings.Builder
-	for i, p := range in.Projects {
-		projects.WriteString(fmt.Sprintf("\n### Project %d: %s\n", i+1, p.Name))
+// FormatProjects renders verified work-context projects as a prompt-ready
+// text block. Shared by the resume rewriter and the tailor agents.
+func FormatProjects(projects []workcontext.Project) string {
+	var b strings.Builder
+	for i, p := range projects {
+		b.WriteString(fmt.Sprintf("\n### Project %d: %s\n", i+1, p.Name))
 		if p.Role != "" {
-			projects.WriteString("Role: " + p.Role + "\n")
+			b.WriteString("Role: " + p.Role + "\n")
 		}
 		if p.Period != "" {
-			projects.WriteString("Period: " + p.Period + "\n")
+			b.WriteString("Period: " + p.Period + "\n")
 		}
 		if p.Repo != "" {
-			projects.WriteString("Repo: " + p.Repo + "\n")
+			b.WriteString("Repo: " + p.Repo + "\n")
 		}
-		projects.WriteString(p.Summary + "\n")
+		b.WriteString(p.Summary + "\n")
 		if len(p.Bullets) > 0 {
-			projects.WriteString("Bullets:\n")
-			for _, b := range p.Bullets {
-				projects.WriteString("- " + b + "\n")
+			b.WriteString("Bullets:\n")
+			for _, bullet := range p.Bullets {
+				b.WriteString("- " + bullet + "\n")
 			}
 		}
 	}
+	return b.String()
+}
+
+func improvePrompt(in ImproveInput) string {
+	projects := FormatProjects(in.Projects)
 
 	profileBlock := "(no AI profile yet — infer carefully from resume text only)"
 	if in.Profile != nil && in.Profile.Summary != "" {
@@ -296,10 +303,12 @@ WORK CONTEXT:
 ORIGINAL RESUME TEXT:
 """
 %s
-"""`, target, target, profileBlock, projects.String(), trimForPrompt(in.ResumeText, 12000))
+"""`, target, target, profileBlock, projects, TrimForPrompt(in.ResumeText, 12000))
 }
 
-func trimForPrompt(s string, max int) string {
+// TrimForPrompt caps a prompt section at max characters with an explicit
+// truncation marker. Shared by every prompt builder in this module.
+func TrimForPrompt(s string, max int) string {
 	s = strings.TrimSpace(s)
 	if len(s) <= max {
 		return s

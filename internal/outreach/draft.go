@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/manthanmanthan/nexus/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 type JobRef struct {

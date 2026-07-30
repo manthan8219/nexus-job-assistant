@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/manthanmanthan/nexus/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 func pressKey(m FormModel, key string) FormModel {

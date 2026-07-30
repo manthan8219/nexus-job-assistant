@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/textutil"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/textutil"
 )
 
 // FitResult is how likely a resume gets shortlisted for a job.
@@ -36,12 +36,12 @@ func ScoreJobFit(ctx context.Context, ai AIOptions, resumeText string, job provi
 
 func fitPrompt(resumeText string, job provider.Job) string {
 	// Send as much as practical — score should use full JD + full resume, not a stub.
-	resumeText = trimForPrompt(resumeText, 24000)
+	resumeText = TrimForPrompt(resumeText, 24000)
 	desc := strings.TrimSpace(job.Description)
 	if desc == "" {
 		desc = "(no full job description available — score from title, company, and location only)"
 	} else {
-		desc = trimForPrompt(textutil.HTMLToPlain(desc), 20000)
+		desc = TrimForPrompt(textutil.HTMLToPlain(desc), 20000)
 	}
 	loc := strings.TrimSpace(job.Location)
 	remote := "no"

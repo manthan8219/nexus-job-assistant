@@ -12,12 +12,12 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/geo"
-	"github.com/manthanmanthan/nexus/internal/localllm"
-	"github.com/manthanmanthan/nexus/internal/notifier"
-	"github.com/manthanmanthan/nexus/internal/resume"
-	"github.com/manthanmanthan/nexus/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/geo"
+	"github.com/manthan8219/nexus-job-assistant/internal/localllm"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
 )
 
 // ── Field indices ─────────────────────────────────────────────────────────────
@@ -398,6 +398,19 @@ type FormModel struct {
 	outreachMode          string
 	linkedinMode          string
 	linkedinSessionCookie string
+	// Outreach pipeline (edited in Outreach → Setup)
+	outreachAutoQueue  bool
+	outreachAICompose  bool
+	outreachAIReview   bool
+	outreachGenModel   string
+	outreachCheckModel string
+	outreachMinScore   int
+	outreachMaxRetries int
+	outreachSMTPVerify bool
+	// Gmail OAuth (written by cmd/gmailauth or Outreach → Setup)
+	gmailOAuthClientID     string
+	gmailOAuthClientSecret string
+	gmailOAuthRefreshToken string
 
 	// Feature flags
 	skipResumeCheck bool // when true, analysis is skipped and all fields stay unlocked
@@ -1753,6 +1766,17 @@ func (m FormModel) toConfig() *config.Config {
 		LinkedInMsgTpl:        m.linkedinMsgTpl,
 		LinkedInMode:          m.linkedinMode,
 		LinkedInSessionCookie: m.linkedinSessionCookie,
+		OutreachAutoQueue:     m.outreachAutoQueue,
+		OutreachAICompose:     m.outreachAICompose,
+		OutreachAIReview:      m.outreachAIReview,
+		OutreachGenModel:      m.outreachGenModel,
+		OutreachCheckModel:    m.outreachCheckModel,
+		OutreachMinScore:      m.outreachMinScore,
+		OutreachMaxRetries:    m.outreachMaxRetries,
+		OutreachSMTPVerify:    m.outreachSMTPVerify,
+		GmailOAuthClientID:     m.gmailOAuthClientID,
+		GmailOAuthClientSecret: m.gmailOAuthClientSecret,
+		GmailOAuthRefreshToken: m.gmailOAuthRefreshToken,
 	}
 }
 
@@ -1760,6 +1784,20 @@ func (m FormModel) saveCmd() tea.Cmd {
 	complete := m.IsComplete()
 	return func() tea.Msg {
 		cfg := m.toConfig()
+		// Preserve externally-managed secrets: nexus-gmailauth writes Gmail
+		// OAuth tokens straight to config.json while the TUI is running, so a
+		// stale in-memory form must not wipe them on the next save.
+		if cur, err := config.Load(); err == nil && cur != nil {
+			if strings.TrimSpace(cfg.GmailOAuthRefreshToken) == "" {
+				cfg.GmailOAuthRefreshToken = cur.GmailOAuthRefreshToken
+			}
+			if strings.TrimSpace(cfg.GmailOAuthClientID) == "" {
+				cfg.GmailOAuthClientID = cur.GmailOAuthClientID
+			}
+			if strings.TrimSpace(cfg.GmailOAuthClientSecret) == "" {
+				cfg.GmailOAuthClientSecret = cur.GmailOAuthClientSecret
+			}
+		}
 		if err := config.Save(cfg); err != nil {
 			return ErrMsg{err}
 		}

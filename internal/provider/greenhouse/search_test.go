@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 func TestFetchJobs_RealAPI(t *testing.T) {

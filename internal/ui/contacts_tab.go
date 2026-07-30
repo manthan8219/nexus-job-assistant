@@ -10,9 +10,9 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/osint"
-	"github.com/manthanmanthan/nexus/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/osint"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
 // ── Messages ──────────────────────────────────────────────────────────────────
@@ -242,6 +242,7 @@ func (m ContactsTabModel) handleSearchKey(key tea.KeyMsg) (tea.Model, tea.Cmd) {
 					apolloKey = cfg.ApolloKey
 				}
 				finder := osint.NewFinder(hunterKey, apolloKey)
+				finder.Verify = true // deep search: SMTP-probe pattern addresses
 				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
 				defer cancel()
 				result := finder.Search(ctx, company, domain)

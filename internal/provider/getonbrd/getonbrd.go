@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // JSON:API response types for Get on Board.

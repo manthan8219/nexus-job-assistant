@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/manthanmanthan/nexus/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
 )
 
 func main() {

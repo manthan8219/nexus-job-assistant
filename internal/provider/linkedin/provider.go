@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
 )
 
 const defaultBaseURL = "http://localhost:" + scraper.Port

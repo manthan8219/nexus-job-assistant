@@ -3,7 +3,7 @@ package outreach
 import (
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 // Run modes for automated outreach.

@@ -9,16 +9,16 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/companies"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/engine"
-	"github.com/manthanmanthan/nexus/internal/enrich"
-	"github.com/manthanmanthan/nexus/internal/notifier"
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/resume"
-	"github.com/manthanmanthan/nexus/internal/scraper"
-	"github.com/manthanmanthan/nexus/internal/store"
-	"github.com/manthanmanthan/nexus/internal/usage"
+	"github.com/manthan8219/nexus-job-assistant/internal/companies"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/engine"
+	"github.com/manthan8219/nexus-job-assistant/internal/enrich"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/usage"
 )
 
 // ── Tab constants ────────────────────────────────────────────────────────────
@@ -514,7 +514,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case OutreachSetupSaveMsg:
-		m.config.ApplyOutreachSetup(msg.Consent, msg.ConsentAt, msg.MaxEmail, msg.MaxLI, msg.LIMode, msg.LICookie)
+		m.config.ApplyOutreachSetup(msg)
 		m.outreach.consent = msg.Consent
 		m.outreach.consentAt = msg.ConsentAt
 		m.outreach.maxEmail = msg.MaxEmail
@@ -782,6 +782,9 @@ func (m AppModel) switchTab(next int) (AppModel, tea.Cmd) {
 		cmds = append(cmds, m.resumeHub.Init())
 	}
 	if next == TabCompanies {
+		// Land on the company list, not a stale scraped-jobs detail view.
+		m.companiesTab.detail = false
+		m.companiesTab.detailLoading = false
 		cmds = append(cmds, m.companiesTab.reload())
 	}
 	if next == TabOutreach {

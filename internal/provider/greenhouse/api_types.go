@@ -57,3 +57,36 @@ type Company struct {
 	Name  string `json:"name"`
 	Board string `json:"board"` // Greenhouse board token
 }
+
+// ── Job-board renderer (public apply form) types ─────────────────────────
+// These mirror the JSON the Greenhouse job-board renderer (Remix app at
+// boards.greenhouse.io) serves to the browser when a human opens an apply
+// form. Reverse-engineered from the live site — see loader.go.
+
+// loaderResponse is returned by the Remix data endpoint backing the public
+// application form, e.g.
+// GET /embed/job_app?for={board}&token={jobID}&_data=routes/embed.job_app
+type loaderResponse struct {
+	SubmitPath       string        `json:"submitPath"`
+	ConfirmationPath string        `json:"confirmationPath"`
+	URLToken         string        `json:"urlToken"`
+	JobPostID        int64         `json:"jobPostId"`
+	Internal         bool          `json:"internal"`
+	JobPost          loaderJobPost `json:"jobPost"`
+}
+
+type loaderJobPost struct {
+	Title       string       `json:"title"`
+	CompanyName string       `json:"company_name"`
+	Location    string       `json:"job_post_location"`
+	Fingerprint string       `json:"fingerprint"` // server-issued token, echoed back at submit time
+	Questions   []ghQuestion `json:"questions"`
+}
+
+// presignedTarget is one entry of the
+// GET /uncacheable_attributes/presigned_fields?fields[]=<name> response:
+// the S3 POST policy fields plus the object key template for one form field.
+type presignedTarget struct {
+	Fields map[string]string `json:"fields"`
+	Key    string            `json:"key"` // contains {timestamp} and {unique_id} placeholders
+}

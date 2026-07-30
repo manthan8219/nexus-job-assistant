@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/outreach"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 )
 
 func (m *FormModel) initOutreachFromCfg(cfg *config.Config) {
@@ -19,15 +19,34 @@ func (m *FormModel) initOutreachFromCfg(cfg *config.Config) {
 	m.outreachMode = outreach.EffectiveMode(cfg)
 	m.linkedinMode = m.outreachMode
 	m.linkedinSessionCookie = cfg.LinkedInSessionCookie
+	m.outreachAutoQueue = cfg.OutreachAutoQueue
+	m.outreachAICompose = cfg.OutreachAICompose
+	m.outreachAIReview = cfg.OutreachAIReview
+	m.outreachGenModel = cfg.OutreachGenModel
+	m.outreachCheckModel = cfg.OutreachCheckModel
+	m.outreachMinScore = cfg.OutreachMinScore
+	m.outreachMaxRetries = cfg.OutreachMaxRetries
+	m.outreachSMTPVerify = cfg.OutreachSMTPVerify
+	m.gmailOAuthClientID = cfg.GmailOAuthClientID
+	m.gmailOAuthClientSecret = cfg.GmailOAuthClientSecret
+	m.gmailOAuthRefreshToken = cfg.GmailOAuthRefreshToken
 }
 
 // ApplyOutreachSetup merges Outreach → Setup fields into the form (for config save).
-func (m *FormModel) ApplyOutreachSetup(consent bool, consentAt string, maxEmail, maxLI int, mode, liCookie string) {
-	m.outreachConsent = consent
-	m.outreachConsentAt = consentAt
-	m.maxEmailsPerDay = maxEmail
-	m.maxLinkedInPerDay = maxLI
-	m.outreachMode = outreach.NormalizeMode(mode)
+func (m *FormModel) ApplyOutreachSetup(s OutreachSetupSaveMsg) {
+	m.outreachConsent = s.Consent
+	m.outreachConsentAt = s.ConsentAt
+	m.maxEmailsPerDay = s.MaxEmail
+	m.maxLinkedInPerDay = s.MaxLI
+	m.outreachMode = outreach.NormalizeMode(s.LIMode)
 	m.linkedinMode = m.outreachMode // keep legacy field in sync
-	m.linkedinSessionCookie = liCookie
+	m.linkedinSessionCookie = s.LICookie
+	m.outreachAutoQueue = s.AutoQueue
+	m.outreachAICompose = s.AICompose
+	m.outreachAIReview = s.AIReview
+	m.outreachGenModel = s.GenModel
+	m.outreachCheckModel = s.CheckModel
+	m.outreachMinScore = s.MinScore
+	m.outreachMaxRetries = s.MaxRetries
+	m.outreachSMTPVerify = s.SMTPVerify
 }

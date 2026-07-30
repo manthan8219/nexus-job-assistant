@@ -7,11 +7,11 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/engine"
-	"github.com/manthanmanthan/nexus/internal/notifier"
-	"github.com/manthanmanthan/nexus/internal/store"
-	"github.com/manthanmanthan/nexus/internal/ui"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/engine"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/ui"
 )
 
 const version = "0.1.0"

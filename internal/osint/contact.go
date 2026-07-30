@@ -32,6 +32,9 @@ type Finder struct {
 	hunterKey string
 	apolloKey string
 	http      *http.Client
+	// Verify enables SMTP probing of generated pattern addresses. It is slow
+	// (dials port 25) and many networks block it, so callers opt in explicitly.
+	Verify bool
 }
 
 // NewFinder creates a Finder with optional API keys.
@@ -100,9 +103,11 @@ func (f *Finder) Search(ctx context.Context, company, domain string) SearchResul
 	// Pattern emails — always generated as fallback
 	if domain != "" {
 		patterns := generatePatterns(company, domain)
-		// SMTP-verify patterns to filter down to real addresses
-		verified := VerifyPatterns(patterns)
-		add(verified, "pattern", nil)
+		if f.Verify {
+			// SMTP-verify patterns to filter down to real addresses
+			patterns = VerifyPatterns(patterns)
+		}
+		add(patterns, "pattern", nil)
 	}
 
 	return result

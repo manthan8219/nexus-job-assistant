@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+// ParseImproved parses raw model output into an ImprovedDoc, tolerating
+// common model drift (education as objects, etc.). Exported for agent
+// pipelines outside this package (e.g. internal/tailor) that receive
+// ImprovedDoc-shaped JSON from their own writer agents.
+func ParseImproved(raw string) (ImprovedDoc, error) {
+	return parseImproved(raw)
+}
+
 // parseImproved tolerates common model drift (education as objects, etc.).
 func parseImproved(raw string) (ImprovedDoc, error) {
 	raw = strings.TrimSpace(raw)

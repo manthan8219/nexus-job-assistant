@@ -3,8 +3,8 @@ package ui
 import (
 	"testing"
 
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
 // makeForm returns a FormModel with a pre-set analysis result.

@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/textutil"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/textutil"
 )
 
 const baseURL = "https://boards-api.greenhouse.io/v1/boards"
@@ -99,28 +99,3 @@ func toProviderJob(j ghJob, company Company) provider.Job {
 	}
 }
 
-// fetchJobQuestions fetches a single job by ID with ?questions=true to get its application form fields.
-func fetchJobQuestions(ctx context.Context, client *http.Client, board, jobID string) ([]ghQuestion, error) {
-	url := fmt.Sprintf("%s/%s/jobs/%s?questions=true", baseURL, board, jobID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; job-search-bot/1.0)")
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusNotFound {
-		return nil, nil
-	}
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("greenhouse job %s/%s: HTTP %d", board, jobID, resp.StatusCode)
-	}
-	var j ghJob
-	if err := json.NewDecoder(resp.Body).Decode(&j); err != nil {
-		return nil, fmt.Errorf("greenhouse job %s/%s: decode: %w", board, jobID, err)
-	}
-	return j.Questions, nil
-}

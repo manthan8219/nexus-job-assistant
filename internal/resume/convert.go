@@ -53,6 +53,34 @@ func EnsurePDF(doc ImprovedDoc, mdPath, texPath, destPDF string) (ConvertResult,
 	}, nil
 }
 
+// EnsureCoverPDF writes destPDF for a cover letter, mirroring EnsurePDF:
+// prefer the LaTeX engine when a .tex file exists, else the native renderer.
+func EnsureCoverPDF(cl CoverLetter, texPath, destPDF string) (ConvertResult, error) {
+	if destPDF == "" {
+		return ConvertResult{}, fmt.Errorf("empty PDF destination")
+	}
+	if err := os.MkdirAll(filepath.Dir(destPDF), 0700); err != nil {
+		return ConvertResult{}, err
+	}
+
+	if texPath != "" {
+		if _, err := os.Stat(texPath); err == nil {
+			if path, note, err := compileLaTeX(texPath, destPDF); err == nil {
+				return ConvertResult{PDFPath: path, Method: "latex", Note: note}, nil
+			}
+		}
+	}
+
+	if err := RenderNativeCoverPDF(cl, destPDF); err != nil {
+		return ConvertResult{}, fmt.Errorf("cover letter pdf convert failed: %w", err)
+	}
+	return ConvertResult{
+		PDFPath: destPDF,
+		Method:  "native",
+		Note:    "PDF built by Nexus (install tectonic/pdflatex for LaTeX typesetting)",
+	}, nil
+}
+
 // ConvertFileToPDF converts an on-disk .md / .tex / .pdf into destPDF.
 func ConvertFileToPDF(src, destPDF string) (ConvertResult, error) {
 	src = filepath.Clean(src)

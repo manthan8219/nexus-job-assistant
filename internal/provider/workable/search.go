@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 const workableBaseURL = "https://apply.workable.com/api/v3/accounts"

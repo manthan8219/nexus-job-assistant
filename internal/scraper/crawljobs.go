@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/companies"
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/companies"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
 // CrawlResult is what comes back for each company after a crawl attempt.

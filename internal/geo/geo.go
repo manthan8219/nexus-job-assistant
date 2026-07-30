@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/manthanmanthan/nexus/data"
+	"github.com/manthan8219/nexus-job-assistant/data"
 )
 
 // City is one row from the slim index.

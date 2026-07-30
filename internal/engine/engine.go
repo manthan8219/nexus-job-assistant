@@ -9,46 +9,46 @@ import (
 	"sync"
 	"time"
 
-	"github.com/manthanmanthan/nexus/data"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/geo"
-	"github.com/manthanmanthan/nexus/internal/notifier"
-	"github.com/manthanmanthan/nexus/internal/provider"
-	"github.com/manthanmanthan/nexus/internal/provider/arbeitnow"
-	"github.com/manthanmanthan/nexus/internal/provider/ashby"
-	"github.com/manthanmanthan/nexus/internal/provider/bamboohr"
-	"github.com/manthanmanthan/nexus/internal/provider/breezy"
-	"github.com/manthanmanthan/nexus/internal/provider/fourday"
-	"github.com/manthanmanthan/nexus/internal/provider/getonbrd"
-	"github.com/manthanmanthan/nexus/internal/provider/greenhouse"
-	"github.com/manthanmanthan/nexus/internal/provider/hackernews"
-	"github.com/manthanmanthan/nexus/internal/provider/himalayas"
-	"github.com/manthanmanthan/nexus/internal/provider/jobicy"
-	"github.com/manthanmanthan/nexus/internal/provider/jobspresso"
-	"github.com/manthanmanthan/nexus/internal/provider/jobvite"
-	"github.com/manthanmanthan/nexus/internal/provider/justjoin"
-	"github.com/manthanmanthan/nexus/internal/provider/lever"
-	"github.com/manthanmanthan/nexus/internal/provider/nodesk"
-	"github.com/manthanmanthan/nexus/internal/provider/nofluffjobs"
-	"github.com/manthanmanthan/nexus/internal/provider/personio"
-	"github.com/manthanmanthan/nexus/internal/provider/pinpoint"
-	"github.com/manthanmanthan/nexus/internal/provider/recruitee"
-	"github.com/manthanmanthan/nexus/internal/provider/remoteok"
-	"github.com/manthanmanthan/nexus/internal/provider/remotive"
-	"github.com/manthanmanthan/nexus/internal/provider/smartrecruiters"
-	"github.com/manthanmanthan/nexus/internal/provider/teamtailor"
-	"github.com/manthanmanthan/nexus/internal/provider/thehub"
-	"github.com/manthanmanthan/nexus/internal/provider/themuse"
-	"github.com/manthanmanthan/nexus/internal/provider/weworkremotely"
-	"github.com/manthanmanthan/nexus/internal/provider/workable"
-	"github.com/manthanmanthan/nexus/internal/provider/workday"
-	"github.com/manthanmanthan/nexus/internal/provider/workingnomads"
-	"github.com/manthanmanthan/nexus/internal/provider/wttj"
-	"github.com/manthanmanthan/nexus/internal/provider/careerscraper"
-	"github.com/manthanmanthan/nexus/internal/provider/linkedin"
-	scr "github.com/manthanmanthan/nexus/internal/scraper"
-	"github.com/manthanmanthan/nexus/internal/resume"
-	"github.com/manthanmanthan/nexus/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/data"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/geo"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/arbeitnow"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/ashby"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/bamboohr"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/breezy"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/fourday"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/getonbrd"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/greenhouse"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/hackernews"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/himalayas"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobicy"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobspresso"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobvite"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/justjoin"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/nodesk"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/nofluffjobs"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/personio"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/pinpoint"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/recruitee"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteok"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/remotive"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/smartrecruiters"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/teamtailor"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/thehub"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/themuse"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/weworkremotely"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/workable"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/workday"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/workingnomads"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/wttj"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerscraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/linkedin"
+	scr "github.com/manthan8219/nexus-job-assistant/internal/scraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
 // Result is emitted for each job processed.
@@ -81,6 +81,10 @@ type Engine struct {
 	MaxPerRun    int
 	MinDelay     int
 	DryRun       bool
+	// OnApplied is called right after an application is recorded with status
+	// "applied" — used to kick off the outreach pipeline (find contact, draft
+	// email). Must be cheap/non-blocking (e.g. a channel send). Optional.
+	OnApplied    func(app store.Application)
 	AutoApply    bool // when false, skip apply and record as skipped
 	Verbose      bool
 	OnlyProvider string
@@ -548,12 +552,17 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 	}
 
 	// Insert immediately with fitScore=0 — scoring runs in background.
-	_ = e.store.Insert(store.Application{
+	recorded := store.Application{
 		Provider: job.Provider, Company: job.Company, Role: job.Title,
 		URL: job.URL, Status: status, Reason: reason,
 		AppliedAt: time.Now(), Location: job.Location, Remote: job.Remote,
 		PostedAt: job.PostedAt, Description: job.Description,
-	})
+	}
+	_ = e.store.Insert(recorded)
+	// Kick the outreach pipeline (find HR email → draft → notify) if wired.
+	if status == store.StatusApplied && e.OnApplied != nil {
+		e.OnApplied(recorded)
+	}
 
 	// Emit result right away (fitScore=0 placeholder; updated after scoring).
 	if e.DryRun {

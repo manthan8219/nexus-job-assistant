@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/manthanmanthan/nexus/internal/companies"
+	"github.com/manthan8219/nexus-job-assistant/internal/companies"
 )
 
 func main() {

@@ -10,25 +10,34 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/outreach"
-	"github.com/manthanmanthan/nexus/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
 const (
 	outreachSubSetup = iota
 	outreachSubEmail
 	outreachSubLinkedIn
+	outreachSubSent
 	outreachSubCount
 )
 
-var outreachSubLabels = [outreachSubCount]string{"Setup", "Email", "LinkedIn"}
+var outreachSubLabels = [outreachSubCount]string{"Setup", "Email", "LinkedIn", "Sent"}
 
 const (
 	setupConsent = iota
 	setupRunMode
 	setupMaxEmail
 	setupMaxLI
+	setupAutoQueue
+	setupAICompose
+	setupAIReview
+	setupGenModel
+	setupCheckModel
+	setupMinScore
+	setupMaxRetries
+	setupSMTPVerify
 	setupCount
 )
 
@@ -67,6 +76,22 @@ type OutreachSetupSaveMsg struct {
 	MaxLI     int
 	LIMode    string // stores OutreachMode (confirm|queue|auto)
 	LICookie  string
+	// Pipeline options
+	AutoQueue  bool
+	AICompose  bool
+	AIReview   bool
+	GenModel   string
+	CheckModel string
+	MinScore   int
+	MaxRetries int
+	SMTPVerify bool
+}
+
+// outreachWorkerMsg carries a pipeline progress line from the background worker.
+type outreachWorkerMsg struct{ Line string }
+type outreachLogLoadedMsg struct {
+	Entries []store.OutreachLogEntry
+	Err     error
 }
 
 // OutreachHubModel — automated email + LinkedIn follow-up after apply.
@@ -75,9 +100,11 @@ type OutreachHubModel struct {
 	sub           int
 	ui            outreachUIMode
 
-	cfg   *config.Config
-	items []outreach.Item
-	jobs  []store.Application
+	cfg    *config.Config
+	items  []outreach.Item
+	jobs   []store.Application
+	worker *outreach.Worker
+	st     *store.Store
 
 	cursor  int
 	status  string
@@ -91,6 +118,21 @@ type OutreachHubModel struct {
 	liCookie   string
 	setupFocus int
 	setupInput textinput.Model
+
+	// Pipeline options (Setup sub-tab, auto-saved)
+	autoQueue  bool
+	aiCompose  bool
+	aiReview   bool
+	genModel   string
+	checkModel string
+	minScore   int
+	maxRetries int
+	smtpVerify bool
+
+	// Sent log (Sent sub-tab)
+	logEntries []store.OutreachLogEntry
+	logCursor  int
+	logLoading bool
 
 	contactInput textinput.Model
 	pending      outreach.Item // item awaiting confirm
@@ -107,6 +149,8 @@ func NewOutreachHubModel() OutreachHubModel {
 	return OutreachHubModel{
 		maxEmail:     10,
 		maxLI:        10,
+		minScore:     70,
+		maxRetries:   3,
 		runMode:      outreach.ModeConfirm,
 		setupInput:   ti,
 		contactInput: ci,

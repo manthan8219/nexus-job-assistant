@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"github.com/manthanmanthan/nexus/internal/osint"
+	"github.com/manthan8219/nexus-job-assistant/internal/osint"
 )
 
 func main() {
@@ -17,6 +17,7 @@ func main() {
 	}
 
 	finder := osint.NewFinder("", "")
+	finder.Verify = true
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 	defer cancel()
 

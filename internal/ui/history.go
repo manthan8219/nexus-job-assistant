@@ -9,8 +9,8 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/manthanmanthan/nexus/internal/store"
-	"github.com/manthanmanthan/nexus/internal/textutil"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/textutil"
 )
 
 type RefreshHistoryMsg struct{ Apps []store.Application }

@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/config"
-	"github.com/manthanmanthan/nexus/internal/provider/lever"
-	"github.com/manthanmanthan/nexus/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 	"github.com/mxschmitt/playwright-go"
 )
 

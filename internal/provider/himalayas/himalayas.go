@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 const apiURL = "https://himalayas.app/jobs/api?limit=50"

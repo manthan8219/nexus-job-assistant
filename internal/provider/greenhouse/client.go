@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/manthanmanthan/nexus/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
 // Client implements provider.Provider for Greenhouse.
@@ -127,17 +127,17 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 	return all, nil
 }
 
-// Apply submits an application for a single job.
-// Fetches the individual job detail with ?questions=true to get the application form fields.
+// Apply submits an application for a single job through the public job-board
+// renderer flow (see loader.go/apply.go): fetch the form schema + anti-replay
+// fingerprint, auto-answer what the profile covers, upload the resume to
+// Greenhouse's S3 stash, then POST the application JSON.
 func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	questions, err := fetchJobQuestions(ctx, c.http, job.Board, job.ID)
+	form, err := FetchForm(ctx, c.http, job.Board, job.ID)
 	if err != nil {
 		return provider.ApplyResult{Status: "failed", Reason: err.Error()}, nil
 	}
-	if len(questions) == 0 {
-		return provider.ApplyResult{Status: "skipped", Reason: "no application form found for this job"}, nil
-	}
-	return submitApplication(ctx, c.http, job, questions, profile)
+	answers := AutoAnswers(form.Questions, profile)
+	return submitApplication(ctx, c.http, form, profile, answers, SubmitOptions{})
 }
 
 // ParseTitles splits a comma-separated titles string into a slice.

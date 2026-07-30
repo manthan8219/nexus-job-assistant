@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/manthanmanthan/nexus/internal/resume"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
 // AnswerContext is everything the AI needs to answer a job's custom

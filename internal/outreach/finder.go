@@ -1,15 +1,9 @@
 package outreach
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
-	"time"
-
-	"github.com/manthanmanthan/nexus/internal/config"
 )
 
 var nonDomain = regexp.MustCompile(`(?i)\b(inc|llc|ltd|corp|corporation|company|co|the)\b`)
@@ -20,24 +14,6 @@ type Contact struct {
 	Name  string
 	Email string
 	Title string
-}
-
-// ResolveContact tries Hunter (and later Apollo) using a guessed domain from the job/company.
-func ResolveContact(cfg *config.Config, company, jobURL string) (Contact, error) {
-	domain := GuessDomain(company, jobURL)
-	if domain == "" {
-		return Contact{}, fmt.Errorf("could not guess domain for %q", company)
-	}
-	if cfg != nil && strings.TrimSpace(cfg.HunterKey) != "" {
-		c, err := hunterDomainSearch(cfg.HunterKey, domain)
-		if err == nil && c.Email != "" {
-			return c, nil
-		}
-		if err != nil {
-			return Contact{}, err
-		}
-	}
-	return Contact{}, fmt.Errorf("no contact found for %s", domain)
 }
 
 // GuessDomain derives a likely company email domain.
@@ -95,59 +71,4 @@ func sanitizeDomainToken(s string) string {
 		}
 	}
 	return b.String()
-}
-
-type hunterResp struct {
-	Data struct {
-		Emails []struct {
-			Value      string `json:"value"`
-			FirstName  string `json:"first_name"`
-			LastName   string `json:"last_name"`
-			Position   string `json:"position"`
-			Confidence int    `json:"confidence"`
-			Type       string `json:"type"`
-		} `json:"emails"`
-	} `json:"data"`
-}
-
-func hunterDomainSearch(apiKey, domain string) (Contact, error) {
-	u := fmt.Sprintf(
-		"https://api.hunter.io/v2/domain-search?domain=%s&department=hr,recruiting&limit=10&api_key=%s",
-		url.QueryEscape(domain),
-		url.QueryEscape(apiKey),
-	)
-	client := &http.Client{Timeout: 12 * time.Second}
-	resp, err := client.Get(u)
-	if err != nil {
-		return Contact{}, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode >= 300 {
-		return Contact{}, fmt.Errorf("hunter HTTP %d", resp.StatusCode)
-	}
-	var doc hunterResp
-	if err := json.NewDecoder(resp.Body).Decode(&doc); err != nil {
-		return Contact{}, err
-	}
-	best := Contact{}
-	bestScore := -1
-	for _, e := range doc.Data.Emails {
-		if strings.TrimSpace(e.Value) == "" {
-			continue
-		}
-		score := e.Confidence
-		pos := strings.ToLower(e.Position)
-		if strings.Contains(pos, "recruit") || strings.Contains(pos, "talent") || strings.Contains(pos, "people") || strings.Contains(pos, "hr") {
-			score += 20
-		}
-		if score > bestScore {
-			bestScore = score
-			name := strings.TrimSpace(e.FirstName + " " + e.LastName)
-			best = Contact{Name: name, Email: e.Value, Title: e.Position}
-		}
-	}
-	if best.Email == "" {
-		return Contact{}, fmt.Errorf("hunter: no emails for %s", domain)
-	}
-	return best, nil
 }
