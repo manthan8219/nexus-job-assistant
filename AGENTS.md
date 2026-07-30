@@ -15,6 +15,7 @@
 - **Storage:** SQLite via `modernc.org/sqlite` (data in `~/.nexus/`)
 - **Browser automation:** `playwright-go` (form filling / applying)
 - **Docs:** `ledongthuc/pdf` (read), `phpdave11/gofpdf` (write) for resumes
+- **AI/LLM:** `cloudwego/eino` agent framework over a local model (Ollama, `internal/localllm`) or a remote API (OpenAI/Anthropic) — selected per-user via `AIMode` (`off | api | local`) in config
 - **Entry point:** `main.go` at repo root (flags → TUI dashboard or headless `--run` engine)
 
 ### Repository layout
@@ -30,7 +31,13 @@
 | `internal/config` | User config load/save (`~/.nexus/config.json`) |
 | `internal/notifier` | Notification channels behind a `Notifier` interface (Discord, Telegram, …) |
 | `internal/scraper` | Job-page scraping |
+| `internal/enrich` | Re-fetches a job description from a stored provider URL (Greenhouse, Lever) for re-analysis |
 | `internal/osint` / `internal/outreach` | Recruiter contact discovery + outreach |
+| `internal/agentx` | Generic typed LLM-agent builder (Eino chain: prompt template → chat model → tolerant parse) — the shared foundation new AI features are built on |
+| `internal/localllm` | Local LLM (Ollama) integration: hardware detection, model catalog/recommendation, setup |
+| `internal/resume` | Resume parsing, AI fit-scoring, cover-letter generation, PDF rendering |
+| `internal/workcontext` | User's project/work-history store (manual or Claude-paste sourced), used to enrich resume tailoring |
+| `internal/usage` | Local disk/memory footprint snapshot for the usage/diagnostics view |
 | `internal/ui` | Bubble Tea dashboard |
 | `internal/textutil` / `internal/geo` | **Shared utilities — check here before writing helpers** |
 | `data/` | Seed data (companies.json, …) |
@@ -328,6 +335,8 @@ This app is a scraper/auto-applier — these rules are core, not optional.
 - **Consent & rate limits are untouchable:** `ApplyConsent`, `MaxAppsPerRun/Day`, `ApplyDelaySec` checks must stay intact in any code path that submits applications. Never add a flag, flag-combination, or code path that bypasses them.
 - **Graceful degradation:** `AIAssist` off or the LLM unreachable → core search/apply still works. A provider down or returning garbage → skip it, record, continue (§10). Missing optional config → that feature disables itself, never the whole app.
 - **Dry-run honesty:** `--dry-run` must guarantee zero submissions — no "harmless" network POSTs in dry-run paths.
+- **AI answer grounding:** any AI-generated free-text answer that contains a number, date, or figure must be checked against grounding facts (resume text + applicant profile) before it is used — see the word-boundary check in `internal/provider/lever/answer.go`. New AI-answering code (other providers, new `agentx` agents) must reuse or replicate this check; never submit an ungrounded numeric claim the model could have hallucinated (salary, experience duration, notice period, etc.).
+- **CAPTCHA / anti-bot is a hard stop:** never attempt to bypass, solve, or evade a CAPTCHA (hCaptcha, reCAPTCHA, …) or other anti-bot challenge. When browser automation detects one (see `internal/provider/lever/questions.go`), halt the automated flow and surface it to the user for manual completion — do not add "workaround" logic.
 
 ---
 
