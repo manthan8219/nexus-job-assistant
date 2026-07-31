@@ -70,7 +70,7 @@ type loaderResponse struct {
 	SubmitPath       string        `json:"submitPath"`
 	ConfirmationPath string        `json:"confirmationPath"`
 	URLToken         string        `json:"urlToken"`
-	JobPostID        int64         `json:"jobPostId"`
+	JobPostID        json.Number   `json:"jobPostId"` // some boards send a string, others a number
 	Internal         bool          `json:"internal"`
 	JobPost          loaderJobPost `json:"jobPost"`
 }
