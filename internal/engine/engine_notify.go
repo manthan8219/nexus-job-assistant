@@ -33,6 +33,7 @@ func notifierFromCfg(cfg *config.Config) notifier.MultiNotifier {
 // log appends a formatted line to the run log (→ Logs tab), dropping it when
 // the UI is lagging rather than blocking the apply pipeline.
 func (e *Engine) log(format string, args ...any) {
+	defer func() { recover() }() // guard against send on closed channel after stop
 	msg := fmt.Sprintf(format, args...)
 	select {
 	case e.LogCh <- msg:
@@ -42,6 +43,7 @@ func (e *Engine) log(format string, args ...any) {
 
 // sendProgress emits per-provider search progress (→ Dashboard), non-blocking.
 func (e *Engine) sendProgress(p ProviderProgress) {
+	defer func() { recover() }() // guard against send on closed channel after stop
 	select {
 	case e.ProgressCh <- p:
 	default:
@@ -50,6 +52,7 @@ func (e *Engine) sendProgress(p ProviderProgress) {
 
 // sendResult emits one per-job result, dropping it when the UI is lagging.
 func (e *Engine) sendResult(r Result) {
+	defer func() { recover() }() // guard against send on closed channel after stop
 	select {
 	case e.ResultCh <- r:
 	default:
