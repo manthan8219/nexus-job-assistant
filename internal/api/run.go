@@ -52,6 +52,7 @@ func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
 	s.mu.Unlock()
+	s.changed()
 
 	// Run the engine in a goroutine
 	go func() {
@@ -61,6 +62,7 @@ func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
 				s.status = StatusError
 				s.errMsg = "engine panic"
 				s.mu.Unlock()
+				s.changed()
 			}
 		}()
 
@@ -77,6 +79,7 @@ func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
 			s.status = StatusDone
 		}
 		s.mu.Unlock()
+		s.changed()
 	}()
 
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -93,6 +96,7 @@ func (s *Server) handleDeleteRun(w http.ResponseWriter, r *http.Request) {
 		s.status = StatusStopped
 	}
 	s.mu.Unlock()
+	s.changed()
 
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
@@ -118,6 +122,7 @@ func (s *Server) drainEngineChannels(ctx context.Context) {
 				ErrMsg: p.ErrMsg,
 			}
 			s.mu.Unlock()
+			s.changed()
 
 		case r, ok := <-s.eng.ResultCh:
 			if !ok {
@@ -148,6 +153,7 @@ func (s *Server) drainEngineChannels(ctx context.Context) {
 				s.failed++
 			}
 			s.mu.Unlock()
+			s.changed()
 
 		case l, ok := <-s.eng.LogCh:
 			if !ok {

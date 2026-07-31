@@ -67,6 +67,10 @@ type Server struct {
 	logLines         []string
 	cancel           context.CancelFunc
 	notifier         notifier.MultiNotifier
+
+	notifyMu     sync.Mutex
+	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
+	sseHeartbeat time.Duration              // interval between periodic snapshot pushes
 }
 
 // New creates an API server.
@@ -88,6 +92,8 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		liveFeed:         make([]DashRecent, 0),
 		recent:           make([]DashRecent, 0),
 		notifier:         mn,
+		subscribers:      make(map[chan struct{}]struct{}),
+		sseHeartbeat:     15 * time.Second,
 	}
 }
 
@@ -151,6 +157,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 
 	// Mission (dashboard)
 	mux.HandleFunc("GET /api/mission", s.handleGetMission)
+	mux.HandleFunc("GET /api/mission/stream", s.handleStreamMission)
 
 	// Run control
 	mux.HandleFunc("POST /api/run", s.handlePostRun)

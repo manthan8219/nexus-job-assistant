@@ -31,6 +31,7 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Unlock()
+	s.changed()
 
 	writeJSON(w, http.StatusOK, incoming)
 }
@@ -56,6 +57,7 @@ func (s *Server) handlePatchConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.mu.Unlock()
+	s.changed()
 
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

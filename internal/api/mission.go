@@ -1,6 +1,9 @@
 package api
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 )
@@ -44,6 +47,11 @@ type ReadyCheck struct {
 
 // handleGetMission returns the full dashboard snapshot.
 func (s *Server) handleGetMission(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, s.missionSnapshot())
+}
+
+// missionSnapshot builds the full dashboard snapshot the frontend renders.
+func (s *Server) missionSnapshot() MissionSnapshot {
 	s.mu.RLock()
 	status := s.status
 	errMsg := s.errMsg
@@ -109,7 +117,7 @@ func (s *Server) handleGetMission(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	snapshot := MissionSnapshot{
+	return MissionSnapshot{
 		EngineStatus:       string(status),
 		LastJob:            lastJob,
 		ErrMsg:             errMsg,
@@ -136,8 +144,98 @@ func (s *Server) handleGetMission(w http.ResponseWriter, r *http.Request) {
 		LiveFeed:           liveFeed,
 		Recent:             recent,
 	}
+}
 
-	writeJSON(w, http.StatusOK, snapshot)
+// handleStreamMission streams the dashboard snapshot over Server-Sent Events.
+// One event is sent immediately on connect, then again on every state change,
+// and periodically as a heartbeat so the connection stays alive and a client
+// that missed a wake-up always re-syncs to the latest state. Every event is a
+// complete snapshot, so events are idempotent and a missed frame is harmless.
+func (s *Server) handleStreamMission(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeError(w, http.StatusInternalServerError, "streaming unsupported")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	sub := s.subscribe()
+	defer s.unsubscribe(sub)
+
+	if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+		return
+	}
+	flusher.Flush()
+
+	var heartbeatCh <-chan time.Time
+	if s.sseHeartbeat > 0 {
+		ticker := time.NewTicker(s.sseHeartbeat)
+		defer ticker.Stop()
+		heartbeatCh = ticker.C
+	}
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-sub:
+			if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+				return
+			}
+			flusher.Flush()
+		case <-heartbeatCh:
+			if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+				return
+			}
+			flusher.Flush()
+		}
+	}
+}
+
+// writeMissionEvent writes one SSE frame carrying the full snapshot. JSON
+// escaping guarantees the payload contains no raw newlines, so it fits on a
+// single "data:" line as the SSE spec requires.
+func writeMissionEvent(w io.Writer, snap MissionSnapshot) error {
+	b, err := json.Marshal(snap)
+	if err != nil {
+		return err
+	}
+	_, err = fmt.Fprintf(w, "event: snapshot\ndata: %s\n\n", b)
+	return err
+}
+
+// subscribe registers a wake-up channel for mission-stream changes.
+func (s *Server) subscribe() chan struct{} {
+	ch := make(chan struct{}, 1)
+	s.notifyMu.Lock()
+	s.subscribers[ch] = struct{}{}
+	s.notifyMu.Unlock()
+	return ch
+}
+
+// unsubscribe removes a mission-stream subscriber.
+func (s *Server) unsubscribe(ch chan struct{}) {
+	s.notifyMu.Lock()
+	delete(s.subscribers, ch)
+	s.notifyMu.Unlock()
+}
+
+// changed wakes every mission-stream subscriber so it pushes a fresh snapshot.
+// Wake-ups are best-effort: snapshots are full-state, so a dropped wake-up is
+// safe, and the heartbeat re-syncs any subscriber that fell behind.
+func (s *Server) changed() {
+	s.notifyMu.Lock()
+	for ch := range s.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+	s.notifyMu.Unlock()
 }
 
 // providerList returns the list of provider names from the engine.
