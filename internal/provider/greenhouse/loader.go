@@ -3,6 +3,7 @@ package greenhouse
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -72,15 +73,15 @@ func FetchForm(ctx context.Context, client *http.Client, board, jobID string) (*
 			url.QueryEscape("routes/$url_token_.jobs_.$job_post_id")),
 	}
 
-	var lastErr error
+	var errs []error
 	for _, u := range urls {
 		info, err := fetchLoader(ctx, client, u, board, jobID)
 		if err == nil {
 			return info, nil
 		}
-		lastErr = err
+		errs = append(errs, err)
 	}
-	return nil, lastErr
+	return nil, errors.Join(errs...)
 }
 
 func fetchLoader(ctx context.Context, client *http.Client, u, board, jobID string) (*FormInfo, error) {
@@ -98,7 +99,7 @@ func fetchLoader(ctx context.Context, client *http.Client, u, board, jobID strin
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("greenhouse form loader %s/%s: HTTP %d", board, jobID, resp.StatusCode)
+		return nil, fmt.Errorf("greenhouse form loader %s/%s: HTTP %d (%s)", board, jobID, resp.StatusCode, resp.Request.URL)
 	}
 
 	var lr loaderResponse
