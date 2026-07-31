@@ -433,18 +433,24 @@ func (m WorkTabModel) viewList() string {
 		if p.Repo != "" {
 			meta = append(meta, p.Repo)
 		}
-		b.WriteString(prefix + nameStyle.Render(p.Name) + "\n")
-		if len(meta) > 0 {
-			b.WriteString("    " + mutedStyle.Render(strings.Join(meta, " · ")) + "\n")
-		}
-		preview := p.ShortSummary(72)
-		if preview != "" {
-			b.WriteString("    " + mutedStyle.Render(preview) + "\n")
-		}
+		// One compact row per project: name · role/period/repo · N bullets.
+		// Each segment is truncated to a per-width budget so the row never
+		// wraps and the whole list stays a few lines tall.
+		avail := max(20, m.width-6)
+		nameBudget := min(28, max(12, avail/3))
+		bullets := ""
 		if n := len(p.Bullets); n > 0 {
-			b.WriteString("    " + lipgloss.NewStyle().Foreground(lipgloss.Color(colorOrange)).Render(fmt.Sprintf("%d bullets captured", n)) + "\n")
+			bullets = fmt.Sprintf(" · %d bullets", n)
 		}
-		b.WriteString("\n")
+		metaBudget := max(10, avail-nameBudget-len(bullets))
+		row := prefix + nameStyle.Render(truncateLabelUI(p.Name, nameBudget))
+		if len(meta) > 0 {
+			row += mutedStyle.Render(" · " + truncateLabelUI(strings.Join(meta, " · "), metaBudget))
+		}
+		if bullets != "" {
+			row += lipgloss.NewStyle().Foreground(lipgloss.Color(colorOrange)).Render(bullets)
+		}
+		b.WriteString(row + "\n")
 	}
 	b.WriteString(mutedStyle.Render("  ↑↓ move  ·  enter open  ·  n new  ·  e edit  ·  d delete  ·  r reload") + "\n")
 	return b.String()

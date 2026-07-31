@@ -8,14 +8,15 @@ import (
 
 type Config struct {
 	// Personal
-	FirstName         string `json:"first_name"`
-	LastName          string `json:"last_name"`
-	Email             string `json:"email"`
-	Phone             string `json:"phone"`
-	LinkedInID        string `json:"linkedin_id"`
-	ResumePath        string `json:"resume_path"`
-	City              string `json:"city"`
-	YearsOfExperience string `json:"years_of_experience"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
+	Email             string   `json:"email"`
+	Phone             string   `json:"phone"`
+	LinkedInID        string   `json:"linkedin_id"`
+	ResumePath        string   `json:"resume_path"`
+	City              string   `json:"city"`
+	YearsOfExperience string   `json:"years_of_experience"`
+	Skills            []string `json:"skills,omitempty"`
 
 	// Job Preferences
 	TargetJobTitles string `json:"target_job_titles"`    // comma-separated

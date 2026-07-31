@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthan8219/nexus-job-assistant/internal/localllm"
 	"github.com/manthan8219/nexus-job-assistant/internal/workcontext"
 )
 
@@ -80,6 +79,7 @@ type ImproveInput struct {
 	ResumeText string
 	Profile    *Profile
 	Projects   []workcontext.Project
+	Skills     []string
 	TargetRole string
 	Formats    []Format
 }
@@ -87,6 +87,7 @@ type ImproveInput struct {
 // ImproveOutput is files written under ~/.nexus/resumes/.
 type ImproveOutput struct {
 	Doc       ImprovedDoc
+	Review    PolishReview
 	Dir       string
 	Files     map[Format]string
 	PDFNote   string
@@ -116,20 +117,13 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		formats = []Format{FormatMarkdown, FormatLaTeX}
 	}
 
-	raw, err := completeImprove(ctx, ai, improvePrompt(in))
-	if err != nil {
-		return nil, err
-	}
-	doc, err := parseImproved(raw)
+	doc, review, err := polishGenerate(ctx, ai, in, nil)
 	if err != nil {
 		return nil, err
 	}
 	doc.GeneratedAt = time.Now()
 	doc.SourcePath = in.ResumePath
 	doc.ProjectCount = len(in.Projects)
-	if doc.TargetRole == "" {
-		doc.TargetRole = strings.TrimSpace(in.TargetRole)
-	}
 
 	dir, err := resumesDir()
 	if err != nil {
@@ -139,6 +133,7 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 	base := filepath.Join(dir, "improved-"+stamp)
 	out := &ImproveOutput{
 		Doc:       doc,
+		Review:    review,
 		Dir:       dir,
 		Files:     map[Format]string{},
 		PreviewMD: RenderMarkdown(doc),
@@ -241,71 +236,6 @@ func FormatProjects(projects []workcontext.Project) string {
 	return b.String()
 }
 
-func improvePrompt(in ImproveInput) string {
-	projects := FormatProjects(in.Projects)
-
-	profileBlock := "(no AI profile yet — infer carefully from resume text only)"
-	if in.Profile != nil && in.Profile.Summary != "" {
-		b, _ := json.MarshalIndent(in.Profile, "", "  ")
-		profileBlock = string(b)
-	}
-
-	target := strings.TrimSpace(in.TargetRole)
-	if target == "" {
-		target = "the strongest realistic role from the profile / resume"
-	}
-
-	return fmt.Sprintf(`You are an expert resume writer for software/engineering candidates.
-
-TASK: Rewrite this person's resume using BOTH the original resume and their multi-repo work context.
-Promote concrete shipped impact from work context into experience bullets.
-Do NOT invent employers, degrees, companies, or skills that are not supported by the resume or work context.
-Prefer quantified, active-voice bullets. Merge overlapping projects into coherent roles when they share an employer/product.
-
-Target role: %s
-
-CRITICAL OUTPUT RULES:
-- Return ONE JSON object only. No markdown. No code fences. No text outside JSON.
-- Types must match EXACTLY — wrong types break Markdown, LaTeX, and PDF exports.
-- full_name, headline, summary, target_role = STRING
-- skills, notes = ARRAY OF STRINGS only
-- education = ARRAY OF STRINGS only — each item is ONE line, e.g. "B.Tech CSE, Example University, 2021"
-  NEVER return education as objects like {"degree":"...","school":"..."}.
-  If unknown, return an empty array [].
-- experience = ARRAY OF OBJECTS; each has title (string), org (string), period (string), bullets (ARRAY OF STRINGS)
-- bullets items are plain strings, never objects.
-
-CORRECT EXAMPLE:
-{
-  "full_name": "Ada Lovelace",
-  "headline": "Backend Engineer",
-  "summary": "Backend engineer with experience shipping APIs and cloud systems.",
-  "skills": ["Go", "PostgreSQL", "AWS"],
-  "experience": [
-    {
-      "title": "Backend Engineer",
-      "org": "Example Corp",
-      "period": "2023 – Present",
-      "bullets": ["Built payment APIs handling 10k RPS", "Reduced p99 latency 40%%"]
-    }
-  ],
-  "education": ["B.S. Mathematics, University Example, 1843"],
-  "notes": ["Added quantified impact from work context"],
-  "target_role": %q
-}
-
-AI PROFILE JSON:
-%s
-
-WORK CONTEXT:
-%s
-
-ORIGINAL RESUME TEXT:
-"""
-%s
-"""`, target, target, profileBlock, projects, TrimForPrompt(in.ResumeText, 12000))
-}
-
 // TrimForPrompt caps a prompt section at max characters with an explicit
 // truncation marker. Shared by every prompt builder in this module.
 func TrimForPrompt(s string, max int) string {
@@ -314,23 +244,4 @@ func TrimForPrompt(s string, max int) string {
 		return s
 	}
 	return s[:max] + "\n…[truncated]"
-}
-
-func completeImprove(ctx context.Context, ai AIOptions, prompt string) (string, error) {
-	switch strings.ToLower(ai.Provider) {
-	case "api":
-		if ai.AnthropicKey != "" {
-			return completeAnthropicTokens(ctx, ai.AnthropicKey, prompt, 4096)
-		}
-		if ai.OpenAIKey != "" {
-			return completeOpenAI(ctx, ai.OpenAIKey, prompt)
-		}
-		return "", fmt.Errorf("AI backend is API Keys but no Anthropic/OpenAI key is set")
-	default:
-		client := localllm.NewClient(ai.LocalURL)
-		if err := client.Ping(ctx); err != nil {
-			return "", err
-		}
-		return client.GenerateJSON(ctx, ai.LocalModel, prompt)
-	}
 }

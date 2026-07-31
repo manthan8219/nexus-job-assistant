@@ -7,8 +7,13 @@ import (
 	"time"
 )
 
+// cacheVersion bumps whenever the on-disk cache format changes (e.g. Profile
+// JSON field renames). Old-format caches are rejected so callers re-analyze.
+const cacheVersion = 2
+
 // CachedAnalysis is the on-disk snapshot of the last resume analysis.
 type CachedAnalysis struct {
+	Version     int       `json:"version"`
 	ResumePath  string    `json:"resume_path"`
 	ModTimeUnix int64     `json:"mod_time_unix"`
 	Size        int64     `json:"size"`
@@ -49,6 +54,10 @@ func LoadFreshCache(path string, aiEnabled bool) (*CachedAnalysis, bool) {
 	if err := json.Unmarshal(data, &c); err != nil {
 		return nil, false
 	}
+	// Reject caches written by an older schema (field renames) — force re-analysis.
+	if c.Version != cacheVersion {
+		return nil, false
+	}
 	if filepath.Clean(c.ResumePath) != path || !c.Result.Valid {
 		return nil, false
 	}
@@ -73,6 +82,7 @@ func SaveCache(path string, aiEnabled bool, result Result) error {
 	}
 	hasProfile := result.Profile != nil && result.Profile.Summary != ""
 	c := CachedAnalysis{
+		Version:     cacheVersion,
 		ResumePath:  filepath.Clean(path),
 		ModTimeUnix: mod,
 		Size:        size,

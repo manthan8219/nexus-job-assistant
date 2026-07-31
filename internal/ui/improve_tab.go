@@ -42,6 +42,7 @@ type ImproveTabModel struct {
 	resumePath string
 	profile    *resume.Profile
 	projects   []workcontext.Project
+	skills     []string
 }
 
 func NewImproveTabModel() ImproveTabModel {
@@ -63,15 +64,18 @@ func NewImproveTabModel() ImproveTabModel {
 func (m ImproveTabModel) Init() tea.Cmd { return nil }
 
 // CapturesKeys when editing target role (keep global tab/numbers away).
+// Generation runs in the background and does not capture keys — the user
+// can navigate freely while the AI is working.
 func (m ImproveTabModel) CapturesKeys() bool {
-	return m.focusTarget || m.generating
+	return m.focusTarget
 }
 
-func (m *ImproveTabModel) SetContext(ai resume.AIOptions, resumePath string, profile *resume.Profile, projects []workcontext.Project) {
+func (m *ImproveTabModel) SetContext(ai resume.AIOptions, resumePath string, profile *resume.Profile, projects []workcontext.Project, skills []string) {
 	m.ai = ai
 	m.resumePath = resumePath
 	m.profile = profile
 	m.projects = projects
+	m.skills = skills
 }
 
 func (m ImproveTabModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -106,7 +110,13 @@ func (m ImproveTabModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		m.err = ""
 		m.lastOut = msg.out
-		m.status = "saved to " + msg.out.Dir
+		rev := msg.out.Review
+		if rev.Summary != "" {
+			m.status = fmt.Sprintf("saved · ATS %d/100 · Quality %d/100 · %s",
+				rev.ATSScore, rev.QualityScore, msg.out.Dir)
+		} else {
+			m.status = "saved to " + msg.out.Dir
+		}
 		if msg.out.PDFNote != "" {
 			m.status += " · " + msg.out.PDFNote
 		}
@@ -175,6 +185,7 @@ func (m ImproveTabModel) generateCmd() tea.Cmd {
 	path := m.resumePath
 	profile := m.profile
 	projects := m.projects
+	skills := m.skills
 	target := strings.TrimSpace(m.target.Value())
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
@@ -183,6 +194,7 @@ func (m ImproveTabModel) generateCmd() tea.Cmd {
 			ResumePath: path,
 			Profile:    profile,
 			Projects:   projects,
+			Skills:     skills,
 			TargetRole: target,
 			Formats:    formats,
 		})
@@ -267,6 +279,21 @@ func (m ImproveTabModel) View() string {
 		for _, f := range resume.SupportedFormats {
 			if p, ok := m.lastOut.Files[f]; ok {
 				b.WriteString("  " + primaryStyle.Render(f.Label()+": "+filepath.Base(p)) + "\n")
+			}
+		}
+		if m.lastOut.Review.Summary != "" {
+			rev := m.lastOut.Review
+			verdictColor := colorOrange
+			if rev.Verdict == "pass" {
+				verdictColor = colorGreen
+			}
+			verdictStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(verdictColor)).Bold(true)
+			b.WriteString("\n  " + mutedStyle.Render("ASSESSOR VERDICT") + "\n")
+			b.WriteString("  " + verdictStyle.Render(fmt.Sprintf("ATS %d/100  ·  Quality %d/100  ·  %s",
+				rev.ATSScore, rev.QualityScore, strings.ToUpper(rev.Verdict))) + "\n")
+			b.WriteString("  " + primaryStyle.Render(rev.Summary) + "\n")
+			if len(rev.Issues) > 0 {
+				b.WriteString("  " + mutedStyle.Render("top issue: "+rev.Issues[0]) + "\n")
 			}
 		}
 		if m.previewOK {
