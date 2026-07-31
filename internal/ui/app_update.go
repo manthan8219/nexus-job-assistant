@@ -80,7 +80,7 @@ func (m AppModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleWorkMsgs(msg)
 	case OutreachSetupSaveMsg:
 		return m.handleOutreachSetupSaveMsg(msg)
-	case companiesLoadedMsg, companySavedMsg:
+	case companiesLoadedMsg, companySavedMsg, companyJobsLoadedMsg, companiesRefreshedMsg:
 		return m.handleCompaniesMsgs(msg)
 	case outreachLoadedMsg, outreachErrMsg, outreachStatusMsg, outreachQueueBuiltMsg, outreachActionDoneMsg, outreachAutoTickMsg:
 		return m.handleOutreachMsgs(msg)
@@ -120,6 +120,7 @@ func (m AppModel) handleEngineResultMsg(msg EngineResultMsg) (tea.Model, tea.Cmd
 	label := fmt.Sprintf("%s @ %s", r.Job.Title, r.Job.Company)
 	switch r.Status {
 	case "found":
+		m.dashboard.foundCount++
 		m.dashboard.pushLive(DashRecent{Label: label, Status: "found"})
 		m.dashboard.lastJob = label
 	case "dry-run":
@@ -541,7 +542,10 @@ func (m AppModel) handleAppKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				return m.switchTab(idx)
 			}
 		}
-		return m, nil
+		// Unrecognized key: exit chrome nav and let the active tab handle it,
+		// so content keys (d/a/enter on Dashboard, / on Companies, etc.) always work.
+		m.chromeNav = false
+		return m.delegateUpdate(msg)
 	}
 	if m.activeTab == TabConfig && m.config.ConsumesEscape() {
 		if key == "esc" {
