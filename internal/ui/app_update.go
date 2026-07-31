@@ -597,6 +597,13 @@ func (m AppModel) handleAppKeyMsg(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if key == "esc" {
 		return m.enterChromeNav(), nil
 	}
+	// Sub-menu tabs (Outreach, Resume) claim tab/shift+tab to cycle their
+	// sub-sections — the CapturesKeys branches above already gave modal and
+	// editing states first claim. From these tabs, main-tab switching stays
+	// available via esc (tab mode), alt+N and the ctrl+letter shortcuts.
+	if (m.activeTab == TabOutreach || m.activeTab == TabResume) && (key == "tab" || key == "shift+tab") {
+		return m.delegateUpdate(msg)
+	}
 	if key == "tab" || key == "shift+tab" {
 		dir := 1
 		if key == "shift+tab" {

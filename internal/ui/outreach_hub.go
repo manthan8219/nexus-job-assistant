@@ -221,20 +221,21 @@ func (m OutreachHubModel) setupFocusIsText() bool {
 	return m.setupFocus == setupMaxEmail || m.setupFocus == setupMaxLI
 }
 
-func (m OutreachHubModel) NextSub() OutreachHubModel {
-	m.sub = (m.sub + 1) % outreachSubCount
+// gotoSub jumps to sub-section i, clearing modal state; landing on Sent loads
+// the audit log. Out-of-range or current-sub jumps are a no-op.
+func (m OutreachHubModel) gotoSub(i int) (OutreachHubModel, tea.Cmd) {
+	if i < 0 || i >= outreachSubCount || i == m.sub {
+		return m, nil
+	}
+	m.sub = i
 	m.ui = outBrowse
 	m.errText = ""
 	m.clampCursor()
-	return m
-}
-
-func (m OutreachHubModel) PrevSub() OutreachHubModel {
-	m.sub = (m.sub - 1 + outreachSubCount) % outreachSubCount
-	m.ui = outBrowse
-	m.errText = ""
-	m.clampCursor()
-	return m
+	if m.sub == outreachSubSent {
+		m.logLoading = true
+		return m, m.loadLogCmd()
+	}
+	return m, nil
 }
 
 func (m *OutreachHubModel) clampCursor() {
@@ -275,15 +276,15 @@ func (m OutreachHubModel) FooterHint() string {
 	}
 	switch m.sub {
 	case outreachSubSetup:
-		return "↑↓ fields  ·  ←→ / space change  ·  auto-saves  ·  tab → Email"
+		return "↑↓ fields  ·  ←→ / space change  ·  auto-saves  ·  tab/1-4 sections"
 	case outreachSubEmail:
-		return "g build queue  ·  enter process next  ·  a auto-run  ·  c check replies  ·  e fix To:  ·  tab cycles"
+		return "g build queue  ·  enter process next  ·  a auto-run  ·  c check replies  ·  e fix To:  ·  tab/1-4 sections"
 	case outreachSubLinkedIn:
-		return "g build queue  ·  enter open browser  ·  a auto-run remaining  ·  tab cycles"
+		return "g build queue  ·  enter open browser  ·  a auto-run remaining  ·  tab/1-4 sections"
 	case outreachSubSent:
-		return "j/k move  ·  r refresh  ·  tab cycles"
+		return "j/k move  ·  r refresh  ·  tab/1-4 sections"
 	default:
-		return "tab cycles"
+		return "tab/1-4 sections"
 	}
 }
 

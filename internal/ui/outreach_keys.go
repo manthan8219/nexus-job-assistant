@@ -76,19 +76,13 @@ func (m OutreachHubModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch key {
 	case "tab", "]":
-		m = m.NextSub()
-		if m.sub == outreachSubSent {
-			m.logLoading = true
-			return m, m.loadLogCmd()
-		}
-		return m, nil
+		return m.gotoSub((m.sub + 1) % outreachSubCount)
 	case "shift+tab", "[":
-		m = m.PrevSub()
-		if m.sub == outreachSubSent {
-			m.logLoading = true
-			return m, m.loadLogCmd()
-		}
-		return m, nil
+		return m.gotoSub((m.sub - 1 + outreachSubCount) % outreachSubCount)
+	case "1", "2", "3", "4":
+		// The step strip is numbered — digits jump straight to a sub-section.
+		i, _ := strconv.Atoi(key)
+		return m.gotoSub(i - 1)
 	}
 
 	if m.sub == outreachSubSetup {

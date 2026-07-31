@@ -184,11 +184,11 @@ func (m ResumeHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		if !m.CapturesKeys() {
 			switch msg.String() {
-			case "[", "h":
+			case "[", "h", "shift+tab":
 				m = m.PrevSub()
 				m = m.syncImproveContext()
 				return m, nil
-			case "]", "l":
+			case "]", "l", "tab":
 				m = m.NextSub()
 				m = m.syncImproveContext()
 				return m, nil
@@ -305,13 +305,13 @@ func (m ResumeHubModel) FooterHint() string {
 	}
 	switch m.sub {
 	case resumeSubAnalyze:
-		return "tab → next step  •  r re-analyze  •  ↑↓ scroll  •  ←→ main tabs"
+		return "tab → next step  •  r re-analyze  •  ↑↓ scroll  •  esc main tabs"
 	case resumeSubWork:
-		return "n add project  •  tab → New resume  •  ←→ main tabs"
+		return "n add project  •  tab → New resume  •  esc main tabs"
 	case resumeSubImprove:
-		return "g generate  •  space formats  •  tab cycles steps  •  ←→ main tabs"
+		return "g generate  •  space formats  •  tab cycles steps  •  esc main tabs"
 	default:
-		return "tab next step  •  ←→ main tabs  •  ctrl+c quit"
+		return "tab next step  •  esc main tabs  •  ctrl+c quit"
 	}
 }
 
