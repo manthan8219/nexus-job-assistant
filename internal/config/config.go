@@ -74,6 +74,12 @@ type Config struct {
 	CoverLetterMode string `json:"cover_letter_mode,omitempty"`
 	CoverLetterText string `json:"cover_letter_text,omitempty"` // used when mode=template
 
+	// Tailor — JD-tailored CV + cover letter with HR-agent review loop
+	// TailorPerJob generates an HR-reviewed tailored kit for each application (engine hook).
+	TailorPerJob bool `json:"tailor_per_job,omitempty"`
+	// TailorMaxRounds caps the writer→HR review loop per kit (0 = default 3).
+	TailorMaxRounds int `json:"tailor_max_rounds,omitempty"`
+
 	// Career Scraper — comma-separated Name:URL pairs for career page targets
 	ScraperTargets string `json:"scraper_targets,omitempty"`
 

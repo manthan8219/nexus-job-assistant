@@ -1,0 +1,19 @@
+Backend Engineer — Acme Cloud (Remote)
+
+Acme Cloud is hiring a Backend Engineer to build and scale our payments platform.
+
+What you'll do:
+- Design, build, and operate Go (Golang) microservices handling high-throughput payment traffic
+- Build gRPC and REST APIs used by internal teams and external partners
+- Own services end-to-end on AWS (EC2, RDS, SQS, Lambda) with PostgreSQL and Redis
+- Drive reliability: observability, metrics, distributed tracing, on-call ownership
+- Work with Docker and Kubernetes in a CI/CD environment
+
+What we're looking for:
+- 3+ years of backend engineering experience, ideally in product companies
+- Strong Go experience; comfort with concurrency patterns and performance profiling
+- Solid PostgreSQL/data-modeling skills and experience with message queues (Kafka or SQS)
+- Experience deploying to AWS and container orchestration with Kubernetes
+- Bonus: gRPC, GraphQL, fintech/payments domain experience
+
+We offer remote-first work, a pragmatic engineering culture, and ownership from day one.
