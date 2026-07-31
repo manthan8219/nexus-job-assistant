@@ -6,6 +6,8 @@ nexus-job-assistant.exe
 /test-scraper
 /test-osint
 /test-crawl
+/greenhouseapply
+/greenhouseapply.exe
 /dist/
 
 # Go
