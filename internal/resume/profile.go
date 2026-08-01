@@ -87,6 +87,7 @@ func AnalyzeFull(path string, ai AIOptions) Result {
 	}
 	r.Profile = profile
 	r.Message += " · AI profile ready"
+	enrichContact(&r, text, profile)
 	return r
 }
 

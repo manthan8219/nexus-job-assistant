@@ -59,6 +59,9 @@ func configToNexusConfig(cfg *config.Config) *NexusConfig {
 		TailorPerJob:           cfg.TailorPerJob,
 		TailorMaxRounds:        cfg.TailorMaxRounds,
 		ScraperTargets:         cfg.ScraperTargets,
+		DailyRunEnabled:        cfg.DailyRunEnabled,
+		DailyRunAt:             cfg.DailyRunAt,
+		EmailNotifications:     cfg.EmailNotifications,
 	}
 }
 
@@ -118,6 +121,9 @@ func applyNexusConfig(cfg *config.Config, n *NexusConfig) {
 	cfg.TailorPerJob = n.TailorPerJob
 	cfg.TailorMaxRounds = n.TailorMaxRounds
 	cfg.ScraperTargets = n.ScraperTargets
+	cfg.DailyRunEnabled = n.DailyRunEnabled
+	cfg.DailyRunAt = n.DailyRunAt
+	cfg.EmailNotifications = n.EmailNotifications
 }
 
 // parseInt converts a string to int, returning 0 on error.

@@ -18,3 +18,4 @@ Summary of the non-negotiables (details in AGENTS.md):
 11. **Verify before done** — `gofmt -l .`, `go vet ./...`, `go build ./...`, `go test -race ./...` must all pass; run `./scripts/verify.ps1`. **CI (`.github/workflows/ci.yml`) is mandatory and blocks merge on red** — including a coverage floor on changed packages. Install the local pre-push gate with `./scripts/install-hook.ps1`.
 12. **Ask before irreversible** — schema/config-breaking changes, deletions, consent-logic changes, new dependencies.
 13. **AI safety** — ground any numeric claim in an AI answer against resume/profile facts before use (never submit hallucinated figures); never attempt to bypass a CAPTCHA/anti-bot check — halt and let the user complete it manually.
+14. **One task = one branch** — every new request that is unrelated to in-progress work gets a fresh branch; work there until a human reviews it (AGENTS.md §15).

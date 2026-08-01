@@ -18,6 +18,7 @@ type Result struct {
 	Message  string   // shown on success, e.g. "PDF · 10 resume keywords found"
 	Err      string   // shown on failure
 	Profile  *Profile // optional AI career profile when AI Assist is enabled
+	Contact  Contact  // structured personal details for profile backfill
 }
 
 // Common resume section / keyword markers used to detect resume content.
@@ -68,7 +69,11 @@ func analyzePDF(path string) Result {
 	if n, err := io.ReadFull(f, hdr); err != nil || n < 4 || string(hdr) != "%PDF" {
 		return Result{Err: "not a valid PDF — wrong file format"}
 	}
-	return Result{Valid: true, FileType: "PDF", Message: "PDF · valid format"}
+	r := Result{Valid: true, FileType: "PDF", Message: "PDF · valid format"}
+	if text, err := ExtractText(path); err == nil {
+		enrichContact(&r, text, nil)
+	}
+	return r
 }
 
 func analyzeDOCX(path string) Result {
@@ -118,11 +123,15 @@ func analyzeDOCX(path string) Result {
 			Err:      fmt.Sprintf("DOCX found but doesn't look like a resume — only %d resume keywords detected", found),
 		}
 	}
-	return Result{
+	res := Result{
 		Valid:    true,
 		FileType: "DOCX",
 		Message:  fmt.Sprintf("DOCX · %d resume keywords found", found),
 	}
+	if t, err := ExtractText(path); err == nil {
+		enrichContact(&res, t, nil)
+	}
+	return res
 }
 
 func countKeywords(lower string) int {

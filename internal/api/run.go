@@ -2,59 +2,61 @@ package api
 
 import (
 	"context"
+	"errors"
 	"net/http"
 )
 
-// handlePostRun starts an engine run in the background.
-func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
-	var input struct {
-		DryRun    bool `json:"dryRun"`
-		AutoApply bool `json:"autoApply"`
-	}
-	if err := readJSON(r, &input); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
-		return
-	}
+// Sentinel errors returned by startEngineRun so handlers can map status codes.
+var (
+	errEngineBusy        = errors.New("engine is already running")
+	errEngineUnavailable = errors.New("engine not available")
+)
 
+// startEngineRun sets up and launches an engine run in the background with the
+// same reset/configure/drain pipeline every trigger uses (manual run,
+// apply-selected, scheduled daily dry-run). dryRun=true guarantees zero
+// submissions (consent untouched).
+func (s *Server) startEngineRun(dryRun, autoApply bool, run func(ctx context.Context) error) error {
 	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.status == StatusRunning {
-		s.mu.Unlock()
-		writeError(w, http.StatusConflict, "engine is already running")
-		return
+		return errEngineBusy
+	}
+	if s.eng == nil {
+		return errEngineUnavailable
 	}
 
-	// Reset state for a new run
 	s.status = StatusRunning
 	s.errMsg = ""
-	s.dryRun = input.DryRun
-	s.autoApply = input.AutoApply
+	s.dryRun = dryRun
+	s.autoApply = autoApply
 	s.lastJob = ""
 	s.foundCount = 0
 	s.liveFeed = make([]DashRecent, 0)
 	s.recent = make([]DashRecent, 0)
 	s.providerProgress = make(map[string]ProviderStatus)
 
-	// Reset and configure engine
-	if s.eng != nil {
-		s.eng.Reset()
-		s.eng.DryRun = input.DryRun
-		s.eng.AutoApply = input.AutoApply && s.cfg.ApplyConsent
-		s.eng.MaxPerRun = s.cfg.MaxAppsPerRun
-		if s.eng.MaxPerRun <= 0 {
-			s.eng.MaxPerRun = 10
-		}
-		s.eng.MinDelay = s.cfg.ApplyDelaySec
-		if s.eng.MinDelay <= 0 {
-			s.eng.MinDelay = 8
-		}
+	s.eng.Reset()
+	s.eng.DryRun = dryRun
+	s.eng.AutoApply = autoApply && s.cfg.ApplyConsent
+	s.eng.MaxPerRun = s.cfg.MaxAppsPerRun
+	if s.eng.MaxPerRun <= 0 {
+		s.eng.MaxPerRun = 10
+	}
+	s.eng.MinDelay = s.cfg.ApplyDelaySec
+	if s.eng.MinDelay <= 0 {
+		s.eng.MinDelay = 8
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	s.cancel = cancel
-	s.mu.Unlock()
-	s.changed()
 
-	// Run the engine in a goroutine
+	if run == nil {
+		run = func(runCtx context.Context) error { return s.eng.RunOnce(runCtx) }
+	}
+	runFn := run
+
 	go func() {
 		defer func() {
 			if rec := recover(); rec != nil {
@@ -66,10 +68,8 @@ func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
 			}
 		}()
 
-		// Drain engine channels
 		go s.drainEngineChannels(ctx)
-
-		runErr := s.eng.RunOnce(ctx)
+		runErr := runFn(ctx)
 
 		s.mu.Lock()
 		if runErr != nil {
@@ -82,6 +82,63 @@ func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
 		s.changed()
 	}()
 
+	s.changed()
+	return nil
+}
+
+// handlePostRun starts an engine run in the background.
+func (s *Server) handlePostRun(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		DryRun    bool `json:"dryRun"`
+		AutoApply bool `json:"autoApply"`
+	}
+	if err := readJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+
+	if err := s.startEngineRun(input.DryRun, input.AutoApply, nil); err != nil {
+		if errors.Is(err, errEngineBusy) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handlePostRunApplySelected submits real applications for approved jobs
+// (the review-queue apply flow). The engine enforces consent, caps, delays,
+// and idempotency; this handler only wires the background run.
+func (s *Server) handlePostRunApplySelected(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		IDs []int64 `json:"ids"`
+	}
+	if err := readJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+	if len(input.IDs) == 0 {
+		writeError(w, http.StatusBadRequest, "no job ids provided")
+		return
+	}
+	if s.cfg == nil || !s.cfg.ApplyConsent {
+		writeError(w, http.StatusBadRequest, "give Apply Consent in Config before applying")
+		return
+	}
+
+	ids := input.IDs
+	if err := s.startEngineRun(false, true, func(ctx context.Context) error {
+		return s.eng.ApplySelected(ctx, ids)
+	}); err != nil {
+		if errors.Is(err, errEngineBusy) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
@@ -145,6 +202,9 @@ func (s *Server) drainEngineChannels(ctx context.Context) {
 				s.recent = s.recent[len(s.recent)-10:]
 			}
 			switch r.Status {
+			case "found":
+				// One discovery event per unique job (the engine dedupes by URL).
+				s.foundCount++
 			case "applied":
 				s.applied++
 			case "skipped":

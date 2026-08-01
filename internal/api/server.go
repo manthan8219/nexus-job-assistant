@@ -77,10 +77,13 @@ type Server struct {
 func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *Server {
 	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
 	mn := notifier.FromConfig(&notifier.NotifyConfig{
-		DiscordWebhookURL: discordURL,
-		TelegramBotToken:  tgToken,
-		TelegramChatID:    tgChatID,
-		EnabledChannels:   channels,
+		DiscordWebhookURL:  discordURL,
+		TelegramBotToken:   tgToken,
+		TelegramChatID:     tgChatID,
+		EnabledChannels:    channels,
+		Email:              cfg.Email,
+		GmailAppPassword:   cfg.GmailAppPassword,
+		EmailNotifications: cfg.EmailNotifications,
 	})
 	return &Server{
 		cfg:              cfg,
@@ -120,6 +123,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		defer cancel()
 		_ = httpServer.Shutdown(shutdownCtx)
 	}()
+
+	// Daily safe dry-run scheduler (runs even when no browser is open).
+	go s.scheduleDailyRuns(ctx)
 
 	log.Printf("Nexus API server listening on %s", s.addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -161,11 +167,14 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 
 	// Run control
 	mux.HandleFunc("POST /api/run", s.handlePostRun)
+	mux.HandleFunc("POST /api/run/apply-selected", s.handlePostRunApplySelected)
 	mux.HandleFunc("DELETE /api/run", s.handleDeleteRun)
 
 	// Jobs
 	mux.HandleFunc("GET /api/jobs", s.handleGetJobs)
+	mux.HandleFunc("POST /api/jobs", s.handlePostJobs)
 	mux.HandleFunc("PATCH /api/jobs/{id}/outcome", s.handlePatchJobOutcome)
+	mux.HandleFunc("POST /api/applications/{id}/approved", s.handlePostApplicationApproved)
 
 	// Companies
 	mux.HandleFunc("GET /api/companies", s.handleGetCompanies)
@@ -197,6 +206,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Resume
 	mux.HandleFunc("GET /api/resume/analyze", s.handleGetResumeAnalyze)
 	mux.HandleFunc("POST /api/resume/analyze", s.handlePostResumeAnalyze)
+	mux.HandleFunc("POST /api/resume/upload", s.handlePostResumeUpload)
 	mux.HandleFunc("GET /api/resume/projects", s.handleGetResumeProjects)
 	mux.HandleFunc("PUT /api/resume/projects", s.handlePutResumeProjects)
 	mux.HandleFunc("DELETE /api/resume/projects/{id}", s.handleDeleteResumeProjects)

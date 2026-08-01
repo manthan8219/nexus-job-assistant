@@ -12,11 +12,15 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/data"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/adzuna"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/arbeitnow"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/ashby"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/bamboohr"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/breezy"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerjet"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerscraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/dynamitejobs"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/euroremotejobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/fourday"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/getonbrd"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/greenhouse"
@@ -25,6 +29,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobicy"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobspresso"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobvite"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/jooble"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/justjoin"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/linkedin"
@@ -33,12 +38,14 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/personio"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/pinpoint"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/recruitee"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteco"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteok"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remotive"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/smartrecruiters"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/teamtailor"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/thehub"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/themuse"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/usajobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/weworkremotely"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workable"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workday"
@@ -120,6 +127,23 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	providers = append(providers, weworkremotely.New())
 	providers = append(providers, jobspresso.New())
 	providers = append(providers, nodesk.New())
+	providers = append(providers, remoteco.New())
+	providers = append(providers, dynamitejobs.New())
+	providers = append(providers, euroremotejobs.New())
+
+	// Key-gated job finders — only registered when the API key is configured.
+	if id, key := cfg.ProviderKeys["adzuna_id"], cfg.ProviderKeys["adzuna_key"]; id != "" && key != "" {
+		providers = append(providers, adzuna.New(id, key, ""))
+	}
+	if usaKey := cfg.ProviderKeys["usajobs"]; usaKey != "" {
+		providers = append(providers, usajobs.New(usaKey, cfg.Email))
+	}
+	if jKey := cfg.ProviderKeys["jooble"]; jKey != "" {
+		providers = append(providers, jooble.New(jKey))
+	}
+	if affid, key := cfg.ProviderKeys["careerjet_affid"], cfg.ProviderKeys["careerjet_key"]; affid != "" && key != "" {
+		providers = append(providers, careerjet.New(affid, key))
+	}
 
 	// Per-company ATSes (Group C)
 	bhr, err := bamboohr.New(data.BambooHRCompaniesJSON)

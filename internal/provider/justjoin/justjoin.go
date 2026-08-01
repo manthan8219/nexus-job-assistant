@@ -17,6 +17,12 @@ type jjJob struct {
 	CompanyName   string `json:"companyName"`
 	City          string `json:"city"`
 	WorkplaceType string `json:"workplaceType"`
+	// ApplyMethod is "external" when the offer redirects candidates to the
+	// employer's own apply page ("applyUrl") instead of the JustJoin form;
+	// internal offers are applied through a JustJoin account (login +
+	// reCAPTCHA) and cannot be automated (AGENTS.md §14).
+	ApplyMethod string `json:"applyMethod"`
+	ApplyURL    string `json:"applyUrl"`
 }
 
 type jjMeta struct {
@@ -31,11 +37,14 @@ type jjResponse struct {
 // Client implements provider.Provider for JustJoin.it.
 type Client struct {
 	http *http.Client
+	// baseURL overrides the API host for tests; when empty the default
+	// https://justjoin.it host is used.
+	baseURL string
 }
 
 // New creates a JustJoin client.
 func New() *Client {
-	return &Client{http: &http.Client{Timeout: 30 * time.Second}}
+	return &Client{http: &http.Client{Timeout: 30 * time.Second}, baseURL: "https://justjoin.it"}
 }
 
 func (c *Client) Name() string { return "justjoin" }
@@ -44,7 +53,7 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 	var jobs []provider.Job
 
 	for page := 1; page <= 3; page++ {
-		u := fmt.Sprintf("https://justjoin.it/api/candidate-api/offers?page=%d&perPage=100", page)
+		u := fmt.Sprintf("%s/api/candidate-api/offers?page=%d&perPage=100", c.baseURL, page)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			return jobs, err
@@ -68,7 +77,7 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 			if title == "" || j.Slug == "" {
 				continue
 			}
-			jobURL := "https://justjoin.it/job-offer/" + j.Slug
+			jobURL := offerApplyURL(j)
 			remote := j.WorkplaceType == "remote" || j.WorkplaceType == "hybrid"
 
 			if len(criteria.Titles) > 0 && !matchesTitle(title, criteria.Titles) {
@@ -97,6 +106,18 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 
 func (c *Client) Apply(_ context.Context, job provider.Job, _ provider.Profile) (provider.ApplyResult, error) {
 	return provider.ApplyResult{Status: "skipped", Reason: "apply manually: " + job.URL}, nil
+}
+
+// offerApplyURL returns the canonical URL a candidate should use to apply:
+// external offers link to the employer's own apply page; everything else
+// uses the JustJoin offer page.
+func offerApplyURL(j jjJob) string {
+	if strings.EqualFold(strings.TrimSpace(j.ApplyMethod), "external") {
+		if u := strings.TrimSpace(j.ApplyURL); u != "" {
+			return u
+		}
+	}
+	return "https://justjoin.it/job-offer/" + j.Slug
 }
 
 func matchesTitle(title string, keywords []string) bool {
