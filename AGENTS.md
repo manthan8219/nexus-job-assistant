@@ -361,6 +361,47 @@ This app is a scraper/auto-applier — these rules are core, not optional.
 - Before committing: `gofmt -l .` clean, `go vet ./...` clean, `go build ./... && go test ./...` green.
 - **CI is mandatory**: `.github/workflows/ci.yml` must be green before a PR merges (§4). A PR that adds/changes a package without tests, or whose changed package is below the coverage floor, is not mergeable. Run `./scripts/verify.ps1` locally before pushing; the optional pre-push hook (`./scripts/install-hook.ps1`) automates that.
 
+### Jira workflow (mandatory - every PR and every piece of work)
+
+Every PR opened - and any other tracked piece of work - gets a Jira task created
+on the Nexus board (project KAN) via the Jira MCP tools configured in the Cline
+MCP config (credentials come from the MCP config, never the repo). Never skip
+this step: no code, branch, or PR without a KAN-### task behind it.
+
+The workflow is always: create -> tag/describe -> attach PR -> In Progress -> Done.
+Never leave a task stuck in the wrong column.
+
+1. **Create the task** - as soon as the PR opens (or the work starts).
+   - **Type:** Task (or Story for user-facing features); file it under the
+     matching roadmap Epic (Epic 0 to Epic 6, keys KAN-6..KAN-12) when it belongs
+     to a phase.
+   - **Summary:** imperative and specific. **Description:** structured markdown -
+     Goal, Context, Scope (checklist), Files to touch, Acceptance criteria, Room
+     for improvement.
+   - **Tags:** always nexus + backend/frontend + phase-N + area tags (api, engine,
+     outreach, resume, ats, deliverability, analytics, scheduler, ui, product).
+   - **Priority** by urgency; **Due date** YYYY-MM-DD (tasks only, never on epics).
+2. **Move to In Progress** when work on the PR actually starts.
+3. **Attach the PR** - link the PR (title + URL) to the task; put KAN-### in the
+   PR title or description for cross-linking.
+4. **Move to Done** when the work is complete and verified - PR merged, CI green
+   (gofmt, vet, go build, go test pass; see sections 15 and 17).
+5. **Re-open or comment** if review expands the scope; update the task and its
+   acceptance criteria.
+
+**Credentials:** never in the repo. Read them at runtime from the Cline MCP
+config (C:\Users\manthan\.cline\data\settings\cline_mcp_settings.json,
+mcpServers.jira.env: JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN) or use the configured
+Jira MCP server. Never commit, log, or paste them.
+
+**REST API fallback:** Basic auth base64(JIRA_EMAIL:JIRA_API_TOKEN) against
+JIRA_URL. Create: POST {JIRA_URL}/rest/api/2/issue with project.key=KAN,
+issuetype.name=Task, summary, priority.name, labels[], duedate,
+parent.key=<EPIC-KEY> (when phased) and description (markdown string).
+Transitions: GET/POST {JIRA_URL}/rest/api/2/issue/{key}/transitions. Attach PR:
+POST {JIRA_URL}/rest/api/2/issue/{key}/remotelink with
+{"object":{"url":"<PR URL>","title":"<PR title>"}}.
+
 ---
 
 ## 16. Agent Workflow (how to approach any task here)
@@ -400,6 +441,7 @@ For everything else: make the reasonable call, state the assumption in your repo
 - [ ] No secrets, personal data, or artifacts committed; config-driven values only
 - [ ] Exported symbols documented; package docs updated if behavior changed
 - [ ] AGENTS.md / `.clinerules` updated if commands, layout, or conventions changed (§18)
+- [ ] Jira task created with proper tags/description, PR attached, and moved through In Progress -> Done (section 15)
 
 ---
 
