@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Git pre-push hook - runs the full verify chain before a push lands.
+# Installed by: pwsh ./scripts/install-hook.ps1   (or copy manually to .git/hooks/pre-push)
+# This is the local half of AGENTS.md section 4/13; CI is the authoritative gate.
+#
+# To bypass temporarily (e.g. a WIP push):  git push --no-verify
+set -euo pipefail
+
+# Repo root is the directory two levels up from .git/hooks/.
+REPO="$(git rev-parse --show-toplevel)"
+
+# Prefer PowerShell verify (Windows-first); fall back to POSIX verify.
+if command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -File "$REPO/scripts/verify.ps1"
+elif command -v powershell.exe >/dev/null 2>&1; then
+  powershell.exe -NoProfile -File "$REPO/scripts/verify.ps1"
+else
+  bash "$REPO/scripts/verify.sh"
+fi

@@ -23,6 +23,23 @@ type Target struct {
 	URL     string // career listing page e.g. "https://stripe.com/jobs"
 }
 
+// ensureScraper starts the local scraper service if it is not already running.
+// Package-level so tests can substitute a no-op and avoid the real service.
+var ensureScraper = func(ollamaModel, ollamaURL string) error {
+	if !scraper.Running() {
+		if !scraper.Installed() {
+			return fmt.Errorf("careerscraper: not installed — open Settings › Career Scraper to install")
+		}
+		if err := scraper.Start(ollamaModel, ollamaURL); err != nil {
+			return fmt.Errorf("careerscraper: start service: %w", err)
+		}
+		if err := scraper.WaitReady(20 * time.Second); err != nil {
+			return fmt.Errorf("careerscraper: %w", err)
+		}
+	}
+	return nil
+}
+
 // Provider implements provider.Provider by calling the Python scraper service.
 type Provider struct {
 	baseURL     string
@@ -48,17 +65,8 @@ func New(targets []Target, ollamaModel, ollamaURL string) *Provider {
 func (p *Provider) Name() string { return "careerscraper" }
 
 func (p *Provider) Search(ctx context.Context, c provider.SearchCriteria) ([]provider.Job, error) {
-	// Auto-start the scraper service if installed but not running.
-	if !scraper.Running() {
-		if !scraper.Installed() {
-			return nil, fmt.Errorf("careerscraper: not installed — open Settings › Career Scraper to install")
-		}
-		if err := scraper.Start(p.ollamaModel, p.ollamaURL); err != nil {
-			return nil, fmt.Errorf("careerscraper: start service: %w", err)
-		}
-		if err := scraper.WaitReady(20 * time.Second); err != nil {
-			return nil, fmt.Errorf("careerscraper: %w", err)
-		}
+	if err := ensureScraper(p.ollamaModel, p.ollamaURL); err != nil {
+		return nil, err
 	}
 
 	type scrapeRequest struct {

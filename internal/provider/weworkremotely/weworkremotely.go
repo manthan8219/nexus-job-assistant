@@ -12,7 +12,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const feedURL = "https://weworkremotely.com/remote-jobs.rss"
+var feedURL = "https://weworkremotely.com/remote-jobs.rss"
 
 type rssItem struct {
 	Title       string `xml:"title"`

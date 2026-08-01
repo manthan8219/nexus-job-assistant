@@ -17,6 +17,23 @@ import (
 
 const defaultBaseURL = "http://localhost:" + scraper.Port
 
+// ensureScraper starts the local scraper service if it is not already running.
+// Package-level so tests can substitute a no-op and avoid the real service.
+var ensureScraper = func() error {
+	if !scraper.Running() {
+		if !scraper.Installed() {
+			return fmt.Errorf("linkedin: scraper service not installed — open Settings › Career Scraper")
+		}
+		if err := scraper.Start("", ""); err != nil {
+			return fmt.Errorf("linkedin: start scraper service: %w", err)
+		}
+		if err := scraper.WaitReady(20 * time.Second); err != nil {
+			return fmt.Errorf("linkedin: %w", err)
+		}
+	}
+	return nil
+}
+
 // Provider implements provider.Provider for LinkedIn job search.
 type Provider struct {
 	baseURL  string
@@ -40,16 +57,8 @@ func New(maxPages int) *Provider {
 func (p *Provider) Name() string { return "linkedin" }
 
 func (p *Provider) Search(ctx context.Context, c provider.SearchCriteria) ([]provider.Job, error) {
-	if !scraper.Running() {
-		if !scraper.Installed() {
-			return nil, fmt.Errorf("linkedin: scraper service not installed — open Settings › Career Scraper")
-		}
-		if err := scraper.Start("", ""); err != nil {
-			return nil, fmt.Errorf("linkedin: start scraper service: %w", err)
-		}
-		if err := scraper.WaitReady(20 * time.Second); err != nil {
-			return nil, fmt.Errorf("linkedin: %w", err)
-		}
+	if err := ensureScraper(); err != nil {
+		return nil, err
 	}
 
 	keywords := strings.Join(c.Titles, " OR ")

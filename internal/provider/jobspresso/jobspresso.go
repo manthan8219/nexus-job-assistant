@@ -12,7 +12,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const feedURL = "https://jobspresso.co/?feed=job_feed"
+var feedURL = "https://jobspresso.co/?feed=job_feed"
 
 type rssItem struct {
 	Title       string `xml:"title"`

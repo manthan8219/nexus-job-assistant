@@ -12,7 +12,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const baseURL = "https://api.smartrecruiters.com"
+var baseURL = "https://api.smartrecruiters.com"
 
 // Client implements provider.Provider for SmartRecruiters.
 type Client struct {

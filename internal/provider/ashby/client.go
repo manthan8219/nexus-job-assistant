@@ -12,7 +12,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const baseGraphQLURL = "https://jobs.ashbyhq.com/api/non-user-graphql"
+var baseGraphQLURL = "https://jobs.ashbyhq.com/api/non-user-graphql"
 
 // Client implements provider.Provider for Ashby.
 type Client struct {

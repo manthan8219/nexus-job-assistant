@@ -10,7 +10,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const leverBaseURL = "https://api.lever.co/v0/postings"
+var leverBaseURL = "https://api.lever.co/v0/postings"
 
 // fetchPostings queries the Lever REST API for a company's open job postings.
 func fetchPostings(ctx context.Context, client *http.Client, slug string) ([]leverPosting, error) {

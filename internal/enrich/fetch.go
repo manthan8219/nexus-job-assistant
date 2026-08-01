@@ -22,6 +22,11 @@ var (
 	leverURL = regexp.MustCompile(`(?i)jobs\.lever\.co/([^/]+)/([a-f0-9-]+)`)
 )
 
+var (
+	ghAPIBase    = "https://boards-api.greenhouse.io/v1/boards"
+	leverAPIBase = "https://api.lever.co/v0/postings"
+)
+
 // FetchDescription re-downloads a job description for an already-stored URL.
 // Supports Greenhouse + Lever today; other providers return an error.
 func FetchDescription(ctx context.Context, provider, jobURL string) (string, error) {
@@ -59,7 +64,7 @@ func fetchGreenhouse(ctx context.Context, client *http.Client, jobURL string) (s
 	} else {
 		return "", fmt.Errorf("unrecognized greenhouse url")
 	}
-	api := fmt.Sprintf("https://boards-api.greenhouse.io/v1/boards/%s/jobs/%s", url.PathEscape(board), id)
+	api := fmt.Sprintf("%s/%s/jobs/%s", ghAPIBase, url.PathEscape(board), id)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api, nil)
 	if err != nil {
 		return "", err
@@ -102,7 +107,7 @@ func fetchLever(ctx context.Context, client *http.Client, jobURL string) (string
 		}
 		slug, id = parts[0], parts[1]
 	}
-	api := fmt.Sprintf("https://api.lever.co/v0/postings/%s/%s", url.PathEscape(slug), url.PathEscape(id))
+	api := fmt.Sprintf("%s/%s/%s", leverAPIBase, url.PathEscape(slug), url.PathEscape(id))
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, api, nil)
 	if err != nil {
 		return "", err

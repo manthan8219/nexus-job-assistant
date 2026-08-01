@@ -14,7 +14,7 @@ Summary of the non-negotiables (details in AGENTS.md):
 7. **Network discipline** — shared `http.Client`, explicit timeouts, bounded retries with backoff, one provider's failure never aborts the run.
 8. **Idempotency & safety** — never apply to the same job twice (check store first); never bypass apply consent/rate limits; no hardcoded secrets.
 9. **Complete code only** — no TODOs, stubs, or placeholders.
-10. **Tests** — table-driven `*_test.go` for every behavior change; hermetic (no network, `t.TempDir()`, fakes); `-race` for concurrency.
-11. **Verify before done** — `gofmt -l .`, `go vet ./...`, `go build ./...`, `go test ./...` must all pass.
+10. **Tests are MANDATORY** — every behavior change / new exported symbol ships with table-driven `*_test.go` (happy + failure paths: malformed input, ctx cancel, non-2xx, empty, bad host). Hermetic: no network, `t.TempDir()`, `httptest`/fake providers, injected clocks; `-race` for concurrency; never `t.Skip` without a `// reason`. Unit tests stay colocated as `*_test.go` in the package dir (Go toolchain requirement); cross-package integration tests go in the top-level `tests/` folder.
+11. **Verify before done** — `gofmt -l .`, `go vet ./...`, `go build ./...`, `go test -race ./...` must all pass; run `./scripts/verify.ps1`. **CI (`.github/workflows/ci.yml`) is mandatory and blocks merge on red** — including a coverage floor on changed packages. Install the local pre-push gate with `./scripts/install-hook.ps1`.
 12. **Ask before irreversible** — schema/config-breaking changes, deletions, consent-logic changes, new dependencies.
 13. **AI safety** — ground any numeric claim in an AI answer against resume/profile facts before use (never submit hallucinated figures); never attempt to bypass a CAPTCHA/anti-bot check — halt and let the user complete it manually.

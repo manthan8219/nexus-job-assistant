@@ -11,7 +11,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const apiURL = "https://www.workingnomads.com/api/exposed_jobs/"
+var apiURL = "https://www.workingnomads.com/api/exposed_jobs/"
 
 type wnJob struct {
 	Title       string `json:"title"`

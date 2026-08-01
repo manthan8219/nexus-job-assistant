@@ -29,3 +29,12 @@ internal/scraper/py/venv/
 
 # macOS
 .DS_Store
+
+# Tailor smoke-test artifacts
+tailor-smoke.exe
+tailor-smoke.log
+tailor-smoke.err
+
+# Coverage output
+coverage/
+coverage.out

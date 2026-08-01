@@ -41,7 +41,9 @@
 | `internal/ui` | Bubble Tea dashboard |
 | `internal/textutil` / `internal/geo` | **Shared utilities — check here before writing helpers** |
 | `data/` | Seed data (companies.json, …) |
-| `scripts/` | One-off helper scripts |
+| `scripts/` | One-off helper scripts + `verify.ps1`/`verify.sh`/`coverage-floor.ps1`/hook installer (§4) |
+| `tests/` | Black-box integration tests (`package tests`) covering the §14 invariants end-to-end |
+| `.github/workflows/` | CI gate (§4) — the authoritative "never merged untested" enforcement |
 
 ---
 
@@ -89,6 +91,12 @@ go mod tidy           # after adding/removing any import
 ```
 
 After editing: run `gofmt -w .` on changed files, then `go build ./... && go vet ./... && go test ./...` — or just run `./scripts/verify.ps1` (`./scripts/verify.sh` on POSIX shells), which wraps the same chain.
+
+### Continuous integration gate (the source of truth)
+
+- `.github/workflows/ci.yml` runs on every push/PR to `main`: `gofmt -l .` (must be empty), `go vet ./...`, `go build ./...`, `go test -race -coverprofile=coverage.out ./...`, and (on PRs) `scripts/coverage-floor.ps1` enforcing a minimum coverage % on changed packages. **A red check blocks the merge** — this is the enforcement layer for "never pushed untested" (§13). CI is authoritative; the local hook below is a convenience.
+- Local pre-push hook (optional, recommended): `pwsh ./scripts/install-hook.ps1` installs `.git/hooks/pre-push` which runs the verify chain before a push. Bypass with `git push --no-verify` (use sparingly; CI still gates).
+- Coverage floor on changed packages: `./scripts/coverage-floor.ps1 -FloorPct 60 -BaseRef origin/main` (run `verify.ps1 -CoverageFloor 60` to chain it). It fails if any package you *touched* in the change is below the floor — pre-existing untouched low-coverage packages are not blocked, so raising coverage is incremental, not all-or-nothing.
 
 ---
 
@@ -311,14 +319,19 @@ This app is a scraper/auto-applier — these rules are core, not optional.
 
 ## 13. Testing
 
-- Every new exported behavior gets a test in `*_test.go` next to the code (house style: table-driven tests — see `internal/geo/*_test.go`, `internal/engine/region_boards_test.go`).
+**Tests are MANDATORY.** Every new exported symbol and every behavior change ships with table-driven tests in `*_test.go` — happy path *and* failure paths. A change with no test is incomplete and is blocked by CI (§4). There is no "I'll add tests later."
+
+- Unit tests live **colocated** as `*_test.go` in the package directory (Go's toolchain requirement — `go test` only discovers tests there). House style: table-driven tests — see `internal/geo/*_test.go`, `internal/engine/region_boards_test.go`, `internal/notifier/discord_test.go`.
+- **Black-box integration tests** that exercise multiple packages together live in the top-level `tests/` folder (`package tests`). These compile as a separate test binary and use only public APIs + `httptest` fakes + `t.TempDir()` SQLite. See `tests/` for the §14 invariants (dry-run honesty, apply idempotency, consent/rate-limit, provider isolation).
 - Table-driven pattern: `tests := []struct{ name string; in …; want … }{…}` with `t.Run(tt.name, …)`.
 - Failure messages must say input, got, want: `t.Errorf("Parse(%q) = %v; want %v", tt.in, got, tt.want)`.
-- Tests must be hermetic: no network, no real `~/.nexus` writes, no wall-clock dependence — use `t.TempDir()`, file-based SQLite in temp dirs, fake `Notifier`/HTTP implementations, and injected clocks (§5).
-- **Test failure paths, not just happy paths**: malformed JSON, provider timeout, DB closed, missing config, cancellation mid-run.
+- Tests must be hermetic: no network, no real `~/.nexus` writes, no wall-clock dependence — use `t.TempDir()`, file-based SQLite in temp dirs, fake `Notifier`/HTTP (`httptest`) implementations, and injected clocks (§5).
+- **Test failure paths, not just happy paths**: malformed JSON, provider timeout, DB closed, missing config, cancellation mid-run, empty input, bad host/URL, non-2xx responses, partial/malformed payloads.
 - **No `time.Sleep` in tests** — synchronize on channels, injected clocks, or `Eventually`-style polling with timeout. Sleeps make suites slow and flaky.
-- Keep tests fast (seconds, not minutes). A slow suite stops being run.
+- **No `t.Skip` without an inline `// reason` comment** explaining why the case is conditionally skipped (e.g. a Python-backed path under `-short`). Never skip silently.
+- Keep tests fast (seconds, not minutes). A slow suite stops being run. Gate slow/networked cases behind `testing.Short()`.
 - Add or update tests for **every** behavior change, even if not asked. A change that breaks existing tests is not finished until they're green.
+- **Coverage floor**: CI enforces a minimum coverage % on packages *changed* by a PR (§4). If your changed package is below the floor, add tests until it clears — do not lower the floor.
 
 ---
 
@@ -345,6 +358,7 @@ This app is a scraper/auto-applier — these rules are core, not optional.
 - Small, focused commits. Conventional-style messages: `feat(provider): add workable board`, `fix(engine): respect daily cap`, `refactor(textutil): dedupe title normalizers`.
 - Don't commit build artifacts (`nexus.exe`, `test-apply`, …), data, or credentials.
 - Before committing: `gofmt -l .` clean, `go vet ./...` clean, `go build ./... && go test ./...` green.
+- **CI is mandatory**: `.github/workflows/ci.yml` must be green before a PR merges (§4). A PR that adds/changes a package without tests, or whose changed package is below the coverage floor, is not mergeable. Run `./scripts/verify.ps1` locally before pushing; the optional pre-push hook (`./scripts/install-hook.ps1`) automates that.
 
 ---
 

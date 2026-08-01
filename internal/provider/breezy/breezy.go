@@ -26,6 +26,10 @@ type bzyJob struct {
 	Location bzyLocation `json:"location"`
 }
 
+// jobsURLFmt builds a company's Breezy HR jobs JSON URL from its slug.
+// Package-level so tests can redirect it to an httptest server.
+var jobsURLFmt = "https://%s.breezy.hr/json"
+
 // Client implements provider.Provider for Breezy HR.
 type Client struct {
 	http      *http.Client
@@ -85,7 +89,7 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 		default:
 		}
 
-		u := fmt.Sprintf("https://%s.breezy.hr/json", company.Slug)
+		u := fmt.Sprintf(jobsURLFmt, company.Slug)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			continue
