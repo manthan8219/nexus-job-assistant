@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 )
 
 type Config struct {
@@ -180,11 +182,7 @@ type Config struct {
 }
 
 func Dir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".nexus"), nil
+	return nexusdir.Home(), nil
 }
 
 func Path() (string, error) {

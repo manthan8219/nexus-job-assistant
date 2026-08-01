@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	_ "modernc.org/sqlite"
 )
 
@@ -19,11 +20,7 @@ type DB struct {
 
 // defaultDBPath returns ~/.nexus/companies.db, creating the directory if needed.
 func defaultDBPath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".nexus")
+	dir := nexusdir.Home()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}

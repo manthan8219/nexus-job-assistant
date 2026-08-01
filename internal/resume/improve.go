@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	"github.com/manthan8219/nexus-job-assistant/internal/workcontext"
 )
 
@@ -202,11 +203,7 @@ func formatSet(formats []Format) map[Format]bool {
 }
 
 func resumesDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".nexus", "resumes")
+	dir := filepath.Join(nexusdir.Home(), "resumes")
 	return dir, os.MkdirAll(dir, 0700)
 }
 

@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"time"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 )
 
 //go:embed py/main.py
@@ -26,13 +28,9 @@ const (
 	serviceName = "nexus-scraper"
 )
 
-// Dir returns ~/.nexus/scraper
+// Dir returns the scraper's data directory under the Nexus home.
 func Dir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".nexus", "scraper"), nil
+	return filepath.Join(nexusdir.Home(), "scraper"), nil
 }
 
 // Installed reports whether the scraper venv + files exist.
