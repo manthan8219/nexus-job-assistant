@@ -8,6 +8,9 @@ const (
 	StatusApplied Status = "applied"
 	StatusSkipped Status = "skipped"
 	StatusFailed  Status = "failed"
+	// StatusQueued marks jobs found by a search (dry-run or queue-only) that
+	// are stored and awaiting the user's approval to apply.
+	StatusQueued Status = "queued"
 )
 
 // Outcome tracks what happened after an application was submitted.
@@ -79,4 +82,7 @@ type Application struct {
 	// Outcome is the post-apply pipeline stage (empty = no response yet).
 	Outcome   Outcome
 	OutcomeAt time.Time // when the outcome was last set; zero when Outcome is empty
+	// Approved marks a queued application the user chose for a real apply
+	// (the review-queue approve → apply flow).
+	Approved bool
 }

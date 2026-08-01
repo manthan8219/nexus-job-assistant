@@ -99,6 +99,10 @@ type NotifyConfig struct {
 	DiscordWebhookURL string
 	TelegramBotToken  string
 	TelegramChatID    string
+	// Email run updates (delivered to the user's own inbox via Gmail SMTP).
+	Email              string
+	GmailAppPassword   string
+	EmailNotifications bool
 	// EnabledChannels is the user-selected list of channels to use.
 	// Empty means all channels with valid credentials are active.
 	EnabledChannels []string

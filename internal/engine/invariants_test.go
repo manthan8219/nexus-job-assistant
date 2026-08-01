@@ -18,6 +18,8 @@ type fakeProvider struct {
 	jobs     []provider.Job
 	applyN   int
 	applyErr error
+	result   provider.ApplyResult
+	applied  []provider.Job
 }
 
 func (f *fakeProvider) Name() string { return f.name }
@@ -26,7 +28,11 @@ func (f *fakeProvider) Search(ctx context.Context, c provider.SearchCriteria) ([
 }
 func (f *fakeProvider) Apply(ctx context.Context, j provider.Job, p provider.Profile) (provider.ApplyResult, error) {
 	f.applyN++
-	return provider.ApplyResult{Status: "applied"}, f.applyErr
+	f.applied = append(f.applied, j)
+	if f.result.Status == "" {
+		return provider.ApplyResult{Status: "applied"}, f.applyErr
+	}
+	return f.result, f.applyErr
 }
 
 // newTestEngine builds a hermetic Engine: temp-dir SQLite store, empty

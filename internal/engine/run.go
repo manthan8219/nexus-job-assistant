@@ -217,11 +217,11 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 	var applyErr error
 
 	if e.DryRun {
-		status = store.StatusSkipped
-		reason = "dry run — not submitted"
+		status = store.StatusQueued
+		reason = "dry run — found but not submitted"
 	} else if !e.AutoApply {
-		status = store.StatusSkipped
-		reason = "apply manually: " + job.URL
+		status = store.StatusQueued
+		reason = "queued — awaiting your approval"
 	} else {
 		e.log("  → Applying: %s @ %s", job.Title, job.Company)
 		result, err := e.providerFor(job.Provider).Apply(ctx, job, profile)

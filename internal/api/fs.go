@@ -31,7 +31,8 @@ func (s *Server) handleFSAutocomplete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	base := filepath.Base(prefix)
-	var suggestions []string
+	// Always emit a JSON array (not `null`) even when nothing matches.
+	suggestions := make([]string, 0, 8)
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasPrefix(strings.ToLower(name), strings.ToLower(base)) {

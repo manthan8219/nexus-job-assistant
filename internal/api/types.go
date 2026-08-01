@@ -59,4 +59,7 @@ type NexusConfig struct {
 	TailorPerJob           bool              `json:"tailorPerJob,omitempty"`
 	TailorMaxRounds        int               `json:"tailorMaxRounds,omitempty"`
 	ScraperTargets         string            `json:"scraperTargets,omitempty"`
+	DailyRunEnabled        bool              `json:"dailyRunEnabled,omitempty"`
+	DailyRunAt             string            `json:"dailyRunAt,omitempty"`
+	EmailNotifications     bool              `json:"emailNotifications,omitempty"`
 }

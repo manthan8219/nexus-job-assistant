@@ -21,7 +21,7 @@ type workableCandidateRequest struct {
 }
 
 // submitApplication attempts to apply to a Workable job on behalf of the user.
-func submitApplication(ctx context.Context, client *http.Client, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
+func (c *Client) submitApplication(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
 	// Extract job shortcode from the URL (last path segment before trailing slash)
 	jobShortcode := extractShortcode(job.URL)
 	if jobShortcode == "" {
@@ -31,7 +31,7 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 		}, nil
 	}
 
-	applyURL := fmt.Sprintf("%s/%s/jobs/%s/candidates", workableBaseURL, job.Board, jobShortcode)
+	applyURL := fmt.Sprintf("%s/%s/jobs/%s/candidates", c.baseURL, job.Board, jobShortcode)
 
 	payload := workableCandidateRequest{
 		FirstName: profile.FirstName,
@@ -53,7 +53,7 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; job-search-bot/1.0)")
 
-	resp, err := client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return provider.ApplyResult{Status: "failed", Reason: err.Error()}, nil
 	}
@@ -63,13 +63,19 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 		return provider.ApplyResult{Status: "applied"}, nil
 	}
 
-	// Workable requires extensive form data — fall back to manual apply
+	// Workable requires more form data than this minimal payload (notably a
+	// resume file); a 4xx means the board rejected it, so hand off manually.
+	// 429 and 5xx are transient and reported as failures instead.
 	respBody, _ := io.ReadAll(resp.Body)
-	_ = respBody
-
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != http.StatusTooManyRequests {
+		return provider.ApplyResult{
+			Status: "skipped",
+			Reason: fmt.Sprintf("apply manually at %s", job.URL),
+		}, nil
+	}
 	return provider.ApplyResult{
-		Status: "skipped",
-		Reason: fmt.Sprintf("apply manually at %s", job.URL),
+		Status: "failed",
+		Reason: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(respBody))),
 	}, nil
 }
 

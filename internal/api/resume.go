@@ -26,6 +26,7 @@ func (s *Server) handleGetResumeAnalyze(w http.ResponseWriter, r *http.Request) 
 				"message":    cached.Result.Message,
 				"err":        cached.Result.Err,
 				"profile":    cached.Result.Profile,
+				"contact":    cached.Result.Contact,
 				"analyzedAt": cached.AnalyzedAt.Format(time.RFC3339),
 			})
 			return
@@ -83,6 +84,7 @@ func (s *Server) handlePostResumeAnalyze(w http.ResponseWriter, r *http.Request)
 		"message":    result.Message,
 		"err":        result.Err,
 		"profile":    result.Profile,
+		"contact":    result.Contact,
 		"analyzedAt": time.Now().UTC().Format(time.RFC3339),
 	})
 }

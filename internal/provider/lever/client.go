@@ -17,6 +17,9 @@ type Client struct {
 	http      *http.Client
 	companies []leverCompany
 	base      []leverCompany // embedded list; MergeBoards rebuilds from this
+	// baseURL overrides the Lever jobs host for tests; defaults to
+	// https://jobs.lever.co.
+	baseURL string
 }
 
 // New creates a Lever client from embedded JSON bytes.
@@ -30,6 +33,7 @@ func New(companiesJSON []byte) (*Client, error) {
 		http:      &http.Client{Timeout: 30 * time.Second},
 		companies: companies,
 		base:      base,
+		baseURL:   "https://jobs.lever.co",
 	}, nil
 }
 
@@ -114,5 +118,5 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 
 // Apply submits an application for a single Lever job.
 func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	return submitApplication(ctx, c.http, job, profile)
+	return c.submitApplication(ctx, job, profile)
 }

@@ -17,9 +17,13 @@ func (s *Server) handleGetLogs(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
 	lines := s.logLines
 	s.mu.RUnlock()
+	// Always emit a JSON array (not `null`) even when the buffer is empty.
+	if lines == nil {
+		lines = []string{}
+	}
 
 	if filter != "" {
-		var filtered []string
+		filtered := make([]string, 0)
 		for _, l := range lines {
 			if contains(l, filter) {
 				filtered = append(filtered, l)

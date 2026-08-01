@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS applications (
 	fit_score   INTEGER NOT NULL DEFAULT 0,
 	fit_summary TEXT    NOT NULL DEFAULT '',
 	outcome     TEXT    NOT NULL DEFAULT '',
-	outcome_at  DATETIME NOT NULL DEFAULT '0001-01-01T00:00:00Z'
+	outcome_at  DATETIME NOT NULL DEFAULT '0001-01-01T00:00:00Z',
+	approved    INTEGER NOT NULL DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_applied_at ON applications(applied_at);
 CREATE INDEX IF NOT EXISTS idx_status     ON applications(status);
@@ -71,11 +72,21 @@ func Open() (*Store, error) {
 	return openPath(filepath.Join(dir, "applications.db"))
 }
 
+// OpenAt opens the store at a specific database path (used by tests and tools
+// that need a hermetic store outside ~/.nexus).
+func OpenAt(path string) (*Store, error) {
+	return openPath(path)
+}
+
 func openPath(path string) (*Store, error) {
 	db, err := sql.Open("sqlite", path)
 	if err != nil {
 		return nil, err
 	}
+	// SQLite is single-writer: serializing on one connection prevents
+	// SQLITE_BUSY when the engine's background scoring writes concurrently
+	// with the apply pipeline (dropped inserts otherwise).
+	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(ddl); err != nil {
 		db.Close()
 		return nil, err
@@ -99,6 +110,7 @@ func openPath(path string) (*Store, error) {
 		`ALTER TABLE applications ADD COLUMN fit_summary TEXT    NOT NULL DEFAULT ''`,
 		`ALTER TABLE applications ADD COLUMN outcome     TEXT    NOT NULL DEFAULT ''`,
 		`ALTER TABLE applications ADD COLUMN outcome_at  DATETIME NOT NULL DEFAULT '0001-01-01T00:00:00Z'`,
+		`ALTER TABLE applications ADD COLUMN approved    INTEGER NOT NULL DEFAULT 0`,
 	} {
 		db.Exec(col) // ignore errors — column already exists
 	}
@@ -131,13 +143,14 @@ func (s *Store) Insert(app Application) error {
 	}
 	_, err := s.db.Exec(
 		`INSERT OR IGNORE INTO applications
-		 (provider, company, role, url, status, reason, applied_at, location, remote, posted_at, description, fit_score, fit_summary, outcome, outcome_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (provider, company, role, url, status, reason, applied_at, location, remote, posted_at, description, fit_score, fit_summary, outcome, outcome_at, approved)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		app.Provider, app.Company, app.Role, app.URL,
 		string(app.Status), app.Reason, app.AppliedAt.UTC(),
 		app.Location, remote, postedAt.UTC(), app.Description,
 		app.FitScore, app.FitSummary,
 		string(app.Outcome), app.OutcomeAt.UTC(),
+		app.Approved,
 	)
 	return err
 }
@@ -167,6 +180,69 @@ func (s *Store) SetOutcome(id int64, outcome Outcome) error {
 		return fmt.Errorf("store: no application with id %d", id)
 	}
 	return nil
+}
+
+// SetApproved marks (or unmarks) an application for a real apply.
+func (s *Store) SetApproved(id int64, approved bool) error {
+	res, err := s.db.Exec(
+		`UPDATE applications SET approved = ? WHERE id = ?`,
+		approved, id,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("store: no application with id %d", id)
+	}
+	return nil
+}
+
+// SetStatus records a new apply status + reason for an application and stamps
+// applied_at (used by the apply-selected flow after a real submission).
+func (s *Store) SetStatus(id int64, status Status, reason string) error {
+	res, err := s.db.Exec(
+		`UPDATE applications SET status = ?, reason = ?, applied_at = ? WHERE id = ?`,
+		string(status), reason, time.Now().UTC(), id,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("store: no application with id %d", id)
+	}
+	return nil
+}
+
+// GetByIDs returns the applications with the given ids, in the same order.
+func (s *Store) GetByIDs(ids []int64) ([]Application, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.db.Query(
+		`SELECT id, provider, company, role, url, status, reason, applied_at,
+		        location, remote, posted_at, description, fit_score, fit_summary,
+		        outcome, outcome_at, approved
+		 FROM applications WHERE id IN (`+placeholders+`)`,
+		args...,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	return scanApplications(rows)
 }
 
 // SetOutcomeByURL records the outcome for the application with the given URL.
@@ -234,7 +310,7 @@ func (s *Store) List() ([]Application, error) {
 	rows, err := s.db.Query(
 		`SELECT id, provider, company, role, url, status, reason, applied_at,
 		        location, remote, posted_at, description, fit_score, fit_summary,
-		        outcome, outcome_at
+		        outcome, outcome_at, approved
 		 FROM applications ORDER BY applied_at DESC`,
 	)
 	if err != nil {
@@ -280,7 +356,7 @@ func (s *Store) ListByCompany(company string) ([]Application, error) {
 	rows, err := s.db.Query(
 		`SELECT id, provider, company, role, url, status, reason, applied_at,
 		        location, remote, posted_at, description, fit_score, fit_summary,
-		        outcome, outcome_at
+		        outcome, outcome_at, approved
 		 FROM applications
 		 WHERE lower(trim(company)) = lower(trim(?))
 		 ORDER BY applied_at DESC`,
@@ -298,13 +374,13 @@ func scanApplications(rows *sql.Rows) ([]Application, error) {
 	for rows.Next() {
 		var a Application
 		var appliedAt, postedAt, outcomeAt string
-		var remote int
+		var remote, approved int
 		var outcome string
 		if err := rows.Scan(
 			&a.ID, &a.Provider, &a.Company, &a.Role,
 			&a.URL, &a.Status, &a.Reason, &appliedAt,
 			&a.Location, &remote, &postedAt, &a.Description,
-			&a.FitScore, &a.FitSummary, &outcome, &outcomeAt,
+			&a.FitScore, &a.FitSummary, &outcome, &outcomeAt, &approved,
 		); err != nil {
 			return nil, err
 		}
@@ -313,6 +389,7 @@ func scanApplications(rows *sql.Rows) ([]Application, error) {
 		a.OutcomeAt, _ = time.Parse(time.RFC3339, outcomeAt)
 		a.Outcome = Outcome(outcome)
 		a.Remote = remote == 1
+		a.Approved = approved == 1
 		apps = append(apps, a)
 	}
 	return apps, rows.Err()
@@ -346,11 +423,26 @@ func (s *Store) Stats() (applied, skipped, failed int, err error) {
 }
 
 // CountAppliedSince returns how many successful applies happened at/after since (UTC).
+// CountAppliedSince counts applications recorded as applied at or after the
+// given time. applied_at is stored by the driver as a native time.Time that
+// SQLite's datetime() cannot parse, so the filter runs in Go where the value
+// round-trips correctly.
 func (s *Store) CountAppliedSince(since time.Time) (int, error) {
-	var n int
-	err := s.db.QueryRow(
-		`SELECT COUNT(1) FROM applications WHERE status = ? AND applied_at >= ?`,
-		string(StatusApplied), since.UTC().Format(time.RFC3339),
-	).Scan(&n)
-	return n, err
+	rows, err := s.db.Query(`SELECT applied_at FROM applications WHERE status = ?`, string(StatusApplied))
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	n := 0
+	for rows.Next() {
+		var at time.Time
+		if err := rows.Scan(&at); err != nil {
+			return 0, err
+		}
+		if !at.Before(since) {
+			n++
+		}
+	}
+	return n, rows.Err()
 }
