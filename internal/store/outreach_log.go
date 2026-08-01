@@ -9,22 +9,22 @@ import (
 // (email sent / send failed / LinkedIn opened) — what was sent, to whom,
 // for which job, and with what AI review data.
 type OutreachLogEntry struct {
-	ID            int64
-	Channel       string // "email" | "linkedin"
-	JobURL        string
-	Company       string
-	Role          string
-	ContactName   string
-	ContactEmail  string
-	ContactSource string
-	Subject       string
-	Body          string
-	Status        string // "sent" | "failed" | "opened"
-	Error         string
-	ReviewScore   int
-	Attempts      int
-	CreatedAt     time.Time
-	SentAt        time.Time
+	ID            int64     `json:"id"`
+	Channel       string    `json:"channel"` // "email" | "linkedin"
+	JobURL        string    `json:"jobURL"`
+	Company       string    `json:"company"`
+	Role          string    `json:"role"`
+	ContactName   string    `json:"contactName"`
+	ContactEmail  string    `json:"contactEmail"`
+	ContactSource string    `json:"contactSource"`
+	Subject       string    `json:"subject"`
+	Body          string    `json:"body"`
+	Status        string    `json:"status"` // "sent" | "failed" | "opened"
+	Error         string    `json:"error"`
+	ReviewScore   int       `json:"reviewScore"`
+	Attempts      int       `json:"attempts"`
+	CreatedAt     time.Time `json:"createdAt"`
+	SentAt        time.Time `json:"sentAt"`
 }
 
 const outreachLogDDL = `

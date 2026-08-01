@@ -16,6 +16,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/contacts"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
+	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
@@ -94,6 +95,12 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 	cdb, _ := companies.OpenDefaultEmbedded()
 	// Open the saved-contacts store best-effort; handlers degrade if nil.
 	ktdb, _ := contacts.OpenDefault()
+	// Every real outreach send attempt lands an audit entry in the store.
+	if st != nil {
+		outreach.SetSentLogger(func(e store.OutreachLogEntry) {
+			_ = st.SaveOutreachLog(e)
+		})
+	}
 	return &Server{
 		cfg:              cfg,
 		store:            st,
