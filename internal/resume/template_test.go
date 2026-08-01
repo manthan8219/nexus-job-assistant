@@ -8,8 +8,8 @@ import (
 
 func TestTemplatesRegistry(t *testing.T) {
 	tmpls := Templates()
-	if len(tmpls) != 4 {
-		t.Fatalf("registry has %d templates; want 4", len(tmpls))
+	if len(tmpls) != 12 {
+		t.Fatalf("registry has %d templates; want 12", len(tmpls))
 	}
 	seen := map[string]bool{}
 	for _, tmpl := range tmpls {
@@ -41,6 +41,20 @@ func TestTemplatesRegistry(t *testing.T) {
 	}
 	if _, err := GetTemplate("nope"); err == nil {
 		t.Error("GetTemplate(\"nope\") should error")
+	}
+
+	// Font + rail tokens are set on the templates that need them.
+	exec, _ := GetTemplate(TemplateExecutive)
+	if exec.BodyFont != "serif" {
+		t.Errorf("executive bodyFont = %q; want serif", exec.BodyFont)
+	}
+	dev, _ := GetTemplate(TemplateDeveloper)
+	if dev.BodyFont != "mono" {
+		t.Errorf("developer bodyFont = %q; want mono", dev.BodyFont)
+	}
+	split, _ := GetTemplate(TemplateSplit)
+	if split.RailSide != "right" {
+		t.Errorf("split railSide = %q; want right", split.RailSide)
 	}
 }
 
@@ -113,6 +127,30 @@ func TestRenderLaTeXForTemplates(t *testing.T) {
 	texK := RenderLaTeXFor(doc, classic)
 	if !containsAll(texK, `\documentclass[11pt,a4paper]{article}`, `margin=0.75in`) {
 		t.Fatalf("classic latex should use 11pt + 0.75in margin:\n%s", texK)
+	}
+
+	developer, _ := GetTemplate(TemplateDeveloper)
+	texD := RenderLaTeXFor(doc, developer)
+	if !contains(texD, `\renewcommand{\familydefault}{\ttdefault}`) {
+		t.Fatalf("developer latex should set a monospace family:\n%s", texD)
+	}
+
+	executive, _ := GetTemplate(TemplateExecutive)
+	texE := RenderLaTeXFor(doc, executive)
+	if strings.Contains(texE, `\usepackage{helvet}`) {
+		t.Fatalf("executive latex should keep the serif default (no helvet):\n%s", texE)
+	}
+
+	split, _ := GetTemplate(TemplateSplit)
+	texSp := RenderLaTeXFor(doc, split)
+	if !containsAll(texSp, `\begin{minipage}[t]{0.66\textwidth}`, `\begin{minipage}[t]{0.30\textwidth}`) {
+		t.Fatalf("split latex should render two minipage columns:\n%s", texSp)
+	}
+	// Split puts experience (the wide column) BEFORE the skills rail.
+	mainIdx := strings.Index(texSp, `\begin{minipage}[t]{0.66\textwidth}`)
+	railIdx := strings.Index(texSp, `\begin{minipage}[t]{0.30\textwidth}`)
+	if mainIdx == -1 || railIdx == -1 || mainIdx > railIdx {
+		t.Fatalf("split latex should lead with the main column (right rail):\n%s", texSp)
 	}
 }
 

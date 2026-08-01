@@ -157,9 +157,21 @@ func polishTemplateBlock(tpl Template) string {
 		fmt.Fprintf(&b, "Description: %s\n", tpl.Description)
 	}
 	if tpl.Layout == LayoutSidebar {
-		b.WriteString("Layout: two-column — skills and education live in a left rail; experience is the main column.\n")
+		side := "left"
+		if tpl.RailSide == "right" {
+			side = "right"
+		}
+		fmt.Fprintf(&b, "Layout: two-column — skills and education live in the %s rail; experience is the main column.\n", side)
 	} else {
 		b.WriteString("Layout: single column.\n")
+	}
+	switch tpl.BodyFont {
+	case "mono":
+		b.WriteString("Typography: monospace — keep bullets terse and scannable.\n")
+	case "serif":
+		b.WriteString("Typography: serif — formal, traditional tone.\n")
+	default:
+		b.WriteString("Typography: clean sans-serif.\n")
 	}
 	if tpl.OnePage {
 		b.WriteString("Constraint: keep the whole resume to ONE page — be ruthless with length.\n")

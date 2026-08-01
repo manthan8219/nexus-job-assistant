@@ -109,8 +109,22 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 \pagestyle{empty}
 \setlist[itemize]{leftmargin=*,itemsep=%s,topsep=%s}
 \newcommand{\rsec}[1]{\par\vspace{0.6em}\noindent{\color{accent}\textbf{\MakeUppercase{#1}}}\vspace{0.25em}\par}
-\begin{document}
 `, size, margin, latexAccentHex(tpl.AccentHex), itemSep, topSep)
+
+	// Body font family per the template manifest (must stay in the preamble).
+	switch tpl.BodyFont {
+	case "mono":
+		b.WriteString(`\renewcommand{\familydefault}{\ttdefault}
+`)
+	case "serif":
+		// article's default (Computer Modern) is already serif.
+	default:
+		b.WriteString(`\usepackage{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+`)
+	}
+	b.WriteString(`\begin{document}
+`)
 
 	name := doc.FullName
 	if name == "" {
@@ -193,8 +207,9 @@ func renderColumnSections(b *strings.Builder, doc ImprovedDoc, esc func(string) 
 	}
 }
 
-// renderSidebarLaTeX renders the Sidebar template: summary full-width on top,
-// skills + education in a left rail, experience in the main column.
+// renderSidebarLaTeX renders the Sidebar/Split templates: summary full-width
+// on top, then a two-column body. The rail (skills + education) sits on the
+// side the template declares (left by default, right for Split).
 func renderSidebarLaTeX(b *strings.Builder, doc ImprovedDoc, esc func(string) string, tpl Template) {
 	if doc.Summary != "" {
 		fmt.Fprintf(b, `\noindent{\color{accent}\textbf{\MakeUppercase{Summary}}}\\[0.25em]
@@ -202,6 +217,22 @@ func renderSidebarLaTeX(b *strings.Builder, doc ImprovedDoc, esc func(string) st
 
 `, esc(doc.Summary))
 	}
+	rail := renderSidebarRailLaTeX(doc, esc)
+	main := renderSidebarMainLaTeX(doc, esc)
+	if tpl.RailSide == "right" {
+		b.WriteString(main)
+		b.WriteString("\\hfill\n")
+		b.WriteString(rail)
+		return
+	}
+	b.WriteString(rail)
+	b.WriteString("\\hfill\n")
+	b.WriteString(main)
+}
+
+// renderSidebarRailLaTeX builds the narrow rail (skills + education).
+func renderSidebarRailLaTeX(doc ImprovedDoc, esc func(string) string) string {
+	var b strings.Builder
 	b.WriteString(`\begin{minipage}[t]{0.30\textwidth}
 `)
 	if len(doc.Skills) > 0 {
@@ -209,7 +240,7 @@ func renderSidebarLaTeX(b *strings.Builder, doc ImprovedDoc, esc func(string) st
 \begin{itemize}
 `)
 		for _, s := range doc.Skills {
-			fmt.Fprintf(b, "  \\item %s\n", esc(s))
+			fmt.Fprintf(&b, "  \\item %s\n", esc(s))
 		}
 		b.WriteString(`\end{itemize}
 `)
@@ -219,22 +250,29 @@ func renderSidebarLaTeX(b *strings.Builder, doc ImprovedDoc, esc func(string) st
 \begin{itemize}
 `)
 		for _, line := range doc.Education {
-			fmt.Fprintf(b, "  \\item %s\n", esc(line))
+			fmt.Fprintf(&b, "  \\item %s\n", esc(line))
 		}
 		b.WriteString(`\end{itemize}
 `)
 	}
 	b.WriteString(`\end{minipage}
-\hfill
-\begin{minipage}[t]{0.66\textwidth}
+`)
+	return b.String()
+}
+
+// renderSidebarMainLaTeX builds the wide column (experience history).
+func renderSidebarMainLaTeX(doc ImprovedDoc, esc func(string) string) string {
+	var b strings.Builder
+	b.WriteString(`\begin{minipage}[t]{0.66\textwidth}
 `)
 	if len(doc.Experience) > 0 {
 		b.WriteString(`\rsec{Experience}
 `)
-		renderRoles(b, doc.Experience, esc)
+		renderRoles(&b, doc.Experience, esc)
 	}
 	b.WriteString(`\end{minipage}
 `)
+	return b.String()
 }
 
 // renderRoles writes the experience entries (title + org, period right-hfill,
