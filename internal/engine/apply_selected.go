@@ -8,6 +8,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -103,6 +104,15 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 
 		if uerr := e.store.SetStatus(app.ID, status, reason); uerr != nil {
 			e.log("Store error: %v", uerr)
+		}
+		// Persist the exact submission audit (KAN-33) — fail open, never
+		// block an apply on a store error.
+		if status == store.StatusApplied && result.Payload != nil {
+			if data, merr := json.Marshal(result.Payload); merr == nil {
+				if perr := e.store.SetSubmittedPayload(app.ID, string(data)); perr != nil {
+					e.log("Store error (payload): %v", perr)
+				}
+			}
 		}
 		if aerr := e.store.SetApproved(app.ID, false); aerr != nil {
 			e.log("Store error: %v", aerr)

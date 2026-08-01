@@ -13,6 +13,22 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
+// leverSubmittedPayload records the audit trail of exactly what was sent to
+// Lever (KAN-33): the profile fields and the attached resume.
+func leverSubmittedPayload(profile provider.Profile, fields map[string]string) *provider.SubmittedPayload {
+	prof := map[string]string{}
+	for k, v := range fields {
+		if v != "" {
+			prof[k] = v
+		}
+	}
+	var resume *provider.SubmittedResume
+	if profile.ResumePath != "" {
+		resume = &provider.SubmittedResume{Filename: filepath.Base(profile.ResumePath)}
+	}
+	return &provider.SubmittedPayload{Profile: prof, Resume: resume}
+}
+
 // submitApplication attempts to apply to a Lever job on behalf of the user.
 func (c *Client) submitApplication(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
 	applyURL := fmt.Sprintf("%s/%s/%s/apply", c.baseURL, job.Board, job.ID)
@@ -70,7 +86,10 @@ func (c *Client) submitApplication(ctx context.Context, job provider.Job, profil
 	if resp.StatusCode == http.StatusOK ||
 		resp.StatusCode == http.StatusCreated ||
 		resp.StatusCode == http.StatusFound {
-		return provider.ApplyResult{Status: "applied"}, nil
+		return provider.ApplyResult{
+			Status:  "applied",
+			Payload: leverSubmittedPayload(profile, fields),
+		}, nil
 	}
 
 	// 4xx (except 429) — direct applicant to apply manually. 429 is

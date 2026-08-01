@@ -23,6 +23,49 @@ func tempStore(t *testing.T) *Store {
 	return db
 }
 
+func TestSetSubmittedPayloadRoundTrip(t *testing.T) {
+	s := tempStore(t)
+
+	if err := s.Insert(Application{
+		Provider: "greenhouse", Company: "Acme", Role: "Engineer",
+		URL: "https://example.com/payload", Status: StatusApplied,
+		AppliedAt: time.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	apps, err := s.List()
+	if err != nil || len(apps) != 1 {
+		t.Fatalf("list = %d apps, err %v; want 1", len(apps), err)
+	}
+
+	payload := `{"profile":{"first_name":"Ada"},"answers":[{"question":"Why","answer":"x"}]}`
+	if err := s.SetSubmittedPayload(apps[0].ID, payload); err != nil {
+		t.Fatalf("SetSubmittedPayload: %v", err)
+	}
+
+	got, err := s.GetByIDs([]int64{apps[0].ID})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].SubmittedPayload != payload {
+		t.Errorf("payload = %q; want %q", got[0].SubmittedPayload, payload)
+	}
+
+	// By-URL variant (used by the run loop).
+	if err := s.SetSubmittedPayloadByURL("https://example.com/payload", `{"resume":{"filename":"r.pdf"}}`); err != nil {
+		t.Fatalf("SetSubmittedPayloadByURL: %v", err)
+	}
+	got2, _ := s.GetByIDs([]int64{apps[0].ID})
+	if got2[0].SubmittedPayload != `{"resume":{"filename":"r.pdf"}}` {
+		t.Errorf("payload after URL update = %q", got2[0].SubmittedPayload)
+	}
+
+	// Missing id → honest error.
+	if err := s.SetSubmittedPayload(999999, "{}"); err == nil {
+		t.Error("expected error for unknown id")
+	}
+}
+
 func TestInsertAndExists(t *testing.T) {
 	s := tempStore(t)
 

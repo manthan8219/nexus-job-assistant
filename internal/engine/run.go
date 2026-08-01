@@ -7,6 +7,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -221,6 +222,7 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 	var status store.Status
 	var reason string
 	var applyErr error
+	var submittedPayload *provider.SubmittedPayload
 
 	if e.DryRun {
 		status = store.StatusQueued
@@ -243,6 +245,7 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 		} else {
 			status = store.Status(result.Status)
 			reason = result.Reason
+			submittedPayload = result.Payload
 		}
 	}
 
@@ -256,6 +259,14 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 		FitScore: preScore, FitSummary: preSummary,
 	}
 	_ = e.store.Insert(recorded)
+	// Persist the exact submission audit (KAN-33) on success — fail open.
+	if status == store.StatusApplied && submittedPayload != nil {
+		if data, merr := json.Marshal(submittedPayload); merr == nil {
+			if perr := e.store.SetSubmittedPayloadByURL(job.URL, string(data)); perr != nil {
+				e.log("Store error (payload): %v", perr)
+			}
+		}
+	}
 	// Kick the outreach pipeline (find HR email → draft → notify) if wired.
 	if status == store.StatusApplied && e.OnApplied != nil {
 		e.OnApplied(recorded)

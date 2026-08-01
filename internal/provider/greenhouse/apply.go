@@ -154,7 +154,10 @@ func submitApplication(
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
-		return provider.ApplyResult{Status: "applied"}, nil
+		return provider.ApplyResult{
+			Status:  "applied",
+			Payload: submittedPayload(profile, answers, app, body),
+		}, nil
 
 	case resp.StatusCode == http.StatusBadRequest || resp.StatusCode == 428:
 		// 400 = captcha token absent, 428 = captcha verification failed.
@@ -172,6 +175,53 @@ func submitApplication(
 			Reason: fmt.Sprintf("HTTP %d: %s", resp.StatusCode, truncate(string(respBody), 400)),
 		}, nil
 	}
+}
+
+// submittedPayload records the audit trail of exactly what was sent to
+// Greenhouse (KAN-33): the profile fields, the answers, and the raw JSON.
+func submittedPayload(profile provider.Profile, answers []Answer, app map[string]any, raw []byte) *provider.SubmittedPayload {
+	prof := map[string]string{}
+	for _, k := range []string{"first_name", "last_name", "email", "phone", "location", "city"} {
+		if v := stringField(app, k); v != "" {
+			prof[k] = v
+		}
+	}
+	if profile.ResumePath != "" {
+		prof["resume_path"] = profile.ResumePath
+	}
+	if v := stringField(app, "resume_url_filename"); v != "" {
+		prof["resume_url_filename"] = v
+	}
+	if v := stringField(app, "cover_letter_text"); v != "" {
+		prof["cover_letter_text"] = v
+	}
+
+	var out []provider.SubmittedAnswer
+	for _, a := range answers {
+		if a.Err != nil || strings.TrimSpace(a.Value) == "" {
+			continue
+		}
+		question := a.Question.Label
+		if question == "" && len(a.Question.Fields) > 0 {
+			question = a.Question.Fields[0].Name
+		}
+		out = append(out, provider.SubmittedAnswer{Question: question, Answer: a.Value})
+	}
+	return &provider.SubmittedPayload{
+		Profile: prof,
+		Answers: out,
+		Raw:     string(raw),
+	}
+}
+
+// stringField returns the string value at key in m, if present.
+func stringField(m map[string]any, key string) string {
+	if v, ok := m[key]; ok {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
 }
 
 // buildApplication assembles the job_application object (sans file uploads)
