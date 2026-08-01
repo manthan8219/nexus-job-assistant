@@ -24,7 +24,9 @@ var networkSeedOnce sync.Once
 // considered seeded and won't be re-fetched automatically — use
 // RefreshCompanies (wired to the Companies tab's refresh action) to force
 // a re-pull.
-func (s *DB) ensureSeeded(dbPath string) {
+// seedEmbeddedOnly imports the embedded catalogs (boards + India employers)
+// when the DB is empty. Never touches the network.
+func (s *DB) seedEmbeddedOnly() {
 	n, err := s.Count()
 	if err == nil && n == 0 {
 		if _, err := s.ImportNexusEmbeddedBoards(); err != nil {
@@ -34,6 +36,10 @@ func (s *DB) ensureSeeded(dbPath string) {
 			fmt.Fprintf(os.Stderr, "companies: auto-seed india employers failed: %v\n", err)
 		}
 	}
+}
+
+func (s *DB) ensureSeeded(dbPath string) {
+	s.seedEmbeddedOnly()
 
 	ycCount, _ := s.CountBySource("ycombinator")
 	ojCount, _ := s.CountBySource("openjobs")

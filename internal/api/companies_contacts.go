@@ -44,6 +44,14 @@ func companyKey(name string) string {
 	return b.String()
 }
 
+// nonNilStrings returns an empty slice instead of nil so JSON emits `[]`.
+func nonNilStrings(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
+}
+
 func companyToFrontend(c companies.Company) Company {
 	return Company{
 		ID:            c.ID,
@@ -52,7 +60,7 @@ func companyToFrontend(c companies.Company) Company {
 		ATS:           c.ATS,
 		Board:         c.Board,
 		BoardURL:      c.BoardURL,
-		HireCountries: c.HireCountries,
+		HireCountries: nonNilStrings(c.HireCountries),
 		HQCountry:     c.HQCountry,
 		Kind:          c.Kind,
 		Industry:      c.Industry,

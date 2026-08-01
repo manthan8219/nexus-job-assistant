@@ -87,8 +87,9 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		GmailAppPassword:   cfg.GmailAppPassword,
 		EmailNotifications: cfg.EmailNotifications,
 	})
-	// Open the companies store best-effort; handlers degrade gracefully if nil.
-	cdb, _ := companies.OpenDefault()
+	// Open the companies store best-effort (embedded catalogs only — no
+	// network); handlers degrade gracefully if nil.
+	cdb, _ := companies.OpenDefaultEmbedded()
 	return &Server{
 		cfg:              cfg,
 		store:            st,
