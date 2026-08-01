@@ -49,6 +49,14 @@ func RenderTemplatePreviewPDF(templateID string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	return RenderTemplatePreviewPDFFor(SampleResume(), tpl)
+}
+
+// RenderTemplatePreviewPDFFor renders ANY resume document into the named
+// template and returns the raw PDF bytes. It powers "preview with my data":
+// the web UI posts the user's current profile/projects/skills and gets back
+// their resume in the chosen design — no AI involved, fully deterministic.
+func RenderTemplatePreviewPDFFor(doc ImprovedDoc, tpl Template) ([]byte, error) {
 	tmp, err := os.CreateTemp("", "nexus-resume-preview-*.pdf")
 	if err != nil {
 		return nil, fmt.Errorf("preview temp file: %w", err)
@@ -60,7 +68,7 @@ func RenderTemplatePreviewPDF(templateID string) ([]byte, error) {
 	}
 	defer os.Remove(path)
 
-	if err := RenderNativePDFFor(SampleResume(), tpl, path); err != nil {
+	if err := RenderNativePDFFor(doc, tpl, path); err != nil {
 		return nil, fmt.Errorf("render preview: %w", err)
 	}
 	return os.ReadFile(path)

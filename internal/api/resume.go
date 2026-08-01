@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -119,6 +120,96 @@ func (s *Server) handleGetResumeTemplatePreviewPDF(w http.ResponseWriter, r *htt
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(pdfBytes)
+}
+
+// handlePostResumeTemplatePreview renders a user-supplied resume document into
+// the named template with the real PDF engine — no AI, fully deterministic.
+// This is the "preview with my data" action: pick a template and see YOUR
+// resume in it before spending AI credits on generation.
+func (s *Server) handlePostResumeTemplatePreview(w http.ResponseWriter, r *http.Request) {
+	templateID := r.PathValue("id")
+	if templateID == "" {
+		writeError(w, http.StatusBadRequest, "missing template id")
+		return
+	}
+	// The web client sends camelCase keys (mirrors the frontend PreviewResumeDoc);
+	// map them onto the resume model explicitly since ImprovedDoc uses snake_case.
+	var body struct {
+		FullName   string   `json:"fullName"`
+		Headline   string   `json:"headline"`
+		Summary    string   `json:"summary"`
+		Skills     []string `json:"skills"`
+		Experience []struct {
+			Title   string   `json:"title"`
+			Org     string   `json:"org"`
+			Period  string   `json:"period"`
+			Bullets []string `json:"bullets"`
+		} `json:"experience"`
+		Education []string `json:"education"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid resume document: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(body.FullName) == "" && strings.TrimSpace(body.Summary) == "" && len(body.Experience) == 0 {
+		writeError(w, http.StatusBadRequest, "send at least a name, summary, or experience entry")
+		return
+	}
+	tpl, err := resume.GetTemplate(templateID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	doc := resume.ImprovedDoc{
+		FullName:  body.FullName,
+		Headline:  body.Headline,
+		Summary:   body.Summary,
+		Skills:    body.Skills,
+		Education: body.Education,
+	}
+	for _, e := range body.Experience {
+		doc.Experience = append(doc.Experience, resume.ImprovedRole{
+			Title:   e.Title,
+			Org:     e.Org,
+			Period:  e.Period,
+			Bullets: e.Bullets,
+		})
+	}
+	pdfBytes, err := resume.RenderTemplatePreviewPDFFor(doc, tpl)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "inline; filename=\""+templateID+"-with-my-data.pdf\"")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfBytes)
+}
+
+// handleGetResumeLibraryPDF streams the PDF of one generated resume version so
+// the web UI can render it inline (the ResultPanel's PDF pane).
+func (s *Server) handleGetResumeLibraryPDF(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "missing version id")
+		return
+	}
+	v, err := resume.GetVersion(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	data, err := os.ReadFile(v.PDFPath)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "pdf missing for version "+id)
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "inline; filename=\""+id+".pdf\"")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 // handleGetResumeProjects returns work history projects from the workcontext store.
@@ -287,6 +378,7 @@ func improveResponse(out *resume.ImproveOutput) map[string]any {
 		},
 		"pdfNote": out.PDFNote,
 		"fit":     out.Fit,
+		"pdfId":   out.VersionID,
 	}
 }
 

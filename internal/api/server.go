@@ -266,6 +266,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/resume/upload", s.handlePostResumeUpload)
 	mux.HandleFunc("GET /api/resume/templates", s.handleGetResumeTemplates)
 	mux.HandleFunc("GET /api/resume/templates/{id}/preview.pdf", s.handleGetResumeTemplatePreviewPDF)
+	mux.HandleFunc("POST /api/resume/templates/{id}/preview", s.handlePostResumeTemplatePreview)
 	mux.HandleFunc("GET /api/resume/projects", s.handleGetResumeProjects)
 	mux.HandleFunc("PUT /api/resume/projects", s.handlePutResumeProjects)
 	mux.HandleFunc("DELETE /api/resume/projects/{id}", s.handleDeleteResumeProjects)
@@ -273,6 +274,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("PUT /api/resume/skills", s.handlePutResumeSkills)
 	mux.HandleFunc("POST /api/resume/improve", s.handlePostResumeImprove)
 	mux.HandleFunc("GET /api/resume/library", s.handleGetResumeLibrary)
+	mux.HandleFunc("GET /api/resume/library/{id}/pdf", s.handleGetResumeLibraryPDF)
 
 	// Job titles
 	mux.HandleFunc("POST /api/job-titles/suggest", s.handlePostJobTitlesSuggest)
