@@ -29,8 +29,9 @@ func (s *Server) handlePostJobTitlesSuggest(w http.ResponseWriter, r *http.Reque
 		// Offline catalog — suggestions work for ANY profession without AI keys.
 		titles := resume.SuggestTitlesOffline(body.Intent, body.Years, body.Hints)
 		writeJSON(w, http.StatusOK, map[string]any{
-			"titles": titles,
-			"intent": body.Intent,
+			"titles":     titles,
+			"intent":     body.Intent,
+			"profession": resume.SuggestProfession(body.Intent),
 		})
 		return
 	}
