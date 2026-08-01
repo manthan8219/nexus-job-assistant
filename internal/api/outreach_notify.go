@@ -85,18 +85,26 @@ func (s *Server) handleGetOutreachSetup(w http.ResponseWriter, r *http.Request) 
 		"maxLinkedInPerDay": maxLinkedIn,
 		"aiCompose":         cfg.OutreachAICompose,
 		"aiReview":          cfg.OutreachAIReview,
+		// Referral-ask variant (KAN-28): switch email drafts to a warm
+		// referral ask; empty templates mean the built-in defaults.
+		"referralAsk":        cfg.OutreachReferralAsk,
+		"referralSubjectTpl": cfg.ReferralSubjectTpl,
+		"referralBodyTpl":    cfg.ReferralBodyTpl,
 	})
 }
 
 // handlePutOutreachSetup persists the outreach configuration.
 func (s *Server) handlePutOutreachSetup(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Consent           bool   `json:"consent"`
-		Mode              string `json:"mode"`
-		MaxEmailsPerDay   int    `json:"maxEmailsPerDay"`
-		MaxLinkedInPerDay int    `json:"maxLinkedInPerDay"`
-		AIConpose         bool   `json:"aiCompose"`
-		AIReview          bool   `json:"aiReview"`
+		Consent            bool   `json:"consent"`
+		Mode               string `json:"mode"`
+		MaxEmailsPerDay    int    `json:"maxEmailsPerDay"`
+		MaxLinkedInPerDay  int    `json:"maxLinkedInPerDay"`
+		AIConpose          bool   `json:"aiCompose"`
+		AIReview           bool   `json:"aiReview"`
+		ReferralAsk        bool   `json:"referralAsk"`
+		ReferralSubjectTpl string `json:"referralSubjectTpl"`
+		ReferralBodyTpl    string `json:"referralBodyTpl"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -117,6 +125,9 @@ func (s *Server) handlePutOutreachSetup(w http.ResponseWriter, r *http.Request) 
 	}
 	s.cfg.OutreachAICompose = body.AIConpose
 	s.cfg.OutreachAIReview = body.AIReview
+	s.cfg.OutreachReferralAsk = body.ReferralAsk
+	s.cfg.ReferralSubjectTpl = body.ReferralSubjectTpl
+	s.cfg.ReferralBodyTpl = body.ReferralBodyTpl
 	err := config.Save(s.cfg)
 	s.mu.Unlock()
 	if err != nil {
