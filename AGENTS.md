@@ -342,6 +342,7 @@ This app is a scraper/auto-applier — these rules are core, not optional.
 
 ## 15. Git & PRs
 
+- **One task = one branch.** Start every piece of work on a fresh branch from the current base (e.g. `feat/auto-apply-recruitee`). When a new request is **unrelated to the in-progress work, create a new branch and work in that** — never stack unrelated changes on a branch that hasn't been reviewed. The branch is the review unit: the human reviews the branch, then it is merged/pushed.
 - Small, focused commits. Conventional-style messages: `feat(provider): add workable board`, `fix(engine): respect daily cap`, `refactor(textutil): dedupe title normalizers`.
 - Don't commit build artifacts (`nexus.exe`, `test-apply`, …), data, or credentials.
 - Before committing: `gofmt -l .` clean, `go vet ./...` clean, `go build ./... && go test ./...` green.
