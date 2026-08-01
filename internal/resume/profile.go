@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -20,16 +21,16 @@ type ScoredItem struct {
 // Profile is an AI-generated career read of the resume.
 type Profile struct {
 	Summary         string       `json:"summary"`
-	WhatsGood       []string     `json:"whats_good"`  // balanced praise grounded in evidence
-	WhatsWrong      []string     `json:"whats_wrong"` // honest critique: gaps, risks, weak spots
+	WhatsGood       []string     `json:"whatsGood"`
+	WhatsWrong      []string     `json:"whatsWrong"`
 	Strengths       []string     `json:"strengths"`
-	StrengthScores  []ScoredItem `json:"strength_scores"`
-	SuitableRoles   []string     `json:"suitable_roles"`
-	RoleFit         []ScoredItem `json:"role_fit"`
+	StrengthScores  []ScoredItem `json:"strengthScores"`
+	SuitableRoles   []string     `json:"suitableRoles"`
+	RoleFit         []ScoredItem `json:"roleFit"`
 	Skills          []string     `json:"skills"`
-	SkillScores     []ScoredItem `json:"skill_scores"`
-	ExperienceLevel string       `json:"experience_level"`
-	YearsEstimate   int          `json:"years_estimate"`
+	SkillScores     []ScoredItem `json:"skillScores"`
+	ExperienceLevel string       `json:"experienceLevel"`
+	YearsEstimate   int          `json:"yearsEstimate"`
 	Industries      []string     `json:"industries"`
 	Improvements    []string     `json:"improvements"`
 	Error           string       `json:"-"`
@@ -109,7 +110,7 @@ func profilePrompt(resumeText string) string {
 TASK: Critically review this resume. Give a BALANCED judgment — equal weight to what is strong and what is weak. Do not flatter. Do not only criticize.
 
 BALANCE REQUIREMENT:
-- whats_good and whats_wrong must each have 4–6 items of similar specificity and seriousness.
+- whatsGood and whatsWrong must each have 4–6 items of similar specificity and seriousness.
 - If you praise something, the critique section must still find real gaps (scope, evidence, seniority mismatch, missing metrics, narrow stack, unclear impact, etc.).
 - If you criticize something, acknowledge genuine strengths with equal concreteness.
 - summary must include BOTH a clear positive framing AND an honest caveat (at least one sentence each).
@@ -124,18 +125,18 @@ RULES:
 JSON SCHEMA (all keys required):
 {
   "summary": "4-6 sentences: balanced overview — who they are, what they are good at, and what holds them back",
-  "whats_good": ["4-6 specific positives about the candidate or resume, each with implied evidence"],
-  "whats_wrong": ["4-6 specific weaknesses, risks, or missing proof a hiring manager would notice"],
+  "whatsGood": ["4-6 specific positives about the candidate or resume, each with implied evidence"],
+  "whatsWrong": ["4-6 specific weaknesses, risks, or missing proof a hiring manager would notice"],
   "strengths": ["4-6 concrete strengths tied to resume evidence"],
-  "strength_scores": [{"name":"short strength label","score":1-10}, ... 4-6 items],
-  "suitable_roles": ["5-8 realistic job titles — not stretch titles they cannot defend"],
-  "role_fit": [{"name":"job title","score":1-10 fit}, ... 4-6 items],
+  "strengthScores": [{"name":"short strength label","score":1-10}, ... 4-6 items],
+  "suitableRoles": ["5-8 realistic job titles — not stretch titles they cannot defend"],
+  "roleFit": [{"name":"job title","score":1-10 fit}, ... 4-6 items],
   "skills": ["8-14 hard skills / tools explicitly present"],
-  "skill_scores": [{"name":"skill","score":1-10 proficiency inferred}, ... 5-8 top skills],
-  "experience_level": "intern|junior|mid|senior|lead|executive",
-  "years_estimate": 0,
+  "skillScores": [{"name":"skill","score":1-10 proficiency inferred}, ... 5-8 top skills],
+  "experienceLevel": "intern|junior|mid|senior|lead|executive",
+  "yearsEstimate": 0,
   "industries": ["3-6 industries that fit"],
-  "improvements": ["3-5 actionable fixes that address the whats_wrong items"]
+  "improvements": ["3-5 actionable fixes that address the whatsWrong items"]
 }
 
 SCORING GUIDE: 1=weak/absent, 5=solid, 8=strong, 10=exceptional for their level.
@@ -189,7 +190,45 @@ func parseProfile(raw string) (*Profile, error) {
 	if p.Summary == "" && len(p.Strengths) == 0 {
 		return nil, fmt.Errorf("empty AI profile")
 	}
+	sanitizeProfile(&p)
 	return &p, nil
+}
+
+// sanitizeProfile strips common LLM hallucinated references (image, chart, figure)
+// from all text fields of the profile so the UI never shows broken placeholders.
+func sanitizeProfile(p *Profile) {
+	p.Summary = sanitizeAIOutput(p.Summary)
+	p.WhatsGood = sanitizeSlice(p.WhatsGood)
+	p.WhatsWrong = sanitizeSlice(p.WhatsWrong)
+	p.Strengths = sanitizeSlice(p.Strengths)
+	p.SuitableRoles = sanitizeSlice(p.SuitableRoles)
+	p.Skills = sanitizeSlice(p.Skills)
+	p.Industries = sanitizeSlice(p.Industries)
+	p.Improvements = sanitizeSlice(p.Improvements)
+}
+
+func sanitizeSlice(items []string) []string {
+	out := make([]string, 0, len(items))
+	for _, s := range items {
+		s = sanitizeAIOutput(s)
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+	return out
+}
+
+// sanitizeAIOutput removes markdown image references like [Image 1], [Chart 2],
+// [Figure 3], and similar LLM hallucinated placeholders from text.
+func sanitizeAIOutput(s string) string {
+	// Remove [Image N], [Chart N], [Figure N], [Table N], [Graph N] references.
+	re := regexp.MustCompile(`\[(?:Image|Chart|Figure|Table|Graph|Diagram|Picture|Screenshot|Screen shot)\s*\d*\]`)
+	s = re.ReplaceAllString(s, "")
+	// Remove any dangling brackets like "[]" left over.
+	s = strings.ReplaceAll(s, "[]", "")
+	// Clean up double spaces.
+	s = strings.Join(strings.Fields(s), " ")
+	return strings.TrimSpace(s)
 }
 
 func normalizeScores(p *Profile) {
@@ -210,6 +249,24 @@ func normalizeScores(p *Profile) {
 		}
 		return out
 	}
+	// Ensure every list field is a non-nil slice so JSON emits [] not null
+	// (the UI relies on .map/.slice and would crash on null).
+	clean := func(items []string) []string {
+		out := make([]string, 0, len(items))
+		for _, s := range items {
+			if s = strings.TrimSpace(s); s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	p.WhatsGood = clean(p.WhatsGood)
+	p.WhatsWrong = clean(p.WhatsWrong)
+	p.Strengths = clean(p.Strengths)
+	p.SuitableRoles = clean(p.SuitableRoles)
+	p.Skills = clean(p.Skills)
+	p.Industries = clean(p.Industries)
+	p.Improvements = clean(p.Improvements)
 	p.StrengthScores = clamp(p.StrengthScores)
 	p.RoleFit = clamp(p.RoleFit)
 	p.SkillScores = clamp(p.SkillScores)

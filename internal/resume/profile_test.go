@@ -6,13 +6,13 @@ func TestParseProfile_JSON(t *testing.T) {
 	raw := `{
 	  "summary": "Backend engineer with 5 years experience.",
 	  "strengths": ["Go", "Distributed systems"],
-	  "strength_scores": [{"name":"Go","score":9}],
-	  "suitable_roles": ["Backend Engineer"],
-	  "role_fit": [{"name":"Backend Engineer","score":9}],
+	  "strengthScores": [{"name":"Go","score":9}],
+	  "suitableRoles": ["Backend Engineer"],
+	  "roleFit": [{"name":"Backend Engineer","score":9}],
 	  "skills": ["Go", "Postgres"],
-	  "skill_scores": [{"name":"Go","score":9}],
-	  "experience_level": "mid",
-	  "years_estimate": 5,
+	  "skillScores": [{"name":"Go","score":9}],
+	  "experienceLevel": "mid",
+	  "yearsEstimate": 5,
 	  "industries": ["SaaS"],
 	  "improvements": ["Add quantifiable impact"]
 	}`
@@ -26,8 +26,42 @@ func TestParseProfile_JSON(t *testing.T) {
 	}
 }
 
+func TestParseProfile_SanitizesImageRefs(t *testing.T) {
+	raw := `{
+	  "summary": "Backend engineer. See [Image 1] for skills chart.",
+	  "whatsGood": ["Clear progression [Chart 2]", "Strong Go experience"],
+	  "whatsWrong": ["[Figure 3] Missing metrics"],
+	  "strengths": ["Go systems design"],
+	  "strengthScores": [{"name":"Go","score":9}],
+	  "suitableRoles": ["Backend Engineer"],
+	  "roleFit": [{"name":"Backend Engineer","score":9}],
+	  "skills": ["Go", "Postgres"],
+	  "skillScores": [{"name":"Go","score":9}],
+	  "experienceLevel": "mid",
+	  "yearsEstimate": 5,
+	  "industries": ["SaaS"],
+	  "improvements": ["Add [Table 4] quantifiable impact"]
+	}`
+	p, err := parseProfile(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Summary != "Backend engineer. See for skills chart." {
+		t.Errorf("summary not sanitized: %q", p.Summary)
+	}
+	if len(p.WhatsGood) != 2 || p.WhatsGood[0] != "Clear progression" {
+		t.Errorf("whatsGood not sanitized: %#v", p.WhatsGood)
+	}
+	if len(p.WhatsWrong) != 1 || p.WhatsWrong[0] != "Missing metrics" {
+		t.Errorf("whatsWrong not sanitized: %#v", p.WhatsWrong)
+	}
+	if len(p.Improvements) != 1 || p.Improvements[0] != "Add quantifiable impact" {
+		t.Errorf("improvements not sanitized: %#v", p.Improvements)
+	}
+}
+
 func TestParseProfile_Fenced(t *testing.T) {
-	raw := "```json\n{\"summary\":\"Hi\",\"strengths\":[\"A\"],\"suitable_roles\":[],\"skills\":[],\"experience_level\":\"junior\",\"industries\":[],\"improvements\":[]}\n```"
+	raw := "```json\n{\"summary\":\"Hi\",\"strengths\":[\"A\"],\"suitableRoles\":[],\"skills\":[],\"experienceLevel\":\"junior\",\"industries\":[],\"improvements\":[]}\n```"
 	p, err := parseProfile(raw)
 	if err != nil {
 		t.Fatal(err)

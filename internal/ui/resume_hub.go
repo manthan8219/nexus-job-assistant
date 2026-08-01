@@ -14,19 +14,21 @@ const (
 	resumeSubAnalyze = iota
 	resumeSubWork
 	resumeSubImprove
+	resumeSubSkills
 	resumeSubCount
 )
 
 // Short labels in the step strip (numbered in render).
-var resumeSubLabels = [resumeSubCount]string{"Review", "Your work", "New resume"}
+var resumeSubLabels = [resumeSubCount]string{"Review", "Your work", "New resume", "Skills"}
 
-// ResumeHubModel groups Analyze, Work, and Improve under one main tab.
+// ResumeHubModel groups Analyze, Work, Improve, and Skills under one main tab.
 type ResumeHubModel struct {
 	width, height int
 	sub           int
 	analyze       ResumeTabModel
 	work          WorkTabModel
 	improve       ImproveTabModel
+	skillsTab     SkillsTabModel
 
 	ai         resume.AIOptions
 	resumePath string
@@ -34,10 +36,16 @@ type ResumeHubModel struct {
 
 func NewResumeHubModel() ResumeHubModel {
 	return ResumeHubModel{
-		analyze: NewResumeTabModel(),
-		work:    NewWorkTabModel(),
-		improve: NewImproveTabModel(),
+		analyze:   NewResumeTabModel(),
+		work:      NewWorkTabModel(),
+		improve:   NewImproveTabModel(),
+		skillsTab: NewSkillsTabModel(nil),
 	}
+}
+
+// SetSkills initialises the skills tab with the given skill list.
+func (m *ResumeHubModel) SetSkills(skills []string) {
+	m.skillsTab = NewSkillsTabModel(skills)
 }
 
 func (m ResumeHubModel) Init() tea.Cmd {
@@ -49,6 +57,9 @@ func (m ResumeHubModel) CapturesKeys() bool {
 		return true
 	}
 	if m.sub == resumeSubImprove && m.improve.CapturesKeys() {
+		return true
+	}
+	if m.sub == resumeSubSkills && m.skillsTab.CapturesKeys() {
 		return true
 	}
 	return false
@@ -135,6 +146,11 @@ func (m ResumeHubModel) nextAction() string {
 			return "Done · files are in ~/.nexus/resumes/ · press g to regenerate"
 		}
 		return "Pick formats · optional target role (t) · press g to generate"
+	case m.sub == resumeSubSkills:
+		if len(m.skillsTab.Skills()) == 0 {
+			return "Press n to add skills — they'll be woven into every generated resume."
+		}
+		return fmt.Sprintf("%d skill(s) saved · press n to add more or tab to generate", len(m.skillsTab.Skills()))
 	default:
 		return "tab moves to the next step"
 	}
@@ -153,7 +169,7 @@ func (m ResumeHubModel) syncImproveContext() ResumeHubModel {
 	if projects == nil {
 		projects = []workcontext.Project{}
 	}
-	m.improve.SetContext(m.ai, path, profile, projects)
+	m.improve.SetContext(m.ai, path, profile, projects, m.skillsTab.Skills())
 	return m
 }
 
@@ -178,6 +194,9 @@ func (m ResumeHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		cmds = append(cmds, cmd)
 		sub, cmd = m.improve.Update(inner)
 		m.improve = sub.(ImproveTabModel)
+		cmds = append(cmds, cmd)
+		sub, cmd = m.skillsTab.Update(inner)
+		m.skillsTab = sub.(SkillsTabModel)
 		cmds = append(cmds, cmd)
 		return m, tea.Batch(cmds...)
 
@@ -218,6 +237,10 @@ func (m ResumeHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		sub, cmd := m.improve.Update(msg)
 		m.improve = sub.(ImproveTabModel)
 		return m, cmd
+	case skillsPersistMsg:
+		sub, cmd := m.skillsTab.Update(msg)
+		m.skillsTab = sub.(SkillsTabModel)
+		return m, cmd
 	}
 
 	var cmd tea.Cmd
@@ -233,6 +256,9 @@ func (m ResumeHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m = m.syncImproveContext()
 		sub, cmd = m.improve.Update(msg)
 		m.improve = sub.(ImproveTabModel)
+	case resumeSubSkills:
+		sub, cmd = m.skillsTab.Update(msg)
+		m.skillsTab = sub.(SkillsTabModel)
 	}
 	return m, cmd
 }
@@ -249,6 +275,8 @@ func (m ResumeHubModel) View() string {
 	case resumeSubImprove:
 		m = m.syncImproveContext()
 		b.WriteString(m.improve.View())
+	case resumeSubSkills:
+		b.WriteString(m.skillsTab.View())
 	}
 	return b.String()
 }
@@ -270,6 +298,7 @@ func (m ResumeHubModel) renderSteps() string {
 		m.analyzeDone(),
 		m.workDone(),
 		m.improveDone(),
+		len(m.skillsTab.Skills()) > 0,
 	}
 	parts := make([]string, 0, resumeSubCount*2)
 	for i, label := range resumeSubLabels {
@@ -310,6 +339,11 @@ func (m ResumeHubModel) FooterHint() string {
 		return "n add project  •  tab → New resume  •  esc main tabs"
 	case resumeSubImprove:
 		return "g generate  •  space formats  •  tab cycles steps  •  esc main tabs"
+	case resumeSubSkills:
+		if m.skillsTab.CapturesKeys() {
+			return "typing  •  enter save  •  esc cancel  •  ctrl+c quit"
+		}
+		return "n add skill  •  d delete  •  j/k move  •  tab cycles steps  •  esc main tabs"
 	default:
 		return "tab next step  •  esc main tabs  •  ctrl+c quit"
 	}

@@ -189,12 +189,26 @@ func (m DashboardModel) View() string {
 	}
 
 	// ── PROVIDERS ────────────────────────────────────────────────────────
-	b.WriteString("\n  " + labelStyle.Render("PROVIDERS") + "  ")
+	b.WriteString("\n  " + labelStyle.Render("PROVIDERS") + "\n")
 	if len(m.providers) == 0 {
-		b.WriteString(mutedStyle.Render("none configured") + "\n")
+		b.WriteString("  " + mutedStyle.Render("none configured") + "\n")
 	} else if m.status == "running" || (m.status == "done" && len(m.progress) > 0) {
-		b.WriteString("\n")
-		const cols = 4
+		// Width-aware grid: fit as many columns as the terminal allows.
+		maxName := 0
+		for _, p := range m.providers {
+			if len(p) > maxName {
+				maxName = len(p)
+			}
+		}
+		cellW := 2 + maxName + 3 // icon + space + name + 3-space gap
+		avail := m.width - 4     // 4 for indent
+		if avail < cellW {
+			avail = cellW
+		}
+		cols := avail / cellW
+		if cols < 1 {
+			cols = 1
+		}
 		for i, p := range m.providers {
 			icon, color := providerIcon(m.progress[p])
 			cell := lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(icon) + " " + primaryStyle.Render(p)
@@ -208,11 +222,33 @@ func (m DashboardModel) View() string {
 		}
 		b.WriteString("\n")
 	} else {
-		var provs []string
-		for _, p := range m.providers {
-			provs = append(provs, lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render("✓")+" "+primaryStyle.Render(p))
+		// Idle: wrap chips onto new lines before they exceed terminal width.
+		const indent = "  "
+		avail := m.width - len(indent)
+		if avail < 20 {
+			avail = 80
 		}
-		b.WriteString(strings.Join(provs, "  ") + "\n")
+		lineLen := 0
+		b.WriteString(indent)
+		for i, p := range m.providers {
+			chip := "✓ " + p
+			sep := 0
+			if i > 0 {
+				sep = 2
+			}
+			if i > 0 && lineLen+sep+len(chip) > avail {
+				b.WriteString("\n" + indent)
+				lineLen = 0
+				sep = 0
+			}
+			if sep > 0 {
+				b.WriteString("  ")
+				lineLen += 2
+			}
+			b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render("✓") + " " + primaryStyle.Render(p))
+			lineLen += len(chip)
+		}
+		b.WriteString("\n")
 	}
 
 	// ── LIVE FEED ────────────────────────────────────────────────────────

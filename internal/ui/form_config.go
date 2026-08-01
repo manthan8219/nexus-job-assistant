@@ -124,6 +124,9 @@ func (m FormModel) saveCmd() tea.Cmd {
 			if strings.TrimSpace(cfg.GmailOAuthClientSecret) == "" {
 				cfg.GmailOAuthClientSecret = cur.GmailOAuthClientSecret
 			}
+			if len(cfg.Skills) == 0 {
+				cfg.Skills = cur.Skills
+			}
 		}
 		if err := config.Save(cfg); err != nil {
 			return ErrMsg{err}

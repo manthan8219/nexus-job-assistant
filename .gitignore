@@ -1,6 +1,7 @@
 # Build output
 nexus
 nexus.exe
+nexus-job-assistant
 nexus-job-assistant.exe
 /test-apply
 /test-scraper

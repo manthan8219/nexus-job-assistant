@@ -7,6 +7,7 @@ import (
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/manthan8219/nexus-job-assistant/internal/api"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
@@ -26,6 +27,7 @@ USAGE:
 MODES:
   (no flags)        Launch the interactive TUI dashboard
   --run             Run the apply engine once and exit
+  --api             Start the HTTP API server (for the web frontend)
   --check-replies   Check Gmail for replies to outreach, update the pipeline
                     (stops follow-ups on reply, records rejections), send any
                     due follow-ups, and notify Discord/Telegram
@@ -42,6 +44,9 @@ CONFIG FLAGS:
   --companies PATH       Path to companies JSON file (default: data/companies.json)
   --skip-resume-check    Skip resume file validation (accept any path)
 
+API FLAGS:
+  --api-port PORT        Port for the API server (default: 8080)
+
 OUTPUT FLAGS:
   --verbose         Print detailed logs including skipped jobs
   --version         Print version and exit
@@ -54,6 +59,8 @@ EXAMPLES:
   nexus --run --dry-run          See matching jobs without applying
   nexus --run --delay 15         Wait at least 15s between applications
   nexus --run --provider greenhouse --limit 3
+  nexus --api                    Start the API server on port 8080
+  nexus --api --api-port 3000    Start the API server on port 3000
   nexus --run --verbose
 
 DATA:
@@ -79,6 +86,8 @@ func main() {
 	providerName := flag.String("provider", "", "run only this provider (e.g. greenhouse)")
 	configPath := flag.String("config", "", "path to config file")
 	companiesPath := flag.String("companies", "", "path to companies JSON file")
+	apiMode := flag.Bool("api", false, "start the HTTP API server and exit")
+	apiPort := flag.Int("api-port", 8080, "port for the API server (default: 8080)")
 
 	flag.Usage = func() { fmt.Print(helpText) }
 	flag.Parse()
@@ -113,6 +122,31 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "config: %v\n", err)
 		os.Exit(1)
+	}
+
+	if *apiMode {
+		// API server mode — create store + engine, then start the HTTP API
+		st, err := store.Open()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "store: %v\n", err)
+			os.Exit(1)
+		}
+		defer st.Close()
+
+		eng, err := engine.New(cfg, st, *companiesPath)
+		if err != nil {
+			// Non-fatal: API works without engine (shows error on dashboard)
+			fmt.Fprintf(os.Stderr, "warning: engine init failed: %v\n", err)
+			eng = nil
+		}
+
+		addr := fmt.Sprintf(":%d", *apiPort)
+		srv := api.New(cfg, st, eng, addr)
+		if err := srv.ListenAndServe(context.Background()); err != nil {
+			fmt.Fprintf(os.Stderr, "api server: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	if !*runMode && !*dryRun {

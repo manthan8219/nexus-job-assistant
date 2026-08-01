@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  # ── Go API Server ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./terminal-job
+      dockerfile: Dockerfile
+    container_name: nexus-api
+    ports:
+      - "8080:8080"
+    volumes:
+      - nexus-data:/home/nexus/.nexus
+    environment:
+      - NEXUS_CONFIG_PATH=/home/nexus/.nexus/config.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── React Frontend ─────────────────────────────────────────────────────
+  ui:
+    image: nginx:alpine
+    container_name: nexus-ui
+    ports:
+      - "80:80"
+    volumes:
+      - ./terminal-job-ui/dist:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  nexus-data:
