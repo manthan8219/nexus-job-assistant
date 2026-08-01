@@ -240,6 +240,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Notifications
 	mux.HandleFunc("GET /api/notify/channels", s.handleGetNotifyChannels)
 	mux.HandleFunc("POST /api/notify/test", s.handlePostNotifyTest)
+	mux.HandleFunc("POST /api/notify/summary", s.handlePostNotifySummary)
 }
 
 // logLine adds a line to the in-memory log buffer (capped at 1000).
