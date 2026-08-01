@@ -2,6 +2,7 @@ package resume
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -74,6 +75,20 @@ func ListVersions() ([]Version, error) {
 		return out[i].CreatedAt.After(out[j].CreatedAt)
 	})
 	return out, nil
+}
+
+// GetVersion returns one generated resume by its library id.
+func GetVersion(id string) (Version, error) {
+	versions, err := ListVersions()
+	if err != nil {
+		return Version{}, err
+	}
+	for _, v := range versions {
+		if v.ID == id {
+			return v, nil
+		}
+	}
+	return Version{}, fmt.Errorf("no resume version %q in the library", id)
 }
 
 // RegisterVersion prepends a generated resume to the library index.

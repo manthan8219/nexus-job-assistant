@@ -107,6 +107,7 @@ func TestImproveResponseIncludesFit(t *testing.T) {
 		TemplateID:   "compact",
 		TemplateName: "Compact",
 		Review:       resume.PolishReview{Summary: "ok", ATSScore: 88, QualityScore: 84},
+		VersionID:    "20260101-120000",
 		Fit: resume.FitPlan{
 			TemplateID:     "compact",
 			Layout:         resume.LayoutSingle,
@@ -121,6 +122,9 @@ func TestImproveResponseIncludesFit(t *testing.T) {
 	resp := improveResponse(out)
 	if resp["templateId"] != "compact" {
 		t.Errorf("templateId = %v; want compact", resp["templateId"])
+	}
+	if resp["pdfId"] != "20260101-120000" {
+		t.Errorf("pdfId = %v; want 20260101-120000", resp["pdfId"])
 	}
 	fit, ok := resp["fit"].(resume.FitPlan)
 	if !ok {

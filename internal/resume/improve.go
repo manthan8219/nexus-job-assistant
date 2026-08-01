@@ -97,6 +97,7 @@ type ImproveOutput struct {
 	TemplateID   string
 	TemplateName string
 	Fit          FitPlan // content→template plan + verified page count
+	VersionID    string  // library id the PDF was registered under (for inline preview)
 }
 
 // GenerateImproved builds a stronger resume from analysis + work context, then exports.
@@ -190,6 +191,7 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 	if conv.Note != "" {
 		out.PDFNote = conv.Note
 	}
+	out.VersionID = stamp
 
 	// Verify the real render's page count using the deterministic native
 	// renderer (always available, same manifest geometry). Count on a temp
