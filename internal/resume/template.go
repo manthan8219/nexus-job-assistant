@@ -8,18 +8,31 @@ import (
 // Template ids for the curated registry. The classic template is the default
 // and the fallback when a caller passes an empty id (old clients keep working).
 const (
-	TemplateClassic    = "classic"
-	TemplateModern     = "modern"
-	TemplateSidebar    = "sidebar"
-	TemplateCompact    = "compact"
-	TemplateExecutive  = "executive"
-	TemplateMinimal    = "minimal"
-	TemplateAcademic   = "academic"
-	TemplateDeveloper  = "developer"
-	TemplateSplit      = "split"
-	TemplateBold       = "bold"
-	TemplateMonochrome = "monochrome"
-	TemplateNordic     = "nordic"
+	TemplateClassic   = "classic" // legacy alias → jake
+	TemplateJake      = "jake"
+	TemplateAwesomeCV = "awesome-cv"
+	TemplateDeedy     = "deedy"
+	TemplateMcDowell  = "mcdowell"
+	TemplateBillRyan  = "billryan"
+	TemplateKendall   = "kendall"
+	TemplateMacchiato = "macchiato"
+	TemplateBanking   = "banking"
+)
+
+// SectionStyle tokens: how a template draws its section headings.
+const (
+	SectionStylePlain     = "plain"
+	SectionStyleCaps      = "caps"
+	SectionStyleMarker    = "marker"
+	SectionStyleRuleAbove = "ruleAbove"
+	SectionStyleSoft      = "soft"
+)
+
+// NameStyle tokens: how the header block presents the candidate's name.
+const (
+	NameStylePlain    = "plain"
+	NameStyleCentered = "centered"
+	NameStyleColored  = "colored"
 )
 
 // TemplateLayout describes the visual geometry of a resume template.
@@ -50,14 +63,15 @@ type TemplateSection struct {
 // needs to draw the template. It is deliberately not exposed over the API —
 // the web UI only needs the manifest fields above.
 type TemplateDesign struct {
-	AccentRGB   [3]int  // rgb triple for rules, section titles, header accents
-	HeaderAlign string  // "left" | "center"
-	ShowRule    bool    // draw an accent rule under the header block
-	LaTeXSize   int     // body font size (pt) for the LaTeX renderer
-	LaTeXMargin string  // geometry margin for the LaTeX renderer (e.g. "0.7in")
-	NativeSize  int     // native-PDF body font size
-	NativeName  int     // native-PDF name font size
-	NativeLead  float64 // native-PDF line leading
+	AccentRGB    [3]int  // rgb triple for rules, section titles, header accents
+	HeaderAlign  string  // "left" | "center"
+	ShowRule     bool    // draw an accent rule under the header block
+	LaTeXSize    int     // body font size (pt) for the LaTeX renderer
+	LaTeXMargin  string  // geometry margin for the LaTeX renderer (e.g. "0.7in")
+	NativeSize   int     // native-PDF body font size
+	NativeName   int     // native-PDF name font size
+	NativeLead   float64 // native-PDF line leading
+	NativeMargin float64 // native-PDF side margin (mm)
 }
 
 // SpaceBudget is how much content a template realistically holds on its target
@@ -94,35 +108,39 @@ type Template struct {
 	HeaderAlign string `json:"headerAlign,omitempty"` // "left" | "center"
 	// NOTE: no omitempty on ShowRule — `false` must round-trip so the UI
 	// knows a template deliberately has no rule under the header.
-	ShowRule bool           `json:"showRule"` // accent rule under the header
-	Budget   SpaceBudget    `json:"budget,omitempty"`
-	Design   TemplateDesign `json:"-"`
+	ShowRule bool        `json:"showRule"` // accent rule under the header
+	Budget   SpaceBudget `json:"budget,omitempty"`
+	// SectionStyle / NameStyle / ContactLine / ColumnRatio / RailBackground are
+	// the "real design" tokens the renderers (LaTeX + native PDF) honor so each
+	// curated template looks like the famous design it is adapted from.
+	SectionStyle   string         `json:"sectionStyle,omitempty"`   // plain | caps | marker | ruleAbove | soft
+	NameStyle      string         `json:"nameStyle,omitempty"`      // plain | centered | colored
+	ContactLine    bool           `json:"contactLine"`              // email · phone · location under the header
+	ColumnRatio    float64        `json:"columnRatio,omitempty"`    // main-column fraction for sidebar layouts
+	RailBackground string         `json:"railBackground,omitempty"` // dark | accent | tint sidebar rail
+	Source         string         `json:"source,omitempty"`         // the open-source design this adapts
+	Design         TemplateDesign `json:"-"`
 }
 
 // TemplateIDs returns the ordered registry ids (used by the API docs/tests).
 func TemplateIDs() []string {
 	return []string{
-		TemplateClassic, TemplateModern, TemplateSidebar, TemplateCompact,
-		TemplateExecutive, TemplateMinimal, TemplateAcademic, TemplateDeveloper,
-		TemplateSplit, TemplateBold, TemplateMonochrome, TemplateNordic,
+		TemplateJake, TemplateAwesomeCV, TemplateDeedy, TemplateMcDowell,
+		TemplateBillRyan, TemplateKendall, TemplateMacchiato, TemplateBanking,
 	}
 }
 
-// Templates returns the curated template registry.
+// Templates returns the curated registry of real, widely-used resume designs.
 func Templates() []Template {
 	templates := []Template{
-		classicTemplate(),
-		modernTemplate(),
-		sidebarTemplate(),
-		compactTemplate(),
-		executiveTemplate(),
-		minimalTemplate(),
-		academicTemplate(),
-		developerTemplate(),
-		splitTemplate(),
-		boldTemplate(),
-		monochromeTemplate(),
-		nordicTemplate(),
+		jakeTemplate(),
+		awesomeCVTemplate(),
+		deedyTemplate(),
+		mcdowellTemplate(),
+		billRyanTemplate(),
+		kendallTemplate(),
+		macchiatoTemplate(),
+		bankingTemplate(),
 	}
 	// Promote the design tokens the web preview needs (header alignment +
 	// rule) onto the served manifest so UI miniatures stay faithful to the
@@ -136,42 +154,15 @@ func Templates() []Template {
 	return templates
 }
 
-// budgetFor returns the explicit space budget for a curated template. The
-// numbers come from the design geometry: column width, body size, and the
-// one-page target. Unknown ids get a conservative default so callers can
-// always plan content.
-func budgetFor(tpl Template) SpaceBudget {
-	switch tpl.ID {
-	case TemplateCompact:
-		return SpaceBudget{TargetPages: 1, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 5, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 100}
-	case TemplateSidebar, TemplateSplit:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 60}
-	case TemplateDeveloper:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 4, MaxSkills: 14, MaxEducation: 2, CharsPerLine: 85}
-	case TemplateMinimal:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 90}
-	case TemplateAcademic:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 3, CharsPerLine: 85}
-	case TemplateExecutive:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
-	case TemplateModern:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
-	case TemplateBold:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 85}
-	case TemplateMonochrome:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
-	case TemplateNordic:
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 100}
-	default: // classic + unknown ids
-		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 95}
-	}
-}
-
-// GetTemplate resolves a template by id. An empty id resolves to Classic so
-// existing callers (TUI, tailor) keep working unchanged.
+// GetTemplate resolves a template by id. An empty id resolves to Jake (the
+// default) so existing callers (TUI, tailor) keep working unchanged. The old
+// "classic" id is kept as a legacy alias for stored versions/links.
 func GetTemplate(id string) (Template, error) {
 	if strings.TrimSpace(id) == "" {
-		id = TemplateClassic
+		id = TemplateJake
+	}
+	if id == TemplateClassic {
+		id = TemplateJake
 	}
 	for _, t := range Templates() {
 		if t.ID == id {
@@ -184,356 +175,293 @@ func GetTemplate(id string) (Template, error) {
 	)
 }
 
-// classicTemplate is the single-column ATS-max layout that matches the
-// original hardcoded renderer exactly.
-func classicTemplate() Template {
+// budgetFor returns the explicit space budget for a curated template. The
+// numbers come from the design geometry: column width, body size, and the
+// one-page target. Unknown ids get a conservative default so callers can
+// always plan content.
+func budgetFor(tpl Template) SpaceBudget {
+	switch tpl.ID {
+	case TemplateDeedy: // one-page asymmetric two-column
+		return SpaceBudget{TargetPages: 1, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 75}
+	case TemplateKendall, TemplateMacchiato: // sidebar rail
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 60}
+	case TemplateAwesomeCV: // marker style, generous skills
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 14, MaxEducation: 2, CharsPerLine: 95}
+	case TemplateBanking: // ruled headings, serif
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
+	case TemplateMcDowell: // generous whitespace
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 95}
+	default: // jake, billryan + unknown ids
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 14, MaxEducation: 2, CharsPerLine: 100}
+	}
+}
+
+// classicTemplate comment removed in the real-templates registry.
+
+// jakeTemplate is the default: the recruiter-favorite clean single column from
+// jakegut/resume — small-caps section heads, tight spacing, zero gimmicks.
+func jakeTemplate() Template {
 	return Template{
-		ID:          TemplateClassic,
-		Name:        "Classic",
-		Description: "Clean single-column flow with standard headings. The safest choice for ATS parsing.",
-		Layout:      LayoutSingle,
+		ID:           TemplateJake,
+		Name:         "Jake",
+		Description:  "The recruiter-favorite clean single column — small-caps section heads, tight spacing, zero gimmicks. Adapted from jakegut/resume.",
+		Layout:       LayoutSingle,
+		SectionStyle: SectionStyleCaps,
 		Sections: []TemplateSection{
 			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionExperience, Label: "Experience"},
+			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionEducation, Label: "Education"},
 		},
-		AccentHex: "#059669",
-		ATSNote:   "Safest for ATS — single column, standard section names.",
+		AccentHex: "#334155",
+		ATSNote:   "ATS-perfect — the most widely recommended clean LaTeX template.",
+		Source:    "github.com/jakegut/resume (MIT)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{5, 150, 105},
-			HeaderAlign: "left",
-			ShowRule:    true,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.75in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
+			AccentRGB:    [3]int{51, 65, 85},
+			HeaderAlign:  "left",
+			ShowRule:     false,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.6in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   4.5,
+			NativeMargin: 15,
 		},
 	}
 }
 
-// modernTemplate centers the header and adds a subtle accent to section
-// titles — still single column, so it keeps ATS compatibility.
-func modernTemplate() Template {
+// awesomeCVTemplate adds a filled accent marker before every section heading —
+// the signature of posquit0/Awesome-CV, the most-starred LaTeX CV on GitHub.
+func awesomeCVTemplate() Template {
 	return Template{
-		ID:          TemplateModern,
-		Name:        "Modern",
-		Description: "Centered header with a violet accent. Single column, slightly more whitespace.",
-		Layout:      LayoutSingle,
+		ID:           TemplateAwesomeCV,
+		Name:         "Awesome-CV",
+		Description:  "Professional sections with a filled accent marker and a full-width rule. Adapted from posquit0/Awesome-CV.",
+		Layout:       LayoutSingle,
+		SectionStyle: SectionStyleMarker,
 		Sections: []TemplateSection{
 			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionEducation, Label: "Education"},
+			{Key: SectionSkills, Label: "Skills"},
 		},
-		AccentHex: "#8b5cf6",
+		AccentHex: "#00539b",
 		ATSNote:   "ATS-safe — single column with standard section names.",
+		Source:    "github.com/posquit0/Awesome-CV (LPPL)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{139, 92, 246},
-			HeaderAlign: "center",
-			ShowRule:    true,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.8in",
-			NativeSize:  10,
-			NativeName:  24,
-			NativeLead:  5,
+			AccentRGB:    [3]int{0, 83, 155},
+			HeaderAlign:  "left",
+			ShowRule:     false,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.65in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   4.5,
+			NativeMargin: 15,
 		},
 	}
 }
 
-// sidebarTemplate puts contact-style content (skills, education) in a left
-// rail and the experience history in the main column.
-func sidebarTemplate() Template {
+// deedyTemplate is the famous one-page asymmetric two-column resume — a narrow
+// left rail (dates/skills) and a wide experience column, thin rule under the
+// name. Adapted from deedy/Deedy-Resume.
+func deedyTemplate() Template {
 	return Template{
-		ID:          TemplateSidebar,
-		Name:        "Sidebar",
-		Description: "Two-column layout: skills and education in a left rail, experience as the main column.",
-		Layout:      LayoutSidebar,
+		ID:           TemplateDeedy,
+		Name:         "Deedy",
+		Description:  "One-page asymmetric two-column — dates and skills in a narrow rail, experience wide. Adapted from deedy/Deedy-Resume.",
+		Layout:       LayoutSidebar,
+		RailSide:     "left",
+		ColumnRatio:  0.76,
+		OnePage:      true,
+		SectionStyle: SectionStylePlain,
 		Sections: []TemplateSection{
-			{Key: SectionSkills, Label: "Skills"},
-			{Key: SectionSummary, Label: "Summary"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionEducation, Label: "Education"},
+			{Key: SectionSkills, Label: "Skills"},
 		},
-		AccentHex: "#22d3ee",
-		ATSNote:   "Design-forward — two columns can confuse some ATS systems; use for roles where design matters.",
+		AccentHex: "#111827",
+		ATSNote:   "One-page asymmetric two-column — great for new grads; two columns can trip some ATS systems.",
+		Source:    "github.com/deedy/Deedy-Resume (Apache-2.0)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{34, 211, 238},
-			HeaderAlign: "center",
-			ShowRule:    true,
-			LaTeXSize:   10,
-			LaTeXMargin: "0.6in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
+			AccentRGB:    [3]int{17, 24, 39},
+			HeaderAlign:  "left",
+			ShowRule:     true,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.5in",
+			NativeSize:   9,
+			NativeName:   21,
+			NativeLead:   4.5,
+			NativeMargin: 13,
 		},
 	}
 }
 
-// compactTemplate is a tighter single-column design aimed at one page —
-// good for senior candidates with a long history.
-func compactTemplate() Template {
+// mcdowellTemplate is a clean single column with generous whitespace and soft
+// gray section heads — the polished look of dnl-blkv/mcdowell-cv.
+func mcdowellTemplate() Template {
 	return Template{
-		ID:          TemplateCompact,
-		Name:        "Compact",
-		Description: "Tighter spacing and smaller margins to fit more on one page.",
-		Layout:      LayoutSingle,
+		ID:           TemplateMcDowell,
+		Name:         "McDowell",
+		Description:  "Clean single column with generous whitespace and soft gray section heads. Adapted from dnl-blkv/mcdowell-cv.",
+		Layout:       LayoutSingle,
+		SectionStyle: SectionStyleSoft,
 		Sections: []TemplateSection{
 			{Key: SectionSummary, Label: "Summary"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionEducation, Label: "Education"},
 		},
-		AccentHex: "#38bdf8",
-		OnePage:   true,
-		ATSNote:   "Optimized for one page — good for senior candidates.",
-		Design: TemplateDesign{
-			AccentRGB:   [3]int{56, 189, 248},
-			HeaderAlign: "left",
-			ShowRule:    true,
-			LaTeXSize:   10,
-			LaTeXMargin: "0.5in",
-			NativeSize:  9,
-			NativeName:  20,
-			NativeLead:  4.5,
-		},
-	}
-}
-
-// executiveTemplate is a formal, senior-leader look: serif type, muted steel
-// accent, centered header with no rule.
-func executiveTemplate() Template {
-	return Template{
-		ID:          TemplateExecutive,
-		Name:        "Executive",
-		Description: "Serif type with a muted steel accent — formal, senior-leader tone.",
-		Layout:      LayoutSingle,
-		Sections: []TemplateSection{
-			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
-			{Key: SectionExperience, Label: "Experience"},
-			{Key: SectionEducation, Label: "Education"},
-		},
-		AccentHex: "#475569",
-		BodyFont:  "serif",
+		AccentHex: "#6b7280",
 		ATSNote:   "ATS-safe — single column with standard section names.",
+		Source:    "github.com/dnl-blkv/mcdowell-cv (MIT)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{71, 85, 105},
-			HeaderAlign: "center",
-			ShowRule:    false,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.8in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
+			AccentRGB:    [3]int{107, 114, 128},
+			HeaderAlign:  "left",
+			ShowRule:     false,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.85in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   5.5,
+			NativeMargin: 18,
 		},
 	}
 }
 
-// minimalTemplate strips everything down: left header, no rule, soft slate
-// accent and extra breathing room.
-func minimalTemplate() Template {
+// billRyanTemplate is the elegant minimal single column with a serif body —
+// billryan/resume's look, clean and quietly professional.
+func billRyanTemplate() Template {
 	return Template{
-		ID:          TemplateMinimal,
-		Name:        "Minimal",
-		Description: "Bare-bones single column with generous whitespace and a soft slate accent.",
-		Layout:      LayoutSingle,
+		ID:           TemplateBillRyan,
+		Name:         "BillRyan",
+		Description:  "Elegant minimal single column with a serif body. Adapted from billryan/resume.",
+		Layout:       LayoutSingle,
+		BodyFont:     "serif",
+		SectionStyle: SectionStylePlain,
 		Sections: []TemplateSection{
 			{Key: SectionSummary, Label: "Summary"},
 			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionEducation, Label: "Education"},
 		},
-		AccentHex: "#94a3b8",
+		AccentHex: "#0f172a",
 		ATSNote:   "ATS-safe — single column with standard section names.",
+		Source:    "github.com/billryan/resume (MIT)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{148, 163, 184},
-			HeaderAlign: "left",
-			ShowRule:    false,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.9in",
-			NativeSize:  10,
-			NativeName:  20,
-			NativeLead:  5.5,
+			AccentRGB:    [3]int{15, 23, 42},
+			HeaderAlign:  "left",
+			ShowRule:     true,
+			LaTeXSize:    11,
+			LaTeXMargin:  "0.75in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   5,
+			NativeMargin: 16,
 		},
 	}
 }
 
-// academicTemplate leads with education and uses serif type with a deep navy
-// accent — built for researchers, students and academia.
-func academicTemplate() Template {
+// kendallTemplate puts skills + education in a dark sidebar rail, main column
+// light — the signature of the JSON Resume Kendall theme.
+func kendallTemplate() Template {
 	return Template{
-		ID:          TemplateAcademic,
-		Name:        "Academic",
-		Description: "Education-forward with serif type and a deep navy accent — built for academia.",
-		Layout:      LayoutSingle,
+		ID:             TemplateKendall,
+		Name:           "Kendall",
+		Description:    "Two-column with a dark sidebar rail for skills and education. Adapted from the JSON Resume Kendall theme.",
+		Layout:         LayoutSidebar,
+		RailSide:       "left",
+		RailBackground: "dark",
+		SectionStyle:   SectionStylePlain,
 		Sections: []TemplateSection{
-			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionEducation, Label: "Education"},
-			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionSkills, Label: "Skills"},
-		},
-		AccentHex: "#1e3a8a",
-		BodyFont:  "serif",
-		ATSNote:   "ATS-safe — single column with standard section names.",
-		Design: TemplateDesign{
-			AccentRGB:   [3]int{30, 58, 138},
-			HeaderAlign: "center",
-			ShowRule:    true,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.8in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
-		},
-	}
-}
-
-// developerTemplate is a monospace, terminal-flavoured design with a lime
-// accent — right at home for the Nexus crowd.
-func developerTemplate() Template {
-	return Template{
-		ID:          TemplateDeveloper,
-		Name:        "Developer",
-		Description: "Monospace type with a lime accent — a terminal-flavoured look.",
-		Layout:      LayoutSingle,
-		Sections: []TemplateSection{
 			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
-			{Key: SectionExperience, Label: "Experience"},
-			{Key: SectionEducation, Label: "Education"},
-		},
-		AccentHex: "#a3e635",
-		BodyFont:  "mono",
-		ATSNote:   "ATS-safe — single column with standard section names.",
-		Design: TemplateDesign{
-			AccentRGB:   [3]int{163, 230, 53},
-			HeaderAlign: "left",
-			ShowRule:    true,
-			LaTeXSize:   10,
-			LaTeXMargin: "0.7in",
-			NativeSize:  9,
-			NativeName:  20,
-			NativeLead:  4.5,
-		},
-	}
-}
-
-// splitTemplate is a sidebar variant with the rail on the RIGHT — skills and
-// education sit in a right rail while experience leads the main column.
-func splitTemplate() Template {
-	return Template{
-		ID:          TemplateSplit,
-		Name:        "Split",
-		Description: "Two-column layout: skills and education in a right rail, experience leads on the left.",
-		Layout:      LayoutSidebar,
-		RailSide:    "right",
-		Sections: []TemplateSection{
-			{Key: SectionExperience, Label: "Experience"},
-			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
-			{Key: SectionEducation, Label: "Education"},
-		},
-		AccentHex: "#f59e0b",
-		ATSNote:   "Design-forward — two columns can confuse some ATS systems; use for roles where design matters.",
-		Design: TemplateDesign{
-			AccentRGB:   [3]int{245, 158, 11},
-			HeaderAlign: "center",
-			ShowRule:    true,
-			LaTeXSize:   10,
-			LaTeXMargin: "0.6in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
-		},
-	}
-}
-
-// boldTemplate makes the name the hero: large centered header, magenta accent
-// and a strong rule. Eye-catching but still single column.
-func boldTemplate() Template {
-	return Template{
-		ID:          TemplateBold,
-		Name:        "Bold",
-		Description: "Big centered header with a magenta accent — makes your name the hero.",
-		Layout:      LayoutSingle,
-		Sections: []TemplateSection{
-			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
-			{Key: SectionExperience, Label: "Experience"},
-			{Key: SectionEducation, Label: "Education"},
-		},
-		AccentHex: "#ec4899",
-		ATSNote:   "ATS-safe — single column with standard section names.",
-		Design: TemplateDesign{
-			AccentRGB:   [3]int{236, 72, 153},
-			HeaderAlign: "center",
-			ShowRule:    true,
-			LaTeXSize:   12,
-			LaTeXMargin: "0.7in",
-			NativeSize:  10,
-			NativeName:  28,
-			NativeLead:  5,
-		},
-	}
-}
-
-// monochromeTemplate is all-ink: black accent, serif type, no rule — quiet,
-// classic and universally acceptable.
-func monochromeTemplate() Template {
-	return Template{
-		ID:          TemplateMonochrome,
-		Name:        "Monochrome",
-		Description: "All-ink serif with a black accent and no rule — quiet, classic, universal.",
-		Layout:      LayoutSingle,
-		Sections: []TemplateSection{
-			{Key: SectionSummary, Label: "Summary"},
-			{Key: SectionSkills, Label: "Skills"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionEducation, Label: "Education"},
 		},
 		AccentHex: "#111827",
-		BodyFont:  "serif",
-		ATSNote:   "ATS-safe — single column with standard section names.",
+		ATSNote:   "Two columns can confuse some ATS systems; use for design-forward roles.",
+		Source:    "jsonresume.org — Kendall (MIT)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{17, 24, 39},
-			HeaderAlign: "left",
-			ShowRule:    false,
-			LaTeXSize:   11,
-			LaTeXMargin: "0.85in",
-			NativeSize:  10,
-			NativeName:  22,
-			NativeLead:  5,
+			AccentRGB:    [3]int{17, 24, 39},
+			HeaderAlign:  "left",
+			ShowRule:     false,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.7in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   4.5,
+			NativeMargin: 15,
 		},
 	}
 }
 
-// nordicTemplate is a clean scandi look: teal accent, left header, thin rule
-// and modest margins.
-func nordicTemplate() Template {
+// macchiatoTemplate is the two-column with an accent-colored sidebar and an
+// accent-colored name — the JSON Resume Macchiato theme.
+func macchiatoTemplate() Template {
 	return Template{
-		ID:          TemplateNordic,
-		Name:        "Nordic",
-		Description: "Clean scandi look — teal accent, left header and a thin rule.",
-		Layout:      LayoutSingle,
+		ID:             TemplateMacchiato,
+		Name:           "Macchiato",
+		Description:    "Two-column with an accent-colored sidebar and accent name. Adapted from the JSON Resume Macchiato theme.",
+		Layout:         LayoutSidebar,
+		RailSide:       "left",
+		RailBackground: "accent",
+		NameStyle:      NameStyleColored,
+		SectionStyle:   SectionStylePlain,
 		Sections: []TemplateSection{
-			{Key: SectionSummary, Label: "Summary"},
 			{Key: SectionSkills, Label: "Skills"},
+			{Key: SectionSummary, Label: "Summary"},
 			{Key: SectionExperience, Label: "Experience"},
 			{Key: SectionEducation, Label: "Education"},
 		},
-		AccentHex: "#0d9488",
-		ATSNote:   "ATS-safe — single column with standard section names.",
+		AccentHex: "#0f766e",
+		ATSNote:   "Two columns can confuse some ATS systems; use for design-forward roles.",
+		Source:    "jsonresume.org — Macchiato (MIT)",
 		Design: TemplateDesign{
-			AccentRGB:   [3]int{13, 148, 136},
-			HeaderAlign: "left",
-			ShowRule:    true,
-			LaTeXSize:   10,
-			LaTeXMargin: "0.6in",
-			NativeSize:  9,
-			NativeName:  21,
-			NativeLead:  4.5,
+			AccentRGB:    [3]int{15, 118, 110},
+			HeaderAlign:  "left",
+			ShowRule:     false,
+			LaTeXSize:    10,
+			LaTeXMargin:  "0.7in",
+			NativeSize:   10,
+			NativeName:   22,
+			NativeLead:   4.5,
+			NativeMargin: 15,
+		},
+	}
+}
+
+// bankingTemplate is the classic moderncv banking style: centered name, a
+// contact line underneath, and a horizontal rule above every section heading.
+func bankingTemplate() Template {
+	return Template{
+		ID:           TemplateBanking,
+		Name:         "Banking",
+		Description:  "Centered name with a contact line and ruled section heads — the classic moderncv banking style.",
+		Layout:       LayoutSingle,
+		BodyFont:     "serif",
+		NameStyle:    NameStyleCentered,
+		ContactLine:  true,
+		SectionStyle: SectionStyleRuleAbove,
+		Sections: []TemplateSection{
+			{Key: SectionSummary, Label: "Summary"},
+			{Key: SectionExperience, Label: "Experience"},
+			{Key: SectionSkills, Label: "Skills"},
+			{Key: SectionEducation, Label: "Education"},
+		},
+		AccentHex: "#004d99",
+		ATSNote:   "ATS-safe — single column with standard section names.",
+		Source:    "moderncv — banking style (LPPL)",
+		Design: TemplateDesign{
+			AccentRGB:    [3]int{0, 77, 153},
+			HeaderAlign:  "center",
+			ShowRule:     false,
+			LaTeXSize:    11,
+			LaTeXMargin:  "0.75in",
+			NativeSize:   10,
+			NativeName:   24,
+			NativeLead:   5,
+			NativeMargin: 16,
 		},
 	}
 }

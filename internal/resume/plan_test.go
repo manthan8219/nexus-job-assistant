@@ -43,17 +43,17 @@ func TestBudgetsForAllTemplates(t *testing.T) {
 			t.Errorf("%s: budget fields must be positive: %+v", tmpl.ID, b)
 		}
 		// Sidebar layouts have a narrower main column → fewer chars per line.
-		if (tmpl.ID == TemplateSidebar || tmpl.ID == TemplateSplit) && b.CharsPerLine >= 80 {
+		if (tmpl.ID == TemplateKendall || tmpl.ID == TemplateMacchiato) && b.CharsPerLine >= 80 {
 			t.Errorf("%s: sidebar charsPerLine=%d; want < 80", tmpl.ID, b.CharsPerLine)
 		}
 	}
-	compact, _ := GetTemplate(TemplateCompact)
-	if compact.Budget.TargetPages != 1 {
-		t.Errorf("compact targetPages = %d; want 1", compact.Budget.TargetPages)
+	deedy, _ := GetTemplate(TemplateDeedy)
+	if deedy.Budget.TargetPages != 1 {
+		t.Errorf("deedy targetPages = %d; want 1", deedy.Budget.TargetPages)
 	}
-	classic, _ := GetTemplate(TemplateClassic)
-	if classic.Budget.CharsPerLine != 95 {
-		t.Errorf("classic charsPerLine = %d; want 95", classic.Budget.CharsPerLine)
+	jake, _ := GetTemplate(TemplateJake)
+	if jake.Budget.CharsPerLine != 100 {
+		t.Errorf("jake charsPerLine = %d; want 100", jake.Budget.CharsPerLine)
 	}
 }
 
@@ -80,7 +80,7 @@ func TestPlanContentSectionOrdering(t *testing.T) {
 }
 
 func TestPlanContentTrimsToBudget(t *testing.T) {
-	tpl, _ := GetTemplate(TemplateClassic) // 5 roles · 4 bullets · 12 skills · 2 edu
+	tpl, _ := GetTemplate(TemplateJake) // 5 roles · 4 bullets · 14 skills · 2 edu
 	plan, fitted := PlanContent(bigDoc(), tpl)
 	if len(fitted.Experience) != 5 {
 		t.Errorf("roles = %d; want 5", len(fitted.Experience))
@@ -90,8 +90,8 @@ func TestPlanContentTrimsToBudget(t *testing.T) {
 			t.Fatalf("bullets = %d; want 4", len(r.Bullets))
 		}
 	}
-	if len(fitted.Skills) != 12 {
-		t.Errorf("skills = %d; want 12", len(fitted.Skills))
+	if len(fitted.Skills) != 14 {
+		t.Errorf("skills = %d; want 14", len(fitted.Skills))
 	}
 	if len(fitted.Education) != 2 {
 		t.Errorf("education = %d; want 2", len(fitted.Education))
@@ -111,7 +111,7 @@ func TestPlanContentTrimsToBudget(t *testing.T) {
 }
 
 func TestPlanContentTruncatesOverlongSummary(t *testing.T) {
-	tpl, _ := GetTemplate(TemplateClassic)
+	tpl, _ := GetTemplate(TemplateJake)
 	doc := SampleResume()
 	doc.Summary = strings.Repeat("Quantified impact sentence. ", 30) // ~870 chars > 285
 	_, fitted := PlanContent(doc, tpl)
@@ -124,7 +124,7 @@ func TestPlanContentTruncatesOverlongSummary(t *testing.T) {
 }
 
 func TestPlanContentFitsSmallDoc(t *testing.T) {
-	tpl, _ := GetTemplate(TemplateClassic)
+	tpl, _ := GetTemplate(TemplateJake)
 	plan, fitted := PlanContent(SampleResume(), tpl)
 	if plan.FitScore != 100 {
 		t.Errorf("fitScore = %d; want 100 for the sample resume", plan.FitScore)
@@ -141,7 +141,7 @@ func TestPlanContentFitsSmallDoc(t *testing.T) {
 }
 
 func TestPlanContentReportsTargetPagesWarning(t *testing.T) {
-	tpl, _ := GetTemplate(TemplateCompact) // targetPages = 1
+	tpl, _ := GetTemplate(TemplateDeedy) // targetPages = 1
 	plan, _ := PlanContent(bigDoc(), tpl)
 	found := false
 	for _, w := range plan.Warnings {
@@ -151,13 +151,13 @@ func TestPlanContentReportsTargetPagesWarning(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Errorf("compact plan should warn about the one-page target, got %v", plan.Warnings)
+		t.Errorf("deedy plan should warn about the one-page target, got %v", plan.Warnings)
 	}
 }
 
 func TestRenderNativePDFForCountedReportsPages(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "giant.pdf")
-	tpl, _ := GetTemplate(TemplateClassic)
+	tpl, _ := GetTemplate(TemplateJake)
 	pages, err := RenderNativePDFForCounted(bigDoc(), tpl, path)
 	if err != nil {
 		t.Fatalf("render: %v", err)
@@ -167,14 +167,14 @@ func TestRenderNativePDFForCountedReportsPages(t *testing.T) {
 	}
 }
 
-func TestSampleResumeFitsOnePageCompact(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "compact.pdf")
-	tpl, _ := GetTemplate(TemplateCompact)
+func TestSampleResumeFitsOnePageDeedy(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "deedy.pdf")
+	tpl, _ := GetTemplate(TemplateDeedy)
 	pages, err := RenderNativePDFForCounted(SampleResume(), tpl, path)
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if pages != 1 {
-		t.Fatalf("sample resume in compact rendered %d pages; want 1", pages)
+		t.Fatalf("sample resume in deedy rendered %d pages; want 1", pages)
 	}
 }

@@ -137,6 +137,9 @@ func (s *Server) handlePostResumeTemplatePreview(w http.ResponseWriter, r *http.
 	var body struct {
 		FullName   string   `json:"fullName"`
 		Headline   string   `json:"headline"`
+		Email      string   `json:"email"`
+		Phone      string   `json:"phone"`
+		Location   string   `json:"location"`
 		Summary    string   `json:"summary"`
 		Skills     []string `json:"skills"`
 		Experience []struct {
@@ -163,6 +166,9 @@ func (s *Server) handlePostResumeTemplatePreview(w http.ResponseWriter, r *http.
 	doc := resume.ImprovedDoc{
 		FullName:  body.FullName,
 		Headline:  body.Headline,
+		Email:     body.Email,
+		Phone:     body.Phone,
+		Location:  body.Location,
 		Summary:   body.Summary,
 		Skills:    body.Skills,
 		Education: body.Education,
@@ -326,8 +332,12 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 	}
 
 	var profile *resume.Profile
+	var contact *resume.Contact
 	if res := resume.AnalyzeFull(resumePath, ai); res.Valid && res.Profile != nil {
 		profile = res.Profile
+		if res.Contact.Email != "" || res.Contact.Phone != "" {
+			contact = &res.Contact
+		}
 	}
 
 	projects, _ := workcontext.Load()
@@ -350,6 +360,7 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		ResumePath: resumePath,
 		ResumeText: resumeText,
 		Profile:    profile,
+		Contact:    contact,
 		Projects:   projects,
 		Skills:     s.cfg.Skills,
 		TargetRole: body.TargetRole,

@@ -32,13 +32,13 @@ func RenderNativePDFForCounted(doc ImprovedDoc, tpl Template, path string) (int,
 	return renderNativeColumn(doc, tpl, path)
 }
 
-// renderNativeColumn renders the single-column templates (classic / modern /
-// compact) with design tokens from the manifest.
+// renderNativeColumn renders the single-column templates with design tokens
+// from the manifest (margin, fonts, section style, name style, contact line).
 func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error) {
 	design := tpl.Design
-	margin := 16.0
-	if tpl.ID == TemplateCompact {
-		margin = 12.0
+	margin := design.NativeMargin
+	if margin <= 0 {
+		margin = 16.0
 	}
 	body := design.NativeSize
 	if body <= 0 {
@@ -75,8 +75,12 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 		name = "Resume"
 	}
 
-	// Name
-	pdf.SetTextColor(17, 24, 39)
+	// Name (accent-colored for Macchiato-style headers)
+	nameColor := [3]int{17, 24, 39}
+	if tpl.NameStyle == NameStyleColored {
+		nameColor = accent
+	}
+	pdf.SetTextColor(nameColor[0], nameColor[1], nameColor[2])
 	pdf.SetFont(ff, "B", float64(nameSize))
 	pdf.SetX(left)
 	pdf.CellFormat(width, 10, name, "", 1, align, false, 0, "")
@@ -87,6 +91,22 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 		pdf.SetFont(ff, "B", 11)
 		pdf.SetX(left)
 		pdf.CellFormat(width, 6, doc.Headline, "", 1, align, false, 0, "")
+	}
+
+	// Contact line (moderncv banking style): email · phone · location
+	if tpl.ContactLine {
+		var parts []string
+		for _, p := range []string{doc.Email, doc.Phone, doc.Location} {
+			if strings.TrimSpace(p) != "" {
+				parts = append(parts, p)
+			}
+		}
+		if len(parts) > 0 {
+			pdf.SetTextColor(107, 114, 128)
+			pdf.SetFont(ff, "", 9)
+			pdf.SetX(left)
+			pdf.CellFormat(width, 5, strings.Join(parts, "  ·  "), "", 1, align, false, 0, "")
+		}
 	}
 
 	// Accent rule under header
@@ -102,15 +122,57 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 
 	writeSection := func(title string) {
 		pdf.Ln(1)
-		pdf.SetTextColor(accent[0], accent[1], accent[2])
-		pdf.SetFont(ff, "B", float64(body))
-		pdf.SetX(left)
-		pdf.CellFormat(width, 6, strings.ToUpper(title), "", 1, "L", false, 0, "")
-		pdf.SetDrawColor(229, 231, 235)
-		y := pdf.GetY()
-		pdf.Line(left, y, right, y)
-		pdf.Ln(2.5)
-		pdf.SetTextColor(17, 24, 39)
+		switch tpl.SectionStyle {
+		case SectionStyleCaps: // Jake: small-caps style heading, no rule
+			pdf.SetTextColor(accent[0], accent[1], accent[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, strings.ToUpper(title), "", 1, "L", false, 0, "")
+			pdf.Ln(1.5)
+			pdf.SetTextColor(17, 24, 39)
+		case SectionStyleMarker: // Awesome-CV: filled accent square + heading + rule
+			pdf.SetFillColor(accent[0], accent[1], accent[2])
+			sq := 3.4
+			y := pdf.GetY() + 1.2
+			pdf.Rect(left, y, sq, sq, "F")
+			pdf.SetTextColor(accent[0], accent[1], accent[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left + sq + 2)
+			pdf.CellFormat(width-sq-2, 6, strings.ToUpper(title), "", 1, "L", false, 0, "")
+			pdf.SetDrawColor(203, 213, 225)
+			y = pdf.GetY()
+			pdf.Line(left, y, right, y)
+			pdf.Ln(2.5)
+			pdf.SetTextColor(17, 24, 39)
+		case SectionStyleRuleAbove: // Banking: rule above the heading
+			pdf.SetDrawColor(accent[0], accent[1], accent[2])
+			y := pdf.GetY()
+			pdf.Line(left, y, right, y)
+			pdf.Ln(3)
+			pdf.SetTextColor(accent[0], accent[1], accent[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, strings.ToUpper(title), "", 1, "L", false, 0, "")
+			pdf.Ln(1)
+			pdf.SetTextColor(17, 24, 39)
+		case SectionStyleSoft: // McDowell: sentence-case gray heading, no rule
+			pdf.SetTextColor(100, 116, 139)
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, title, "", 1, "L", false, 0, "")
+			pdf.Ln(1.5)
+			pdf.SetTextColor(17, 24, 39)
+		default: // plain: uppercase heading + light rule
+			pdf.SetTextColor(accent[0], accent[1], accent[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, strings.ToUpper(title), "", 1, "L", false, 0, "")
+			pdf.SetDrawColor(229, 231, 235)
+			y := pdf.GetY()
+			pdf.Line(left, y, right, y)
+			pdf.Ln(2.5)
+			pdf.SetTextColor(17, 24, 39)
+		}
 	}
 
 	for _, sec := range tpl.Sections {
@@ -206,6 +268,15 @@ func fontFor(bodyFont string) string {
 	}
 }
 
+// lightenRGB mixes an RGB color toward white by f (0-1).
+func lightenRGB(c [3]int, f float64) [3]int {
+	return [3]int{
+		int(float64(c[0]) + float64(255-c[0])*f),
+		int(float64(c[1]) + float64(255-c[1])*f),
+		int(float64(c[2]) + float64(255-c[2])*f),
+	}
+}
+
 // renderNativeSidebar renders the Sidebar/Split templates: full-width header
 // and summary, then skills + education in a rail on the template-declared side
 // and experience in the main column.
@@ -235,9 +306,14 @@ func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) (int, error
 	left := margin
 	right := 210.0 - margin
 	width := right - left
-	railW := width * 0.30
 	gap := 6.0
-	colW := width - railW - gap
+	// ColumnRatio widens the main column for Deedy-style asymmetric layouts.
+	ratio := tpl.ColumnRatio
+	if ratio <= 0 {
+		ratio = 0.66
+	}
+	colW := width*ratio - gap/2
+	railW := width - colW - gap
 	railX := left
 	mainX := left + railW + gap
 	if tpl.RailSide == "right" {
@@ -256,7 +332,11 @@ func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) (int, error
 	if name == "" {
 		name = "Resume"
 	}
-	pdf.SetTextColor(17, 24, 39)
+	nameColor := [3]int{17, 24, 39}
+	if tpl.NameStyle == NameStyleColored {
+		nameColor = accent
+	}
+	pdf.SetTextColor(nameColor[0], nameColor[1], nameColor[2])
 	pdf.SetFont(ff, "B", float64(nameSize))
 	pdf.SetX(left)
 	pdf.CellFormat(width, 10, name, "", 1, "C", false, 0, "")
@@ -294,12 +374,40 @@ func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) (int, error
 	}
 
 	colY := y
+	// Rail background fill (Kendall dark, Macchiato accent, tint).
+	var railFill [3]int
+	drawRailBg := false
+	railInk := [3]int{31, 41, 55}
+	railHead := accent
+	switch tpl.RailBackground {
+	case "dark":
+		drawRailBg = true
+		railFill = [3]int{17, 24, 39}
+		railInk = [3]int{255, 255, 255}
+		railHead = [3]int{255, 255, 255}
+	case "accent":
+		drawRailBg = true
+		railFill = accent
+		railInk = [3]int{255, 255, 255}
+		railHead = [3]int{255, 255, 255}
+	case "tint":
+		drawRailBg = true
+		railFill = lightenRGB(accent, 0.9)
+	}
+	if drawRailBg {
+		pdf.SetFillColor(railFill[0], railFill[1], railFill[2])
+		pdf.Rect(railX, colY, railW, bottom-colY, "F")
+	}
 	railTitle := func(title string) {
 		if colY+8 > bottom {
 			pdf.AddPage()
 			colY = top
+			if drawRailBg {
+				pdf.SetFillColor(railFill[0], railFill[1], railFill[2])
+				pdf.Rect(railX, colY, railW, bottom-colY, "F")
+			}
 		}
-		pdf.SetTextColor(accent[0], accent[1], accent[2])
+		pdf.SetTextColor(railHead[0], railHead[1], railHead[2])
 		pdf.SetFont(ff, "B", float64(body))
 		pdf.SetXY(railX, colY)
 		pdf.CellFormat(railW, 6, title, "", 1, "L", false, 0, "")
@@ -309,8 +417,12 @@ func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) (int, error
 		if colY+lead > bottom {
 			pdf.AddPage()
 			colY = top
+			if drawRailBg {
+				pdf.SetFillColor(railFill[0], railFill[1], railFill[2])
+				pdf.Rect(railX, colY, railW, bottom-colY, "F")
+			}
 		}
-		pdf.SetTextColor(31, 41, 55)
+		pdf.SetTextColor(railInk[0], railInk[1], railInk[2])
 		pdf.SetFont(ff, "", float64(body))
 		pdf.SetXY(railX, colY)
 		pdf.MultiCell(railW, lead, "•  "+line, "", "", false)
