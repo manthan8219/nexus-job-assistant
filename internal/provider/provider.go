@@ -98,4 +98,33 @@ type Profile struct {
 type ApplyResult struct {
 	Status string // "applied" | "skipped" | "failed"
 	Reason string // populated when skipped or failed
+
+	// Payload is the exact submission audit (KAN-33): what profile fields,
+	// resume and question answers were actually sent. Populated on success
+	// when the provider captures it; nil otherwise. Never contains secrets.
+	Payload *SubmittedPayload
+}
+
+// SubmittedResume describes the resume file that was attached to a submission.
+type SubmittedResume struct {
+	Filename string `json:"filename,omitempty"`
+	Checksum string `json:"checksum,omitempty"`
+}
+
+// SubmittedAnswer is one question→answer pair sent to the employer.
+type SubmittedAnswer struct {
+	Question string `json:"question"`
+	Answer   string `json:"answer"`
+	// AIGenerated is true when the answer was produced by the AI composer.
+	AIGenerated bool `json:"aiGenerated,omitempty"`
+}
+
+// SubmittedPayload is the audit trail of exactly what was submitted for one
+// application (recorded per-application; surfaced in the web UI).
+type SubmittedPayload struct {
+	Profile map[string]string `json:"profile,omitempty"`
+	Resume  *SubmittedResume  `json:"resume,omitempty"`
+	Answers []SubmittedAnswer `json:"answers,omitempty"`
+	// Raw holds the provider-specific payload as submitted (JSON where possible).
+	Raw string `json:"raw,omitempty"`
 }

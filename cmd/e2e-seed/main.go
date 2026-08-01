@@ -58,6 +58,7 @@ func main() {
 			URL: "https://jobs.ashbyhq.com/acmehealth/3", Status: store.StatusApplied,
 			AppliedAt: now.Add(-6 * time.Hour), Location: "Remote", Remote: true,
 			PostedAt: now.Add(-2 * time.Hour), FitScore: 81, FitSummary: "solid",
+			SubmittedPayload: `{"profile":{"first_name":"Ada","last_name":"Lovelace","email":"ada@example.com"},"resume":{"filename":"resume.pdf","checksum":"abc123"},"answers":[{"question":"Why this role?","answer":"because","aiGenerated":true}]}`,
 		},
 		{
 			Provider: "remoteok", Company: "Designio", Role: "Product Designer",

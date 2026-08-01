@@ -85,4 +85,7 @@ type Application struct {
 	// Approved marks a queued application the user chose for a real apply
 	// (the review-queue approve → apply flow).
 	Approved bool
+	// SubmittedPayload is the JSON audit of exactly what was sent to the
+	// employer on apply (KAN-33). Empty string when not recorded.
+	SubmittedPayload string
 }

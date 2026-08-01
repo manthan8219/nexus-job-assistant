@@ -111,6 +111,7 @@ func openPath(path string) (*Store, error) {
 		`ALTER TABLE applications ADD COLUMN outcome     TEXT    NOT NULL DEFAULT ''`,
 		`ALTER TABLE applications ADD COLUMN outcome_at  DATETIME NOT NULL DEFAULT '0001-01-01T00:00:00Z'`,
 		`ALTER TABLE applications ADD COLUMN approved    INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE applications ADD COLUMN submitted_payload TEXT NOT NULL DEFAULT ''`,
 	} {
 		db.Exec(col) // ignore errors — column already exists
 	}
@@ -143,16 +144,47 @@ func (s *Store) Insert(app Application) error {
 	}
 	_, err := s.db.Exec(
 		`INSERT OR IGNORE INTO applications
-		 (provider, company, role, url, status, reason, applied_at, location, remote, posted_at, description, fit_score, fit_summary, outcome, outcome_at, approved)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 (provider, company, role, url, status, reason, applied_at, location, remote, posted_at, description, fit_score, fit_summary, outcome, outcome_at, approved, submitted_payload)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		app.Provider, app.Company, app.Role, app.URL,
 		string(app.Status), app.Reason, app.AppliedAt.UTC(),
 		app.Location, remote, postedAt.UTC(), app.Description,
 		app.FitScore, app.FitSummary,
 		string(app.Outcome), app.OutcomeAt.UTC(),
-		app.Approved,
+		app.Approved, app.SubmittedPayload,
 	)
 	return err
+}
+
+// SetSubmittedPayload records the JSON audit of the exact submission for an
+// application (KAN-33). Fails open at the caller — never blocks an apply.
+func (s *Store) SetSubmittedPayload(id int64, payloadJSON string) error {
+	res, err := s.db.Exec(
+		`UPDATE applications SET submitted_payload = ? WHERE id = ?`,
+		payloadJSON, id,
+	)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return fmt.Errorf("store: no application with id %d", id)
+	}
+	return nil
+}
+
+// SetSubmittedPayloadByURL records the submission audit for the application
+// with the given URL (used by the run loop, which inserts before scoring).
+func (s *Store) SetSubmittedPayloadByURL(url, payloadJSON string) error {
+	var id int64
+	err := s.db.QueryRow(`SELECT id FROM applications WHERE url = ?`, url).Scan(&id)
+	if err != nil {
+		return err
+	}
+	return s.SetSubmittedPayload(id, payloadJSON)
 }
 
 // SetOutcome records the post-apply outcome for one application.
@@ -234,7 +266,7 @@ func (s *Store) GetByIDs(ids []int64) ([]Application, error) {
 	rows, err := s.db.Query(
 		`SELECT id, provider, company, role, url, status, reason, applied_at,
 		        location, remote, posted_at, description, fit_score, fit_summary,
-		        outcome, outcome_at, approved
+		        outcome, outcome_at, approved, submitted_payload
 		 FROM applications WHERE id IN (`+placeholders+`)`,
 		args...,
 	)
@@ -310,7 +342,7 @@ func (s *Store) List() ([]Application, error) {
 	rows, err := s.db.Query(
 		`SELECT id, provider, company, role, url, status, reason, applied_at,
 		        location, remote, posted_at, description, fit_score, fit_summary,
-		        outcome, outcome_at, approved
+		        outcome, outcome_at, approved, submitted_payload
 		 FROM applications ORDER BY applied_at DESC`,
 	)
 	if err != nil {
@@ -356,7 +388,7 @@ func (s *Store) ListByCompany(company string) ([]Application, error) {
 	rows, err := s.db.Query(
 		`SELECT id, provider, company, role, url, status, reason, applied_at,
 		        location, remote, posted_at, description, fit_score, fit_summary,
-		        outcome, outcome_at, approved
+		        outcome, outcome_at, approved, submitted_payload
 		 FROM applications
 		 WHERE lower(trim(company)) = lower(trim(?))
 		 ORDER BY applied_at DESC`,
@@ -381,6 +413,7 @@ func scanApplications(rows *sql.Rows) ([]Application, error) {
 			&a.URL, &a.Status, &a.Reason, &appliedAt,
 			&a.Location, &remote, &postedAt, &a.Description,
 			&a.FitScore, &a.FitSummary, &outcome, &outcomeAt, &approved,
+			&a.SubmittedPayload,
 		); err != nil {
 			return nil, err
 		}

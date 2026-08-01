@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -27,6 +28,9 @@ type Application struct {
 	Outcome     string `json:"outcome"`
 	OutcomeAt   string `json:"outcomeAt"`
 	Approved    bool   `json:"approved"`
+	// SubmittedPayload is the JSON audit of the exact submission (KAN-33).
+	// Emitted as an object when recorded; omitted entirely otherwise.
+	SubmittedPayload json.RawMessage `json:"submittedPayload,omitempty"`
 }
 
 // handleGetJobs returns all applications, optionally filtered by query.
@@ -230,21 +234,22 @@ func (s *Server) handlePostJobDismiss(w http.ResponseWriter, r *http.Request) {
 
 func storeAppToFrontend(a store.Application) Application {
 	return Application{
-		ID:         int(a.ID),
-		Provider:   a.Provider,
-		Company:    a.Company,
-		Role:       a.Role,
-		URL:        a.URL,
-		Status:     string(a.Status),
-		Reason:     a.Reason,
-		AppliedAt:  a.AppliedAt.Format(time.RFC3339),
-		Location:   a.Location,
-		Remote:     a.Remote,
-		PostedAt:   a.PostedAt.Format(time.RFC3339),
-		FitScore:   a.FitScore,
-		FitSummary: a.FitSummary,
-		Outcome:    string(a.Outcome),
-		OutcomeAt:  a.OutcomeAt.Format(time.RFC3339),
-		Approved:   a.Approved,
+		ID:               int(a.ID),
+		Provider:         a.Provider,
+		Company:          a.Company,
+		Role:             a.Role,
+		URL:              a.URL,
+		Status:           string(a.Status),
+		Reason:           a.Reason,
+		AppliedAt:        a.AppliedAt.Format(time.RFC3339),
+		Location:         a.Location,
+		Remote:           a.Remote,
+		PostedAt:         a.PostedAt.Format(time.RFC3339),
+		FitScore:         a.FitScore,
+		FitSummary:       a.FitSummary,
+		Outcome:          string(a.Outcome),
+		OutcomeAt:        a.OutcomeAt.Format(time.RFC3339),
+		Approved:         a.Approved,
+		SubmittedPayload: json.RawMessage(a.SubmittedPayload),
 	}
 }

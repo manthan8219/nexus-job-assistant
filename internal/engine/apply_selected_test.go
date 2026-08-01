@@ -2,7 +2,9 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -157,6 +159,46 @@ func TestApplySelectedSubmits(t *testing.T) {
 	}
 	if got[0].Approved {
 		t.Error("approved flag should be cleared after apply")
+	}
+}
+
+func TestApplySelectedRecordsSubmittedPayload(t *testing.T) {
+	cfg := &config.Config{ApplyConsent: true}
+	payload := &provider.SubmittedPayload{
+		Profile: map[string]string{"first_name": "Ada", "last_name": "Lovelace"},
+		Resume:  &provider.SubmittedResume{Filename: "resume.pdf"},
+		Answers: []provider.SubmittedAnswer{{Question: "Why us?", Answer: "because"}},
+	}
+	fake := &fakeProvider{
+		name:   "greenhouse",
+		result: provider.ApplyResult{Status: "applied", Payload: payload},
+	}
+	e, st := newEngineWithProviders(t, cfg, []provider.Provider{fake})
+	id := seedQueued(t, st, "greenhouse")
+
+	if err := e.ApplySelected(context.Background(), []int64{id}); err != nil {
+		t.Fatalf("ApplySelected: %v", err)
+	}
+	got, err := st.GetByIDs([]int64{id})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0].SubmittedPayload == "" {
+		t.Fatal("submitted payload was not persisted after apply")
+	}
+	if !strings.Contains(got[0].SubmittedPayload, "resume.pdf") {
+		t.Errorf("payload = %s; want resume filename", got[0].SubmittedPayload)
+	}
+	// The persisted JSON must round-trip back into the same shape.
+	var back provider.SubmittedPayload
+	if err := json.Unmarshal([]byte(got[0].SubmittedPayload), &back); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if back.Resume == nil || back.Resume.Filename != "resume.pdf" {
+		t.Errorf("payload resume = %+v; want resume.pdf", back.Resume)
+	}
+	if len(back.Answers) != 1 || back.Answers[0].Answer != "because" {
+		t.Errorf("payload answers = %+v; want the submitted answer", back.Answers)
 	}
 }
 
