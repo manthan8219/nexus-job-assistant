@@ -26,7 +26,12 @@ func (s *Server) handlePostJobTitlesSuggest(w http.ResponseWriter, r *http.Reque
 
 	ai := resume.AIOptionsFromConfig(s.cfg)
 	if !ai.Enabled {
-		writeError(w, http.StatusBadRequest, "turn on AI Assist in Config first")
+		// Offline catalog — suggestions work for ANY profession without AI keys.
+		titles := resume.SuggestTitlesOffline(body.Intent, body.Years, body.Hints)
+		writeJSON(w, http.StatusOK, map[string]any{
+			"titles": titles,
+			"intent": body.Intent,
+		})
 		return
 	}
 
