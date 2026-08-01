@@ -17,6 +17,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/ashby"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/bamboohr"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/breezy"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerjet"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerscraper"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/fourday"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/getonbrd"
@@ -26,6 +27,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobicy"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobspresso"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobvite"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/jooble"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/justjoin"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/linkedin"
@@ -129,6 +131,12 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	}
 	if usaKey := cfg.ProviderKeys["usajobs"]; usaKey != "" {
 		providers = append(providers, usajobs.New(usaKey, cfg.Email))
+	}
+	if jKey := cfg.ProviderKeys["jooble"]; jKey != "" {
+		providers = append(providers, jooble.New(jKey))
+	}
+	if affid, key := cfg.ProviderKeys["careerjet_affid"], cfg.ProviderKeys["careerjet_key"]; affid != "" && key != "" {
+		providers = append(providers, careerjet.New(affid, key))
 	}
 
 	// Per-company ATSes (Group C)
