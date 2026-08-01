@@ -5,7 +5,13 @@ package engine
 // fit-score gate, and the company blocklist. These guards must stay intact on
 // every path that submits an application (see AGENTS.md §14).
 
-import "strings"
+import (
+	"strings"
+	"time"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/store"
+)
 
 // syncApplySafety pulls rate limits from config (with safe defaults).
 func (e *Engine) syncApplySafety() {
@@ -66,4 +72,17 @@ func companyBlocked(company, blocklist string) bool {
 		}
 	}
 	return false
+}
+
+// skipJob records a job as skipped with a reason and emits the result event.
+// Shared by the blocklist and stale-cutoff skip paths so both behave identically
+// and stay visible in results (honest dry-run).
+func (e *Engine) skipJob(job provider.Job, reason string) {
+	_ = e.store.Insert(store.Application{
+		Provider: job.Provider, Company: job.Company, Role: job.Title,
+		URL: job.URL, Status: store.StatusSkipped, Reason: reason,
+		AppliedAt: time.Now(), Location: job.Location, Remote: job.Remote,
+		PostedAt: job.PostedAt, Description: job.Description,
+	})
+	e.sendResult(Result{Job: job, Status: "skipped", Reason: reason})
 }
