@@ -11,6 +11,12 @@ import (
 
 const scraperBaseURL = "http://localhost:8765"
 
+// verifyBatchTimeout bounds the whole SMTP verification pass of one Search
+// call. Politeness delays and greylisting retries make a large batch slow, so
+// the pass is capped and every remaining address is reported inconclusive
+// rather than blocking the search forever.
+const verifyBatchTimeout = 2 * time.Minute
+
 // Contact represents a found HR/recruiter contact.
 type Contact struct {
 	ID         int64
@@ -32,8 +38,11 @@ type Finder struct {
 	hunterKey string
 	apolloKey string
 	http      *http.Client
-	// Verify enables SMTP probing of generated pattern addresses. It is slow
-	// (dials port 25) and many networks block it, so callers opt in explicitly.
+	// scraperURL overrides the local OSINT scraper service base URL.
+	// Empty means the default localhost:8765; tests inject an httptest URL.
+	scraperURL string
+	// Verify enables SMTP probing of the found addresses. It is slow (dials
+	// port 25) and many networks block it, so callers opt in explicitly.
 	Verify bool
 }
 
@@ -103,11 +112,17 @@ func (f *Finder) Search(ctx context.Context, company, domain string) SearchResul
 	// Pattern emails — always generated as fallback
 	if domain != "" {
 		patterns := generatePatterns(company, domain)
-		if f.Verify {
-			// SMTP-verify patterns to filter down to real addresses
-			patterns = VerifyPatterns(patterns)
-		}
 		add(patterns, "pattern", nil)
+	}
+
+	// SMTP-verify every found address (from any source) so Confidence
+	// reflects reality: a definitive accept upgrades it, a definitive reject
+	// zeroes it, and unreachable/inconclusive results keep the source
+	// confidence with a reason in Notes. Verification never drops a contact.
+	if f.Verify && len(result.Contacts) > 0 {
+		ctx2, cancel := context.WithTimeout(ctx, verifyBatchTimeout)
+		defer cancel()
+		result.Contacts = NewVerifier().VerifyContacts(ctx2, result.Contacts)
 	}
 
 	return result
@@ -134,8 +149,12 @@ func (f *Finder) scraperSearch(ctx context.Context, company, domain string) ([]C
 	}
 
 	body, _ := json.Marshal(reqBody{Company: company, Domain: domain})
+	base := scraperBaseURL
+	if f.scraperURL != "" {
+		base = f.scraperURL
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		scraperBaseURL+"/osint/contacts", bytes.NewReader(body))
+		base+"/osint/contacts", bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("build request: %w", err)
 	}
@@ -148,6 +167,10 @@ func (f *Finder) scraperSearch(ctx context.Context, company, domain string) ([]C
 		return nil, fmt.Errorf("http: %w", err)
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("scraper service HTTP %d", resp.StatusCode)
+	}
 
 	var r respBody
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
