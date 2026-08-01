@@ -1,7 +1,9 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
@@ -165,11 +167,79 @@ func (s *Server) handlePutResumeSkills(w http.ResponseWriter, r *http.Request) {
 }
 
 // handlePostResumeImprove triggers resume improvement (stub).
+// handlePostResumeImprove generates a stronger resume from analysis + work
+// context and exports the requested formats. It fails honestly (400) when AI
+// Assist is off or no resume path is configured.
 func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		TargetRole string   `json:"targetRole"`
+		Formats    []string `json:"formats"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+
+	ai := resume.AIOptionsFromConfig(s.cfg)
+	if !ai.Enabled {
+		writeError(w, http.StatusBadRequest, "turn on AI Assist in Config first")
+		return
+	}
+
+	resumePath := strings.TrimSpace(s.cfg.ResumePath)
+	if resumePath == "" {
+		writeError(w, http.StatusBadRequest, "set a resume path in Config first")
+		return
+	}
+	resumeText, err := resume.ExtractText(resumePath)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "read resume: "+err.Error())
+		return
+	}
+
+	var profile *resume.Profile
+	if res := resume.AnalyzeFull(resumePath, ai); res.Valid && res.Profile != nil {
+		profile = res.Profile
+	}
+
+	projects, _ := workcontext.Load()
+
+	formats := make([]resume.Format, 0, len(body.Formats))
+	for _, f := range body.Formats {
+		switch resume.Format(f) {
+		case resume.FormatMarkdown, resume.FormatLaTeX, resume.FormatPDF:
+			formats = append(formats, resume.Format(f))
+		}
+	}
+	if len(formats) == 0 {
+		formats = []resume.Format{resume.FormatMarkdown}
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 6*time.Minute)
+	defer cancel()
+
+	out, err := resume.GenerateImproved(ctx, ai, resume.ImproveInput{
+		ResumePath: resumePath,
+		ResumeText: resumeText,
+		Profile:    profile,
+		Projects:   projects,
+		Skills:     s.cfg.Skills,
+		TargetRole: body.TargetRole,
+		Formats:    formats,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "generate improved resume: "+err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"analysis": nil,
-		"formats":  []string{},
-		"pdfNote":  nil,
+		"previewMD": out.PreviewMD,
+		"dir":       out.Dir,
+		"review": map[string]any{
+			"summary":      out.Review.Summary,
+			"atsScore":     out.Review.ATSScore,
+			"qualityScore": out.Review.QualityScore,
+		},
+		"pdfNote": out.PDFNote,
 	})
 }
 
