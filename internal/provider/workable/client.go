@@ -17,6 +17,9 @@ type Client struct {
 	http      *http.Client
 	companies []workableCompany
 	base      []workableCompany // embedded list; MergeBoards rebuilds from this
+	// baseURL overrides the Workable API host for tests; defaults to
+	// workableBaseURL.
+	baseURL string
 }
 
 // New creates a Workable client from embedded JSON bytes.
@@ -30,6 +33,7 @@ func New(companiesJSON []byte) (*Client, error) {
 		http:      &http.Client{Timeout: 30 * time.Second},
 		companies: companies,
 		base:      base,
+		baseURL:   workableBaseURL,
 	}, nil
 }
 
@@ -114,5 +118,5 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 
 // Apply submits an application for a single Workable job.
 func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	return submitApplication(ctx, c.http, job, profile)
+	return c.submitApplication(ctx, job, profile)
 }
