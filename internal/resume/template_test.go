@@ -58,6 +58,15 @@ func TestTemplatesRegistry(t *testing.T) {
 		t.Errorf("split railSide = %q; want right", split.RailSide)
 	}
 
+	// Every template declares a positive space budget (the AI + planner use it).
+	for _, tmpl := range Templates() {
+		b := tmpl.Budget
+		if b.MaxRoles == 0 || b.MaxBulletsPerRole == 0 || b.MaxSkills == 0 ||
+			b.MaxEducation == 0 || b.CharsPerLine == 0 || b.MaxSummaryLines == 0 {
+			t.Errorf("template %q missing budget fields: %+v", tmpl.ID, b)
+		}
+	}
+
 	// Header alignment + rule tokens are promoted onto the manifest so the web
 	// gallery's miniature previews stay faithful to the real renderers.
 	classic, _ := GetTemplate(TemplateClassic)

@@ -269,7 +269,13 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusInternalServerError, "generate improved resume: "+err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	writeJSON(w, http.StatusOK, improveResponse(out))
+}
+
+// improveResponse builds the JSON payload for a successful /resume/improve.
+// Extracted so tests can assert the shape without running the AI pipeline.
+func improveResponse(out *resume.ImproveOutput) map[string]any {
+	return map[string]any{
 		"previewMD":    out.PreviewMD,
 		"dir":          out.Dir,
 		"templateId":   out.TemplateID,
@@ -280,7 +286,8 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 			"qualityScore": out.Review.QualityScore,
 		},
 		"pdfNote": out.PDFNote,
-	})
+		"fit":     out.Fit,
+	}
 }
 
 // handleGetResumeLibrary returns the list of generated resumes.

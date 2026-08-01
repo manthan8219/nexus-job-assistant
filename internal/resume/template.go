@@ -60,6 +60,20 @@ type TemplateDesign struct {
 	NativeLead  float64 // native-PDF line leading
 }
 
+// SpaceBudget is how much content a template realistically holds on its target
+// page count, derived from the design geometry (font size, margins, column
+// width). The AI creator writes to this budget, the deterministic planner
+// enforces it, and the renderer verifies the final page count.
+type SpaceBudget struct {
+	TargetPages       int `json:"targetPages"`       // 1 = must fit one page; 0 = flexible
+	MaxSummaryLines   int `json:"maxSummaryLines"`   // summary lines the planner caps at
+	MaxBulletsPerRole int `json:"maxBulletsPerRole"` // bullets per experience entry
+	MaxRoles          int `json:"maxRoles"`          // experience entries
+	MaxSkills         int `json:"maxSkills"`         // skills listed
+	MaxEducation      int `json:"maxEducation"`      // education entries
+	CharsPerLine      int `json:"charsPerLine"`      // ~chars that fit one body line
+}
+
 // Template is a machine-readable resume design. The manifest is what the
 // system "understands" about a template: which sections it supports, in what
 // order, on what geometry, and what constraints it imposes. The AI polish loop
@@ -81,6 +95,7 @@ type Template struct {
 	// NOTE: no omitempty on ShowRule — `false` must round-trip so the UI
 	// knows a template deliberately has no rule under the header.
 	ShowRule bool           `json:"showRule"` // accent rule under the header
+	Budget   SpaceBudget    `json:"budget,omitempty"`
 	Design   TemplateDesign `json:"-"`
 }
 
@@ -111,12 +126,45 @@ func Templates() []Template {
 	}
 	// Promote the design tokens the web preview needs (header alignment +
 	// rule) onto the served manifest so UI miniatures stay faithful to the
-	// real renderers.
+	// real renderers, and attach each template's explicit space budget so the
+	// UI + AI both know how much content it holds.
 	for i := range templates {
 		templates[i].HeaderAlign = templates[i].Design.HeaderAlign
 		templates[i].ShowRule = templates[i].Design.ShowRule
+		templates[i].Budget = budgetFor(templates[i])
 	}
 	return templates
+}
+
+// budgetFor returns the explicit space budget for a curated template. The
+// numbers come from the design geometry: column width, body size, and the
+// one-page target. Unknown ids get a conservative default so callers can
+// always plan content.
+func budgetFor(tpl Template) SpaceBudget {
+	switch tpl.ID {
+	case TemplateCompact:
+		return SpaceBudget{TargetPages: 1, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 5, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 100}
+	case TemplateSidebar, TemplateSplit:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 60}
+	case TemplateDeveloper:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 4, MaxSkills: 14, MaxEducation: 2, CharsPerLine: 85}
+	case TemplateMinimal:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 2, MaxBulletsPerRole: 3, MaxRoles: 4, MaxSkills: 10, MaxEducation: 2, CharsPerLine: 90}
+	case TemplateAcademic:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 3, CharsPerLine: 85}
+	case TemplateExecutive:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
+	case TemplateModern:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
+	case TemplateBold:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 85}
+	case TemplateMonochrome:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 90}
+	case TemplateNordic:
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 100}
+	default: // classic + unknown ids
+		return SpaceBudget{TargetPages: 0, MaxSummaryLines: 3, MaxBulletsPerRole: 4, MaxRoles: 5, MaxSkills: 12, MaxEducation: 2, CharsPerLine: 95}
+	}
 }
 
 // GetTemplate resolves a template by id. An empty id resolves to Classic so
