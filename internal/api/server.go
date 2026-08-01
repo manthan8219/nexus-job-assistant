@@ -14,6 +14,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/companies"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/contacts"
+	"github.com/manthan8219/nexus-job-assistant/internal/deliverability"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
@@ -76,6 +77,10 @@ type Server struct {
 	notifyMu     sync.Mutex
 	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
 	sseHeartbeat time.Duration              // interval between periodic snapshot pushes
+
+	// txtResolver is the DNS backend for deliverability audits. Nil means
+	// net.DefaultResolver; tests inject a fake so no real DNS is touched.
+	txtResolver deliverability.TxtResolver
 }
 
 // New creates an API server.
@@ -236,6 +241,9 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 
 	// Job titles
 	mux.HandleFunc("POST /api/job-titles/suggest", s.handlePostJobTitlesSuggest)
+
+	// Deliverability
+	mux.HandleFunc("GET /api/deliverability/audit", s.handleGetDeliverabilityAudit)
 
 	// Notifications
 	mux.HandleFunc("GET /api/notify/channels", s.handleGetNotifyChannels)
