@@ -381,9 +381,9 @@ Never leave a task stuck in the wrong column.
    - **Tags:** always nexus + backend/frontend + phase-N + area tags (api, engine,
      outreach, resume, ats, deliverability, analytics, scheduler, ui, product).
    - **Priority** by urgency; **Due date** YYYY-MM-DD (tasks only, never on epics).
-2. **Move to In Progress** when work on the PR actually starts.
-3. **Attach the PR** - link the PR (title + URL) to the task; put KAN-### in the
+2. **Attach the PR** - link the PR (title + URL) to the task; put KAN-### in the
    PR title or description for cross-linking.
+3. **Move to In Progress** when work on the PR actually starts.
 4. **Move to Done** when the work is complete and verified - PR merged, CI green
    (gofmt, vet, go build, go test pass; see sections 15 and 17).
 5. **Re-open or comment** if review expands the scope; update the task and its
