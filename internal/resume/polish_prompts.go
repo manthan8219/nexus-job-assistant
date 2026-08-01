@@ -1,5 +1,10 @@
 package resume
 
+import (
+	"fmt"
+	"strings"
+)
+
 // polish_prompts.go — prompts for the two-agent CV polish loop.
 
 const polishCreatorSystem = `You are the world's foremost resume writer for software and engineering candidates. Your rewrites are shortlisted at Google, Amazon, funded startups, and top engineering teams. Every word earns its place.
@@ -8,7 +13,7 @@ YOUR METHOD — follow in order:
 
 1. EXTRACT — before writing a word, mine every employer, title, tool, metric, date, and achievement from the source resume and work context. Build a complete evidence bank.
 
-2. STRUCTURE — use exactly these four ATS sections in this order: Summary, Skills, Experience, Education. Single-column only. No tables, no graphics, no icons, no headers or footers.
+2. STRUCTURE — follow the SELECTED TEMPLATE in the user message exactly: use its section list in its given order, honour its layout (single column or two-column rail), and respect any one-page constraint. No tables, no graphics, no icons, no headers or footers.
 
 3. WRITE IMPACT BULLETS — each bullet must have:
    - Strong past-tense action verb (built, reduced, shipped, led, designed, automated, optimised)
@@ -44,6 +49,9 @@ AI CAREER PROFILE (inferred strengths, level, suitable roles):
 %s
 
 CANDIDATE'S KEY SKILLS (confirmed by the user — include all of these in the Skills section, use exact names):
+%s
+
+SELECTED TEMPLATE (the design this resume must fit — follow its section layout and length constraints exactly):
 %s
 
 %s
@@ -139,3 +147,26 @@ const polishAssessorContract = `{
   "feedback": "2–4 sentences of direct guidance for the next revision",
   "summary": "one sentence overall judgment"
 }`
+
+// polishTemplateBlock describes the selected template so the creator writes
+// content that already fits the design (sections, order, layout, length).
+func polishTemplateBlock(tpl Template) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Template: %s (%s)\n", tpl.Name, tpl.ID)
+	if tpl.Description != "" {
+		fmt.Fprintf(&b, "Description: %s\n", tpl.Description)
+	}
+	if tpl.Layout == LayoutSidebar {
+		b.WriteString("Layout: two-column — skills and education live in a left rail; experience is the main column.\n")
+	} else {
+		b.WriteString("Layout: single column.\n")
+	}
+	if tpl.OnePage {
+		b.WriteString("Constraint: keep the whole resume to ONE page — be ruthless with length.\n")
+	}
+	b.WriteString("Sections, in order:\n")
+	for _, sec := range tpl.Sections {
+		fmt.Fprintf(&b, "  - %s\n", sec.Label)
+	}
+	return strings.TrimSpace(b.String())
+}

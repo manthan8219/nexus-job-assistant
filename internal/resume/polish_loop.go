@@ -67,8 +67,9 @@ func (r PolishReview) feedbackBlock() string {
 }
 
 // polishGenerate runs the creator → assessor feedback loop and returns the
-// best improved resume and its final assessment.
-func polishGenerate(ctx context.Context, ai AIOptions, in ImproveInput, logf func(string, ...any)) (ImprovedDoc, PolishReview, error) {
+// best improved resume and its final assessment. The template manifest steers
+// both the content (sections/order/length) and the rendering the assessor sees.
+func polishGenerate(ctx context.Context, ai AIOptions, in ImproveInput, tpl Template, logf func(string, ...any)) (ImprovedDoc, PolishReview, error) {
 	if logf == nil {
 		logf = func(string, ...any) {}
 	}
@@ -86,7 +87,7 @@ func polishGenerate(ctx context.Context, ai AIOptions, in ImproveInput, logf fun
 		}
 
 		logf("round %d/%d — rewriting resume…", round, polishDefaultMaxRounds)
-		raw, err := runCreator(ctx, ai, in, feedback)
+		raw, err := runCreator(ctx, ai, in, tpl, feedback)
 		if err != nil {
 			return ImprovedDoc{}, PolishReview{}, fmt.Errorf("polish round %d creator: %w", round, err)
 		}
@@ -99,7 +100,7 @@ func polishGenerate(ctx context.Context, ai AIOptions, in ImproveInput, logf fun
 		}
 
 		logf("round %d/%d — assessing quality…", round, polishDefaultMaxRounds)
-		rawRev, err := runAssessor(ctx, ai, strings.TrimSpace(in.TargetRole), RenderMarkdown(doc))
+		rawRev, err := runAssessor(ctx, ai, strings.TrimSpace(in.TargetRole), RenderMarkdownFor(doc, tpl))
 		if err != nil {
 			logf("assessor error (keeping best draft so far): %v", err)
 			if bestDoc.Summary == "" {
@@ -135,7 +136,7 @@ func polishGenerate(ctx context.Context, ai AIOptions, in ImproveInput, logf fun
 	return bestDoc, final, nil
 }
 
-func runCreator(ctx context.Context, ai AIOptions, in ImproveInput, feedback string) (string, error) {
+func runCreator(ctx context.Context, ai AIOptions, in ImproveInput, tpl Template, feedback string) (string, error) {
 	fb := strings.TrimSpace(feedback)
 	if fb == "" {
 		fb = "This is the first draft — no prior assessor feedback."
@@ -150,6 +151,7 @@ func runCreator(ctx context.Context, ai AIOptions, in ImproveInput, feedback str
 		polishProjectsBlock(in.Projects),
 		polishProfileJSON(in.Profile),
 		polishSkillsBlock(in.Skills),
+		polishTemplateBlock(tpl),
 		fb,
 		polishCreatorContract,
 	)

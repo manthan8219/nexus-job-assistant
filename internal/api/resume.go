@@ -91,6 +91,13 @@ func (s *Server) handlePostResumeAnalyze(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+// handleGetResumeTemplates returns the curated resume template registry. Each
+// manifest declares the sections/layout/constraints the backend understands,
+// which is what lets the AI fit generated content into the chosen design.
+func (s *Server) handleGetResumeTemplates(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, resume.Templates())
+}
+
 // handleGetResumeProjects returns work history projects from the workcontext store.
 func (s *Server) handleGetResumeProjects(w http.ResponseWriter, r *http.Request) {
 	projects, err := workcontext.Load()
@@ -166,14 +173,14 @@ func (s *Server) handlePutResumeSkills(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, body.Skills)
 }
 
-// handlePostResumeImprove triggers resume improvement (stub).
 // handlePostResumeImprove generates a stronger resume from analysis + work
 // context and exports the requested formats. It fails honestly (400) when AI
-// Assist is off or no resume path is configured.
+// Assist is off, no resume path is configured, or the template id is unknown.
 func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		TargetRole string   `json:"targetRole"`
 		Formats    []string `json:"formats"`
+		TemplateID string   `json:"templateId"`
 	}
 	if err := readJSON(r, &body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
@@ -191,6 +198,13 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "set a resume path in Config first")
 		return
 	}
+
+	tpl, err := resume.GetTemplate(body.TemplateID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	resumeText, err := resume.ExtractText(resumePath)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "read resume: "+err.Error())
@@ -226,14 +240,17 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		Skills:     s.cfg.Skills,
 		TargetRole: body.TargetRole,
 		Formats:    formats,
+		TemplateID: tpl.ID,
 	})
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "generate improved resume: "+err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"previewMD": out.PreviewMD,
-		"dir":       out.Dir,
+		"previewMD":    out.PreviewMD,
+		"dir":          out.Dir,
+		"templateId":   out.TemplateID,
+		"templateName": out.TemplateName,
 		"review": map[string]any{
 			"summary":      out.Review.Summary,
 			"atsScore":     out.Review.ATSScore,

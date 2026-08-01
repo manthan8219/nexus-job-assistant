@@ -83,16 +83,19 @@ type ImproveInput struct {
 	Skills     []string
 	TargetRole string
 	Formats    []Format
+	TemplateID string // empty → classic
 }
 
 // ImproveOutput is files written under ~/.nexus/resumes/.
 type ImproveOutput struct {
-	Doc       ImprovedDoc
-	Review    PolishReview
-	Dir       string
-	Files     map[Format]string
-	PDFNote   string
-	PreviewMD string
+	Doc          ImprovedDoc
+	Review       PolishReview
+	Dir          string
+	Files        map[Format]string
+	PDFNote      string
+	PreviewMD    string
+	TemplateID   string
+	TemplateName string
 }
 
 // GenerateImproved builds a stronger resume from analysis + work context, then exports.
@@ -118,7 +121,12 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		formats = []Format{FormatMarkdown, FormatLaTeX}
 	}
 
-	doc, review, err := polishGenerate(ctx, ai, in, nil)
+	tpl, err := GetTemplate(in.TemplateID)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, review, err := polishGenerate(ctx, ai, in, tpl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -133,21 +141,23 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 	stamp := doc.GeneratedAt.Format("20060102-150405")
 	base := filepath.Join(dir, "improved-"+stamp)
 	out := &ImproveOutput{
-		Doc:       doc,
-		Review:    review,
-		Dir:       dir,
-		Files:     map[Format]string{},
-		PreviewMD: RenderMarkdown(doc),
+		Doc:          doc,
+		Review:       review,
+		Dir:          dir,
+		Files:        map[Format]string{},
+		PreviewMD:    RenderMarkdownFor(doc, tpl),
+		TemplateID:   tpl.ID,
+		TemplateName: tpl.Name,
 	}
 
 	want := formatSet(formats)
 	// Always write MD + LaTeX + JSON so converters / Config library have sources.
 	mdPath := base + ".md"
-	if err := os.WriteFile(mdPath, []byte(RenderMarkdown(doc)), 0600); err != nil {
+	if err := os.WriteFile(mdPath, []byte(RenderMarkdownFor(doc, tpl)), 0600); err != nil {
 		return nil, err
 	}
 	texPath := base + ".tex"
-	if err := os.WriteFile(texPath, []byte(RenderLaTeX(doc)), 0600); err != nil {
+	if err := os.WriteFile(texPath, []byte(RenderLaTeXFor(doc, tpl)), 0600); err != nil {
 		return nil, err
 	}
 	jsonPath := base + ".json"
@@ -163,7 +173,7 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 
 	// Always produce a PDF for applying (LaTeX → pandoc → native fallback).
 	pdfPath := base + ".pdf"
-	conv, err := EnsurePDF(doc, mdPath, texPath, pdfPath)
+	conv, err := EnsurePDFFor(doc, tpl, mdPath, texPath, pdfPath)
 	if err != nil {
 		out.PDFNote = err.Error()
 		return out, nil
@@ -184,6 +194,7 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		CreatedAt:  doc.GeneratedAt,
 		Label:      label,
 		TargetRole: doc.TargetRole,
+		Template:   tpl.ID,
 		PDFPath:    conv.PDFPath,
 		MDPath:     mdPath,
 		TeXPath:    texPath,
