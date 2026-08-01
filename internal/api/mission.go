@@ -37,12 +37,14 @@ type MissionSnapshot struct {
 	Recent             []DashRecent              `json:"recent"`
 }
 
-// ReadyCheck mirrors the frontend ReadyCheck type.
+// ReadyCheck mirrors the frontend ReadyCheck type. Optional checks (like AI
+// Assist) inform the user but never block onboarding completion.
 type ReadyCheck struct {
-	Key   string `json:"key"`
-	OK    bool   `json:"ok"`
-	Label string `json:"label"`
-	Hint  string `json:"hint"`
+	Key      string `json:"key"`
+	OK       bool   `json:"ok"`
+	Label    string `json:"label"`
+	Hint     string `json:"hint"`
+	Optional bool   `json:"optional,omitempty"`
 }
 
 // handleGetMission returns the full dashboard snapshot.
@@ -97,6 +99,9 @@ func (s *Server) missionSnapshot() MissionSnapshot {
 	checks := s.buildChecks()
 	onboardingComplete := true
 	for _, c := range checks {
+		if c.Optional {
+			continue // recommended, not required — never blocks completion
+		}
 		if !c.OK {
 			onboardingComplete = false
 			break
@@ -110,6 +115,12 @@ func (s *Server) missionSnapshot() MissionSnapshot {
 		switch status {
 		case StatusIdle:
 			nextAction = "Start a run to search and apply"
+			// AI Assist is recommended, not required: once the profile
+			// basics are done, nudge users who never turned it on so they
+			// don't miss fit-scoring and tailored answers.
+			if !s.cfg.AIAssist {
+				nextAction = "Next: turn on AI Assist to unlock fit-scoring and tailored answers"
+			}
 		case StatusRunning:
 			nextAction = "Run in progress"
 		default:
@@ -264,6 +275,9 @@ func (s *Server) buildChecks() []ReadyCheck {
 			Label: "Locations", Hint: "Set target locations in Config"},
 		{Key: "consent", OK: s.cfg.ApplyConsent,
 			Label: "Apply consent", Hint: "Grant consent in Config"},
+		{Key: "ai-assist", OK: s.cfg.AIAssist, Optional: true,
+			Label: "AI Assist on",
+			Hint:  "AI Assist off — optional: fit-scoring & tailored answers"},
 	}
 }
 
