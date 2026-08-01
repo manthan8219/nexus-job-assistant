@@ -19,3 +19,4 @@ Summary of the non-negotiables (details in AGENTS.md):
 12. **Ask before irreversible** — schema/config-breaking changes, deletions, consent-logic changes, new dependencies.
 13. **AI safety** — ground any numeric claim in an AI answer against resume/profile facts before use (never submit hallucinated figures); never attempt to bypass a CAPTCHA/anti-bot check — halt and let the user complete it manually.
 14. **One task = one branch** — every new request that is unrelated to in-progress work gets a fresh branch; work there until a human reviews it (AGENTS.md §15).
+15. **Jira workflow— every PR/feature/fix needs a `KAN-###` Jira task via the MCP config: create it with proper tags + description, attach the PR, move it to In Progress when started, and move it to Done on merge. Credentials come from the Cline MCP config, never the repo (see AGENTS.md §15).
