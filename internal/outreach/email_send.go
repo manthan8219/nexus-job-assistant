@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/osint"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
@@ -99,9 +100,38 @@ func SendEmail(cfg *config.Config, item Item) error {
 	if to == "" {
 		return fmt.Errorf("contact email is empty — add an address before sending")
 	}
+
+	// Recipient verification (KAN-23): when the user has opted into the slow
+	// SMTP probe (OutreachSMTPVerify), a definitive invalid verdict blocks the
+	// send — malformed address, no MX, or a 5xx rejection of the exact address.
+	// Inconclusive results fail open so a network hiccup never stalls a send.
+	if cfg.OutreachSMTPVerify {
+		vctx, vcancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ver := osint.NewVerifier().Verify(vctx, to)
+		vcancel()
+		if ver.Status == osint.StatusInvalid {
+			item.Status = StatusSkipped
+			item.Error = "recipient verification failed: " + ver.Detail
+			_ = Upsert(item)
+			logAttempt(item, StatusSkipped, fmt.Errorf("%s", item.Error))
+			return fmt.Errorf("recipient verification failed: %s", ver.Detail)
+		}
+	}
+
+	// Warm-up ramp (KAN-23): cap the day's sends at the ramp schedule until the
+	// sender has been active for SmtpWarmupDays, never exceeding MaxEmailsPerDay.
+	// A store read failure fails open to the configured cap.
 	max := cfg.MaxEmailsPerDay
 	if max <= 0 {
 		max = 10
+	}
+	if cfg.SmtpWarmupDays > 0 {
+		if items, err := Load(); err == nil {
+			ramped := warmupCap(sendingDaysActive(items, time.Now()), cfg.SmtpWarmupDays, max)
+			if ramped < max {
+				max = ramped
+			}
+		}
 	}
 	if n, err := CountSentToday(ChannelEmail); err == nil && n >= max {
 		return fmt.Errorf("daily email cap reached (%d)", max)
@@ -131,10 +161,13 @@ func SendEmail(cfg *config.Config, item Item) error {
 		}
 	}
 	if sendErr != nil {
-		item.Status = StatusFailed
+		// Bounce handling (KAN-23): 5xx recipient rejections become a terminal
+		// bounced status (no more follow-ups); 4xx and other errors stay failed.
+		st, _ := classifySendError(sendErr)
+		item.Status = st
 		item.Error = sendErr.Error()
 		_ = Upsert(item)
-		logAttempt(item, StatusFailed, sendErr)
+		logAttempt(item, st, sendErr)
 		return sendErr
 	}
 	item.SentAt = time.Now()
