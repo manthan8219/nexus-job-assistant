@@ -250,6 +250,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/outreach/items", s.handleGetOutreachItems)
 	mux.HandleFunc("POST /api/outreach/build", s.handlePostOutreachBuild)
 	mux.HandleFunc("POST /api/outreach/send/{id}", s.handlePostOutreachSend)
+	mux.HandleFunc("PUT /api/outreach/items/{id}/variant", s.handlePutOutreachItemVariant)
 	mux.HandleFunc("GET /api/outreach/log", s.handleGetOutreachLog)
 
 	// Logs

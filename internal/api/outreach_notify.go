@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
@@ -34,6 +35,7 @@ type outreachItemDTO struct {
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
 	SentAt        time.Time `json:"sentAt,omitempty"`
+	Variant       string    `json:"variant,omitempty"`
 }
 
 func toOutreachItemDTO(it outreach.Item) outreachItemDTO {
@@ -60,6 +62,7 @@ func toOutreachItemDTO(it outreach.Item) outreachItemDTO {
 		CreatedAt:     it.CreatedAt,
 		UpdatedAt:     it.UpdatedAt,
 		SentAt:        it.SentAt,
+		Variant:       it.Variant,
 	}
 }
 
@@ -268,6 +271,55 @@ func (s *Server) handlePostOutreachSend(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	writeJSON(w, http.StatusOK, toOutreachItemDTO(reloaded))
+}
+
+// handlePutOutreachItemVariant tags an outreach item with an A/B test variant
+// (KAN-27). An empty variant clears the tag. The Response Center compares
+// reply rates across variants.
+func (s *Server) handlePutOutreachItemVariant(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	var body struct {
+		Variant string `json:"variant"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+	body.Variant = strings.TrimSpace(body.Variant)
+	if len(body.Variant) > 20 {
+		writeError(w, http.StatusBadRequest, "variant too long (max 20 chars)")
+		return
+	}
+
+	items, err := outreach.Load()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "load outreach: "+err.Error())
+		return
+	}
+	found := false
+	for i := range items {
+		if items[i].ID == id {
+			items[i].Variant = body.Variant
+			found = true
+			break
+		}
+	}
+	if !found {
+		writeError(w, http.StatusNotFound, "outreach item not found")
+		return
+	}
+	if err := outreach.SaveAll(items); err != nil {
+		writeError(w, http.StatusInternalServerError, "save outreach: "+err.Error())
+		return
+	}
+	var updated outreach.Item
+	for _, it := range items {
+		if it.ID == id {
+			updated = it
+			break
+		}
+	}
+	writeJSON(w, http.StatusOK, toOutreachItemDTO(updated))
 }
 
 // handleGetOutreachLog returns the outreach audit log (newest first).
