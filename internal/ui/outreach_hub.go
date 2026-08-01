@@ -130,10 +130,11 @@ type OutreachHubModel struct {
 	logCursor  int
 	logLoading bool
 
-	contactInput textinput.Model
-	pending      outreach.Item
-	autoGen      int
-	building     bool
+	contactInput   textinput.Model
+	pending        outreach.Item
+	autoGen        int
+	autoBatchFired int // sends fired in the current auto batch (for send-time batching)
+	building       bool
 }
 
 func NewOutreachHubModel() OutreachHubModel {
@@ -336,7 +337,15 @@ func (m OutreachHubModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.autoGen > 0 {
 			ch := m.channelForSub()
 			gen := m.autoGen
-			cmds = append(cmds, tea.Tick(1200*time.Millisecond, func(t time.Time) tea.Msg {
+			// Send-time batching: fire BatchSize emails with the short per-item
+			// cadence, then pause BatchPause before the next batch (KAN-24).
+			delay := 1200 * time.Millisecond
+			m.autoBatchFired++
+			if m.autoBatchFired >= outreach.BatchSize(m.effectiveCfg()) {
+				m.autoBatchFired = 0
+				delay = outreach.BatchPause(m.effectiveCfg())
+			}
+			cmds = append(cmds, tea.Tick(delay, func(t time.Time) tea.Msg {
 				return outreachAutoTickMsg{Channel: ch, Gen: gen}
 			}))
 			m.ui = outRunning
