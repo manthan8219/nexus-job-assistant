@@ -83,6 +83,10 @@ func openPath(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	// SQLite is single-writer: serializing on one connection prevents
+	// SQLITE_BUSY when the engine's background scoring writes concurrently
+	// with the apply pipeline (dropped inserts otherwise).
+	db.SetMaxOpenConns(1)
 	if _, err := db.Exec(ddl); err != nil {
 		db.Close()
 		return nil, err
@@ -419,11 +423,26 @@ func (s *Store) Stats() (applied, skipped, failed int, err error) {
 }
 
 // CountAppliedSince returns how many successful applies happened at/after since (UTC).
+// CountAppliedSince counts applications recorded as applied at or after the
+// given time. applied_at is stored by the driver as a native time.Time that
+// SQLite's datetime() cannot parse, so the filter runs in Go where the value
+// round-trips correctly.
 func (s *Store) CountAppliedSince(since time.Time) (int, error) {
-	var n int
-	err := s.db.QueryRow(
-		`SELECT COUNT(1) FROM applications WHERE status = ? AND applied_at >= ?`,
-		string(StatusApplied), since.UTC().Format(time.RFC3339),
-	).Scan(&n)
-	return n, err
+	rows, err := s.db.Query(`SELECT applied_at FROM applications WHERE status = ?`, string(StatusApplied))
+	if err != nil {
+		return 0, err
+	}
+	defer rows.Close()
+
+	n := 0
+	for rows.Next() {
+		var at time.Time
+		if err := rows.Scan(&at); err != nil {
+			return 0, err
+		}
+		if !at.Before(since) {
+			n++
+		}
+	}
+	return n, rows.Err()
 }

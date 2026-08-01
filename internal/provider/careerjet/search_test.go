@@ -62,6 +62,52 @@ func TestSearchSkipsOnAPIError(t *testing.T) {
 	}
 }
 
+func TestSearchFiltersByLocationAndTitle(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(careerjetResponse{
+			Type: "SUCCESS",
+			Jobs: []careerjetJob{
+				{Title: "Backend Engineer", Company: "Acme", Locations: []string{"Paris", "France"}, URL: "https://acme.example.com/jobs/1"},
+				{Title: "Product Manager", Company: "Acme", Locations: []string{"London", "UK"}, URL: "https://acme.example.com/jobs/2"},
+			},
+		})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), affid: "aff-1", apiKey: "key-1", baseURL: srv.URL}
+
+	// London + backend → only the Paris job matches the title but not the
+	// location, so nothing survives.
+	jobs, err := c.Search(context.Background(), provider.SearchCriteria{
+		Titles:    []string{"Backend Engineer"},
+		WorkType:  "Onsite",
+		Locations: []string{"London"},
+	})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Fatalf("got %d jobs, want 0 (title matched but location did not)", len(jobs))
+	}
+}
+
+func TestSearchPassesAffiliateAndKey(t *testing.T) {
+	var gotAffid, gotKey string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAffid = r.URL.Query().Get("affid")
+		gotKey = r.URL.Query().Get("api_key")
+		json.NewEncoder(w).Encode(careerjetResponse{Type: "SUCCESS"})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), affid: "aff-1", apiKey: "key-1", baseURL: srv.URL}
+
+	if _, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Engineer"}}); err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if gotAffid != "aff-1" || gotKey != "key-1" {
+		t.Errorf("credentials = affid:%q key:%q, want aff-1/key-1", gotAffid, gotKey)
+	}
+}
+
 func TestApplyIsSkipped(t *testing.T) {
 	c := &Client{http: &http.Client{}}
 	res, err := c.Apply(context.Background(), provider.Job{URL: "https://acme.example.com/jobs/1"}, provider.Profile{})

@@ -172,6 +172,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 
 	// Jobs
 	mux.HandleFunc("GET /api/jobs", s.handleGetJobs)
+	mux.HandleFunc("POST /api/jobs", s.handlePostJobs)
 	mux.HandleFunc("PATCH /api/jobs/{id}/outcome", s.handlePatchJobOutcome)
 	mux.HandleFunc("POST /api/applications/{id}/approved", s.handlePostApplicationApproved)
 

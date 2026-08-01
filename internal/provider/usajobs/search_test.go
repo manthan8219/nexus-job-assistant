@@ -106,6 +106,54 @@ func TestSearchSkipsOnServerError(t *testing.T) {
 	}
 }
 
+func TestSearchSkipsJobsWithoutURI(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := searchResponse{}
+		resp.SearchResult.Items = []searchResultItem{{
+			Descriptor: struct {
+				ID               string         `json:"PositionID"`
+				Title            string         `json:"PositionTitle"`
+				OrganizationName string         `json:"OrganizationName"`
+				Location         string         `json:"PositionLocationDisplay"`
+				URI              string         `json:"PositionURI"`
+				Remuneration     []remuneration `json:"PositionRemuneration"`
+			}{ID: "x", Title: "Software Engineer", URI: ""}, // no apply URI
+		}}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), apiKey: "k", email: "ada@example.com", baseURL: srv.URL}
+
+	jobs, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Software Engineer"}})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Fatalf("got %d jobs, want 0 (job without a URI must be skipped)", len(jobs))
+	}
+}
+
+func TestSearchSendsAuthHeaders(t *testing.T) {
+	var gotAuth, gotUA string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotAuth = r.Header.Get("Authorization")
+		gotUA = r.Header.Get("User-Agent")
+		json.NewEncoder(w).Encode(searchResponse{})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), apiKey: "secret-key", email: "ada@example.com", baseURL: srv.URL}
+
+	if _, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Engineer"}}); err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if gotAuth != "Bearer secret-key" {
+		t.Errorf("Authorization = %q, want Bearer secret-key", gotAuth)
+	}
+	if gotUA != "ada@example.com" {
+		t.Errorf("User-Agent = %q, want the account email (API requirement)", gotUA)
+	}
+}
+
 func TestApplyIsSkipped(t *testing.T) {
 	c := &Client{http: &http.Client{}}
 	res, err := c.Apply(context.Background(), provider.Job{URL: "https://www.usajobs.gov/GetJob/ViewDetails/1"}, provider.Profile{})

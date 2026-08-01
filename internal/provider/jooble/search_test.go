@@ -76,6 +76,53 @@ func TestSearchSkipsOnServerError(t *testing.T) {
 	}
 }
 
+func TestSearchFiltersByTitleAndLocation(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(joobleResponse{
+			Jobs: []joobleJob{
+				{Title: "Senior Backend Engineer", Company: "Acme", Location: "Warsaw", Link: "https://acme.example.com/jobs/1"},
+				{Title: "Product Manager", Company: "Acme", Location: "Remote", Link: "https://acme.example.com/jobs/2"},
+				{Title: "Backend Engineer", Company: "Acme", Location: "Remote", Link: "https://acme.example.com/jobs/3"},
+			},
+		})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), apiKey: "key-123", baseURL: srv.URL}
+
+	// Remote-only + backend titles → only the third job matches.
+	jobs, err := c.Search(context.Background(), provider.SearchCriteria{
+		Titles:   []string{"Backend Engineer"},
+		WorkType: "Remote",
+	})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(jobs) != 1 {
+		t.Fatalf("got %d jobs, want 1 (title + remote filters)", len(jobs))
+	}
+	if jobs[0].URL != "https://acme.example.com/jobs/3" {
+		t.Errorf("URL = %q, want the third job", jobs[0].URL)
+	}
+}
+
+func TestSearchSendsKeywords(t *testing.T) {
+	var gotBody map[string]string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(body, &gotBody)
+		json.NewEncoder(w).Encode(joobleResponse{})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), apiKey: "key-123", baseURL: srv.URL}
+
+	if _, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Go Developer"}}); err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if gotBody["keywords"] != "Go Developer" {
+		t.Errorf("keywords = %q, want Go Developer", gotBody["keywords"])
+	}
+}
+
 func TestApplyIsSkipped(t *testing.T) {
 	c := &Client{http: &http.Client{}}
 	res, err := c.Apply(context.Background(), provider.Job{URL: "https://acme.example.com/jobs/1"}, provider.Profile{})

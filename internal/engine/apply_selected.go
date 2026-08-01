@@ -78,6 +78,13 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 				e.log("Store error: %v", uerr)
 			}
 			e.sendResult(Result{Job: job, Status: "failed", Reason: reason})
+			e.Notifier.Send(ctx, notifier.Event{
+				Kind:     notifier.EventJobFailed,
+				JobTitle: job.Title,
+				Company:  job.Company,
+				Provider: job.Provider,
+				Reason:   reason,
+			})
 			continue
 		}
 

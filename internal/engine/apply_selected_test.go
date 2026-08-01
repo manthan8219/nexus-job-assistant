@@ -11,24 +11,9 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
 
-// fakeProvider records Apply calls and returns the configured result.
-type fakeProvider struct {
-	name    string
-	result  provider.ApplyResult
-	err     error
-	applied []provider.Job
-}
-
-func (f *fakeProvider) Name() string { return f.name }
-func (f *fakeProvider) Search(ctx context.Context, c provider.SearchCriteria) ([]provider.Job, error) {
-	return nil, nil
-}
-func (f *fakeProvider) Apply(ctx context.Context, j provider.Job, p provider.Profile) (provider.ApplyResult, error) {
-	f.applied = append(f.applied, j)
-	return f.result, f.err
-}
-
-func newTestEngine(t *testing.T, cfg *config.Config, provs []provider.Provider) (*Engine, *store.Store) {
+// newEngineWithProviders builds a hermetic Engine with the given providers and
+// returns it alongside its temp-dir store.
+func newEngineWithProviders(t *testing.T, cfg *config.Config, provs []provider.Provider) (*Engine, *store.Store) {
 	t.Helper()
 	st, err := store.OpenAt(filepath.Join(t.TempDir(), "apps.db"))
 	if err != nil {
@@ -81,7 +66,7 @@ func TestApplySelectedGuards(t *testing.T) {
 	fake := &fakeProvider{name: "greenhouse", result: provider.ApplyResult{Status: "applied"}}
 
 	t.Run("blocks without consent", func(t *testing.T) {
-		e, st := newTestEngine(t, cfg, []provider.Provider{fake})
+		e, st := newEngineWithProviders(t, cfg, []provider.Provider{fake})
 		id := seedQueued(t, st, "greenhouse")
 		err := e.ApplySelected(context.Background(), []int64{id})
 		if err == nil {
@@ -94,7 +79,7 @@ func TestApplySelectedGuards(t *testing.T) {
 
 	t.Run("blocks while dry run is active", func(t *testing.T) {
 		withConsent := &config.Config{ApplyConsent: true}
-		e, st := newTestEngine(t, withConsent, []provider.Provider{fake})
+		e, st := newEngineWithProviders(t, withConsent, []provider.Provider{fake})
 		e.DryRun = true
 		id := seedQueued(t, st, "greenhouse")
 		if err := e.ApplySelected(context.Background(), []int64{id}); err == nil {
@@ -107,7 +92,7 @@ func TestApplySelectedGuards(t *testing.T) {
 
 	t.Run("skips already-applied jobs (idempotent)", func(t *testing.T) {
 		withConsent := &config.Config{ApplyConsent: true}
-		e, st := newTestEngine(t, withConsent, []provider.Provider{fake})
+		e, st := newEngineWithProviders(t, withConsent, []provider.Provider{fake})
 		now := time.Now().UTC()
 		if err := st.Insert(store.Application{
 			Provider: "greenhouse", Company: "Acme", Role: "Engineer",
@@ -127,7 +112,7 @@ func TestApplySelectedGuards(t *testing.T) {
 
 	t.Run("respects the daily cap", func(t *testing.T) {
 		withConsent := &config.Config{ApplyConsent: true, MaxAppsPerDay: 1}
-		e, st := newTestEngine(t, withConsent, []provider.Provider{fake})
+		e, st := newEngineWithProviders(t, withConsent, []provider.Provider{fake})
 		// One application already today fills the cap.
 		now := time.Now().UTC()
 		if err := st.Insert(store.Application{
@@ -150,7 +135,7 @@ func TestApplySelectedGuards(t *testing.T) {
 func TestApplySelectedSubmits(t *testing.T) {
 	cfg := &config.Config{ApplyConsent: true}
 	fake := &fakeProvider{name: "lever", result: provider.ApplyResult{Status: "applied"}}
-	e, st := newTestEngine(t, cfg, []provider.Provider{fake})
+	e, st := newEngineWithProviders(t, cfg, []provider.Provider{fake})
 	id := seedQueued(t, st, "lever")
 
 	if err := e.ApplySelected(context.Background(), []int64{id}); err != nil {
@@ -177,7 +162,7 @@ func TestApplySelectedSubmits(t *testing.T) {
 
 func TestApplySelectedUnknownProviderFailsSafely(t *testing.T) {
 	cfg := &config.Config{ApplyConsent: true}
-	e, st := newTestEngine(t, cfg, nil) // no providers registered
+	e, st := newEngineWithProviders(t, cfg, nil) // no providers registered
 	id := seedQueued(t, st, "nobody")
 
 	if err := e.ApplySelected(context.Background(), []int64{id}); err != nil {

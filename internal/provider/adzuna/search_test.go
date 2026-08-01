@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
@@ -102,6 +103,63 @@ func TestSearchSkipsOnServerError(t *testing.T) {
 	}
 	if len(jobs) != 0 {
 		t.Fatalf("got %d jobs, want 0", len(jobs))
+	}
+}
+
+func TestSearchEmptyTitlesQueriesAll(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("what") != "" {
+			t.Errorf("what = %q, want empty query for no titles", r.URL.Query().Get("what"))
+		}
+		json.NewEncoder(w).Encode(adzunaResult{Results: []adzunaJob{}})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), appID: "id", appKey: "key", country: "gb", baseURL: srv.URL}
+
+	jobs, err := c.Search(context.Background(), provider.SearchCriteria{})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Fatalf("got %d jobs, want 0", len(jobs))
+	}
+}
+
+func TestSearchSkipsJobsWithoutRedirect(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(adzunaResult{Results: []adzunaJob{
+			{ID: "x", Title: "Backend Engineer", RedirectURL: ""}, // no apply URL
+		}})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), appID: "id", appKey: "key", country: "gb", baseURL: srv.URL}
+
+	jobs, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Backend Engineer"}})
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(jobs) != 0 {
+		t.Fatalf("got %d jobs, want 0 (job without a redirect URL must be skipped)", len(jobs))
+	}
+}
+
+func TestSearchPassesCredentialsAndQuery(t *testing.T) {
+	var gotQuery url.Values
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotQuery = r.URL.Query()
+		json.NewEncoder(w).Encode(adzunaResult{Results: []adzunaJob{}})
+	}))
+	t.Cleanup(srv.Close)
+	c := &Client{http: srv.Client(), appID: "app-id", appKey: "app-key", country: "de", baseURL: srv.URL}
+
+	if _, err := c.Search(context.Background(), provider.SearchCriteria{Titles: []string{"Backend Engineer"}}); err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if gotQuery.Get("app_id") != "app-id" || gotQuery.Get("app_key") != "app-key" {
+		t.Errorf("credentials missing from query: app_id=%q app_key=%q", gotQuery.Get("app_id"), gotQuery.Get("app_key"))
+	}
+	if gotQuery.Get("what") != "Backend Engineer" {
+		t.Errorf("what = %q, want Backend Engineer", gotQuery.Get("what"))
 	}
 }
 

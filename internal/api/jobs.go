@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
@@ -60,6 +61,71 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 		frontend[i] = storeAppToFrontend(a)
 	}
 	writeJSON(w, http.StatusOK, frontend)
+}
+
+// handlePostJobs records a manually-added job into the review queue
+// (the frontend "Add a job" flow).
+func (s *Server) handlePostJobs(w http.ResponseWriter, r *http.Request) {
+	if s.store == nil {
+		writeError(w, http.StatusInternalServerError, "store not available")
+		return
+	}
+
+	var input struct {
+		Role     string `json:"role"`
+		Company  string `json:"company"`
+		URL      string `json:"url"`
+		Location string `json:"location"`
+		Remote   bool   `json:"remote"`
+		Provider string `json:"provider"`
+	}
+	if err := readJSON(r, &input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+	input.Role = strings.TrimSpace(input.Role)
+	input.Company = strings.TrimSpace(input.Company)
+	input.URL = strings.TrimSpace(input.URL)
+	if input.Role == "" || input.Company == "" || input.URL == "" {
+		writeError(w, http.StatusBadRequest, "role, company, and url are required")
+		return
+	}
+
+	provider := strings.TrimSpace(input.Provider)
+	if provider == "" {
+		provider = "manual"
+	}
+
+	now := time.Now().UTC()
+	if err := s.store.Insert(store.Application{
+		Provider:  provider,
+		Company:   input.Company,
+		Role:      input.Role,
+		URL:       input.URL,
+		Status:    store.StatusQueued,
+		Reason:    "added manually — awaiting your approval",
+		AppliedAt: now,
+		Location:  strings.TrimSpace(input.Location),
+		Remote:    input.Remote,
+		PostedAt:  now,
+	}); err != nil {
+		writeError(w, http.StatusInternalServerError, "save application: "+err.Error())
+		return
+	}
+
+	// Reload to pick up the generated id, then return the frontend shape.
+	apps, err := s.store.List()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list applications: "+err.Error())
+		return
+	}
+	for _, a := range apps {
+		if a.URL == input.URL {
+			writeJSON(w, http.StatusCreated, storeAppToFrontend(a))
+			return
+		}
+	}
+	writeError(w, http.StatusInternalServerError, "saved application not found after insert")
 }
 
 // parsePathID parses a numeric path value ("{id}") into an int64.
