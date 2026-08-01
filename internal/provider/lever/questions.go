@@ -11,6 +11,10 @@ import (
 	"time"
 )
 
+// leverApplyURLFmt builds a Lever job's apply-page URL from board + job ID.
+// Package-level so tests can redirect it to an httptest server.
+var leverApplyURLFmt = "https://jobs.lever.co/%s/%s/apply"
+
 // Question is one custom application question extracted from a Lever
 // apply page's embedded card schema.
 type Question struct {
@@ -51,7 +55,7 @@ var cardInputRE = regexp.MustCompile(
 // custom question schema plus whether it requires solving hCaptcha.
 // This is a read-only GET — it does not submit anything.
 func FetchFormInfo(board, jobID string) (*FormInfo, error) {
-	applyURL := fmt.Sprintf("https://jobs.lever.co/%s/%s/apply", board, jobID)
+	applyURL := fmt.Sprintf(leverApplyURLFmt, board, jobID)
 
 	client := &http.Client{Timeout: 20 * time.Second}
 	req, err := http.NewRequest(http.MethodGet, applyURL, nil)

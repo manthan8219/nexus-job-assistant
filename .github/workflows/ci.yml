@@ -1,0 +1,56 @@
+# Nexus Job Assistant - continuous integration gate.
+# A push or PR to main is only mergeable when every check below is green.
+# This is the enforcement layer for AGENTS.md section 4/13: code is never merged
+# without gofmt, vet, build, tests (-race), and the coverage floor passing.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # need full history for git diff in coverage-floor
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: gofmt (must be clean)
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            echo "::error::gofmt found unformatted files:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test (-race + coverage)
+        run: |
+          go test -race -count=1 -coverprofile=coverage.out -covermode=atomic ./...
+          go tool cover -func=coverage.out | tail -1
+
+      - name: Coverage floor (changed packages >= 60%)
+        if: github.event_name == 'pull_request'
+        run: pwsh ./scripts/coverage-floor.ps1 -FloorPct 60 -BaseRef origin/main
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.out

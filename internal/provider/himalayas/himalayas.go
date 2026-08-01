@@ -11,7 +11,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const apiURL = "https://himalayas.app/jobs/api?limit=50"
+var apiURL = "https://himalayas.app/jobs/api?limit=50"
 
 type himJob struct {
 	Title          string `json:"title"`

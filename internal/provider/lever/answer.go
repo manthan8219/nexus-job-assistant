@@ -11,6 +11,11 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
+// completeFn routes an answer prompt to the configured AI backend. It is a
+// package-level indirection over resume.Complete so tests can substitute a
+// deterministic fake without any network or model dependency.
+var completeFn = resume.Complete
+
 // AnswerContext is everything the AI needs to answer a job's custom
 // application questions truthfully.
 type AnswerContext struct {
@@ -67,7 +72,7 @@ func AnswerQuestions(ctx context.Context, ai resume.AIOptions, questions []Quest
 
 	for i, q := range questions {
 		prompt := buildAnswerPrompt(q, actx, prior)
-		raw, err := resume.Complete(ctx, ai, prompt)
+		raw, err := completeFn(ctx, ai, prompt)
 		if err != nil {
 			out[i] = Answer{Question: q, Err: fmt.Errorf("ai completion: %w", err)}
 			prior = append(prior, answeredPair{Text: q.Text, Value: "(error)"})

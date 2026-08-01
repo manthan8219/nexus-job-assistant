@@ -79,14 +79,11 @@ func TestAssertReadable_RejectsJunk(t *testing.T) {
 }
 
 func TestExtractUserResumeReadable(t *testing.T) {
-	path := "/Users/manthanmanthan/Downloads/Resume.pdf"
-	text, err := ExtractText(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !containsFold(text, "manthan") && !containsFold(text, "backend") {
-		t.Fatalf("expected resume content, got %q", text[:min(200, len(text))])
-	}
+	// reason: requires a real sample resume PDF, but none is committed because
+	// resumes contain personal data (AGENTS.md §14). ExtractText is instead
+	// exercised hermetically by the parse/fit tests via in-memory text. Replace
+	// this skip with a t.TempDir()-generated fixture (gofpdf) when feasible.
+	t.Skip("no committed sample resume PDF fixture — kept hermetic")
 }
 
 func containsFold(s, sub string) bool {

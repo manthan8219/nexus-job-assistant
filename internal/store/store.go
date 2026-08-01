@@ -115,6 +115,11 @@ func openPath(path string) (*Store, error) {
 
 func (s *Store) Close() error { return s.db.Close() }
 
+// OpenPath opens (or creates) a SQLite application store at an explicit path,
+// running the same schema setup + migrations as Open. Use it in tests with a
+// t.TempDir() file so the store is hermetic (no ~/.nexus writes, no network).
+func OpenPath(path string) (*Store, error) { return openPath(path) }
+
 // Exists returns true if this URL has already been applied to.
 func (s *Store) Exists(url string) (bool, error) {
 	var count int

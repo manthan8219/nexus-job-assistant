@@ -28,6 +28,10 @@ type rctResponse struct {
 	Offers []rctOffer `json:"offers"`
 }
 
+// offerURLFmt builds a company's Recruitee offers API URL from its slug.
+// Package-level so tests can redirect it to an httptest server.
+var offerURLFmt = "https://%s.recruitee.com/api/offers/"
+
 // Client implements provider.Provider for Recruitee.
 type Client struct {
 	http      *http.Client
@@ -90,7 +94,7 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 		default:
 		}
 
-		u := fmt.Sprintf("https://%s.recruitee.com/api/offers/", company.Slug)
+		u := fmt.Sprintf(offerURLFmt, company.Slug)
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 		if err != nil {
 			continue

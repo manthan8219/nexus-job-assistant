@@ -10,7 +10,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
-const workableBaseURL = "https://apply.workable.com/api/v3/accounts"
+var workableBaseURL = "https://apply.workable.com/api/v3/accounts"
 
 // fetchPostings queries the Workable API for a company's published job postings.
 func fetchPostings(ctx context.Context, client *http.Client, slug string) ([]workableJob, error) {
