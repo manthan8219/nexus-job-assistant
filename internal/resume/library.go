@@ -14,6 +14,7 @@ type Version struct {
 	CreatedAt  time.Time `json:"created_at"`
 	Label      string    `json:"label"` // e.g. target role or "Improved resume"
 	TargetRole string    `json:"target_role,omitempty"`
+	Template   string    `json:"template,omitempty"` // template id used to render
 	PDFPath    string    `json:"pdf_path"`
 	MDPath     string    `json:"md_path,omitempty"`
 	TeXPath    string    `json:"tex_path,omitempty"`

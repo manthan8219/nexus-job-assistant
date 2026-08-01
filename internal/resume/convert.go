@@ -18,8 +18,16 @@ type ConvertResult struct {
 }
 
 // EnsurePDF writes destPDF from the improved doc and optional intermediate files.
-// Prefer LaTeX engine → pandoc(MD) → native Go PDF (always works).
+// Prefer LaTeX engine → pandoc(MD) → native Go PDF (always works). Uses the
+// Classic template (kept for TUI/tailor callers).
 func EnsurePDF(doc ImprovedDoc, mdPath, texPath, destPDF string) (ConvertResult, error) {
+	tpl, _ := GetTemplate(TemplateClassic)
+	return EnsurePDFFor(doc, tpl, mdPath, texPath, destPDF)
+}
+
+// EnsurePDFFor is the template-aware variant of EnsurePDF: the LaTeX and
+// native fallback outputs follow the template manifest.
+func EnsurePDFFor(doc ImprovedDoc, tpl Template, mdPath, texPath, destPDF string) (ConvertResult, error) {
 	if destPDF == "" {
 		return ConvertResult{}, fmt.Errorf("empty PDF destination")
 	}
@@ -43,7 +51,7 @@ func EnsurePDF(doc ImprovedDoc, mdPath, texPath, destPDF string) (ConvertResult,
 		}
 	}
 
-	if err := RenderNativePDF(doc, destPDF); err != nil {
+	if err := RenderNativePDFFor(doc, tpl, destPDF); err != nil {
 		return ConvertResult{}, fmt.Errorf("pdf convert failed: %w", err)
 	}
 	return ConvertResult{
