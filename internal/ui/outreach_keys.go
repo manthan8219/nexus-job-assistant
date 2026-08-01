@@ -228,6 +228,7 @@ func (m OutreachHubModel) handleChannelKey(key string) (tea.Model, tea.Cmd) {
 		return m.fireNext(false)
 	case "a":
 		m.autoGen++
+		m.autoBatchFired = 0 // fresh batch run
 		gen := m.autoGen
 		var model tea.Model
 		var cmd tea.Cmd

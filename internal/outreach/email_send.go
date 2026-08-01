@@ -3,7 +3,9 @@ package outreach
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/smtp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -52,6 +54,26 @@ func logAttempt(it Item, status Status, err error) {
 	}()
 }
 
+// relayEndpoint resolves the optional custom-domain SMTP relay. Returns
+// (addr "host:port", host, from, enabled). The port defaults to 587 and From
+// falls back to the configured Email address. A nil config or empty host
+// disables the relay path so Gmail sending is used unchanged.
+func relayEndpoint(cfg *config.Config) (addr, host, from string, enabled bool) {
+	if cfg == nil || strings.TrimSpace(cfg.SmtpRelayHost) == "" {
+		return "", "", "", false
+	}
+	host = strings.TrimSpace(cfg.SmtpRelayHost)
+	port := cfg.SmtpRelayPort
+	if port <= 0 {
+		port = 587
+	}
+	from = strings.TrimSpace(cfg.SmtpRelayFrom)
+	if from == "" {
+		from = strings.TrimSpace(cfg.Email)
+	}
+	return net.JoinHostPort(host, strconv.Itoa(port)), host, from, true
+}
+
 // SendEmail delivers one email item through the user's Gmail.
 // Transport: Gmail API with the OAuth token when configured, otherwise
 // Gmail SMTP with the app password. Both send from the user's own address.
@@ -64,10 +86,14 @@ func SendEmail(cfg *config.Config, item Item) error {
 	}
 	from := strings.TrimSpace(cfg.Email)
 	to := strings.TrimSpace(item.ContactEmail)
+	relayAddr, relayHost, relayFrom, useRelay := relayEndpoint(cfg)
+	if useRelay {
+		from = relayFrom
+	}
 	if from == "" {
 		return fmt.Errorf("set your Email in Config → Personal")
 	}
-	if !HasGmailOAuth(cfg) && strings.TrimSpace(cfg.GmailAppPassword) == "" {
+	if !useRelay && !HasGmailOAuth(cfg) && strings.TrimSpace(cfg.GmailAppPassword) == "" {
 		return fmt.Errorf("set a Gmail App Password in Config → Outreach, or run nexus-gmailauth to connect a Gmail token")
 	}
 	if to == "" {
@@ -88,11 +114,17 @@ func SendEmail(cfg *config.Config, item Item) error {
 	raw := buildRFC822(from, to, subj, item.Body)
 
 	var sendErr error
-	if HasGmailOAuth(cfg) {
+	switch {
+	case useRelay:
+		auth := smtp.PlainAuth("", strings.TrimSpace(cfg.SmtpRelayUser), cfg.SmtpRelayPass, relayHost)
+		if err := smtp.SendMail(relayAddr, auth, from, []string{to}, []byte(raw)); err != nil {
+			sendErr = fmt.Errorf("relay send: %w", err)
+		}
+	case HasGmailOAuth(cfg):
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()
 		sendErr = sendViaGmailAPI(ctx, cfg, raw)
-	} else {
+	default:
 		auth := smtp.PlainAuth("", from, strings.TrimSpace(cfg.GmailAppPassword), "smtp.gmail.com")
 		if err := smtp.SendMail("smtp.gmail.com:587", auth, from, []string{to}, []byte(raw)); err != nil {
 			sendErr = fmt.Errorf("smtp send: %w", err)

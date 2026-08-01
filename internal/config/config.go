@@ -124,6 +124,21 @@ type Config struct {
 	// ReplyLookbackDays caps how far back reply detection scans the inbox
 	// (0 = default 45 days).
 	ReplyLookbackDays int `json:"reply_lookback_days,omitempty"`
+	// OutreachBatchSize caps how many emails the auto-send loop fires in one
+	// batch before pausing (0 = default 5). Batching never exceeds the daily cap.
+	OutreachBatchSize int `json:"outreach_batch_size,omitempty"`
+	// OutreachBatchPauseSec is the pause between auto-send batches (0 = default 60).
+	OutreachBatchPauseSec int `json:"outreach_batch_pause_sec,omitempty"`
+
+	// SMTP relay — send outreach from a custom domain instead of Gmail.
+	// When SmtpRelayHost is set, SendEmail routes through this relay and Gmail
+	// credentials are not required. The relay is expected to sign mail
+	// (SPF/DKIM) for the From domain; credentials live only in config.
+	SmtpRelayHost string `json:"smtp_relay_host,omitempty"`
+	SmtpRelayPort int    `json:"smtp_relay_port,omitempty"` // 0 = default 587
+	SmtpRelayUser string `json:"smtp_relay_user,omitempty"`
+	SmtpRelayPass string `json:"smtp_relay_pass,omitempty"` // never logged
+	SmtpRelayFrom string `json:"smtp_relay_from,omitempty"` // From address (defaults to Email)
 
 	// Gmail OAuth — send from the user's Gmail via the Gmail API using a token
 	// instead of an SMTP app password. Get a refresh token with: nexus-gmailauth
