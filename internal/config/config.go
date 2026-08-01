@@ -147,6 +147,10 @@ type Config struct {
 	SmtpRelayUser string `json:"smtp_relay_user,omitempty"`
 	SmtpRelayPass string `json:"smtp_relay_pass,omitempty"` // never logged
 	SmtpRelayFrom string `json:"smtp_relay_from,omitempty"` // From address (defaults to Email)
+	// SmtpWarmupDays ramps the daily email cap linearly from day one up to the
+	// full MaxEmailsPerDay over this many active sending days (0 = disabled),
+	// so a fresh sender domain is not blasted at full volume on day one.
+	SmtpWarmupDays int `json:"smtp_warmup_days,omitempty"`
 
 	// Gmail OAuth — send from the user's Gmail via the Gmail API using a token
 	// instead of an SMTP app password. Get a refresh token with: nexus-gmailauth
