@@ -201,6 +201,33 @@ func (s *Server) handlePostApplicationApproved(w http.ResponseWriter, r *http.Re
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
+// handlePostJobDismiss marks a queued job as dismissed (skipped) so it leaves
+// the review queue (the frontend "Dismiss" action).
+func (s *Server) handlePostJobDismiss(w http.ResponseWriter, r *http.Request) {
+	if s.store == nil {
+		writeError(w, http.StatusInternalServerError, "store not available")
+		return
+	}
+
+	id, ok := parsePathID(r)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid job id")
+		return
+	}
+
+	if err := s.store.SetStatus(id, store.StatusSkipped, "dismissed by user"); err != nil {
+		if strings.Contains(err.Error(), "no application") {
+			writeError(w, http.StatusNotFound, "application not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "dismiss job: "+err.Error())
+		return
+	}
+	// Clear any pending approval so the job can never be applied later.
+	_ = s.store.SetApproved(id, false)
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
 func storeAppToFrontend(a store.Application) Application {
 	return Application{
 		ID:         int(a.ID),
