@@ -9,8 +9,8 @@ import (
 
 func TestTemplatesRegistry(t *testing.T) {
 	tmpls := Templates()
-	if len(tmpls) != 12 {
-		t.Fatalf("registry has %d templates; want 12", len(tmpls))
+	if len(tmpls) != 8 {
+		t.Fatalf("registry has %d templates; want 8", len(tmpls))
 	}
 	seen := map[string]bool{}
 	for _, tmpl := range tmpls {
@@ -27,9 +27,13 @@ func TestTemplatesRegistry(t *testing.T) {
 		if tmpl.AccentHex == "" {
 			t.Errorf("template %q has no accent hex", tmpl.ID)
 		}
+		if tmpl.Source == "" {
+			t.Errorf("template %q should credit its real open-source source", tmpl.ID)
+		}
 	}
 
-	// GetTemplate resolves every registry id and falls back for empty.
+	// GetTemplate resolves every registry id; empty defaults to jake; classic
+	// stays as a legacy alias for stored versions/links.
 	for _, tmpl := range tmpls {
 		got, err := GetTemplate(tmpl.ID)
 		if err != nil || got.ID != tmpl.ID {
@@ -37,25 +41,49 @@ func TestTemplatesRegistry(t *testing.T) {
 		}
 	}
 	def, err := GetTemplate("")
-	if err != nil || def.ID != TemplateClassic {
-		t.Errorf("GetTemplate(\"\") should default to classic, got %q (%v)", def.ID, err)
+	if err != nil || def.ID != TemplateJake {
+		t.Errorf("GetTemplate(\"\") should default to jake, got %q (%v)", def.ID, err)
+	}
+	alias, err := GetTemplate(TemplateClassic)
+	if err != nil || alias.ID != TemplateJake {
+		t.Errorf("GetTemplate(\"classic\") should alias to jake, got %q (%v)", alias.ID, err)
 	}
 	if _, err := GetTemplate("nope"); err == nil {
 		t.Error("GetTemplate(\"nope\") should error")
 	}
 
-	// Font + rail tokens are set on the templates that need them.
-	exec, _ := GetTemplate(TemplateExecutive)
-	if exec.BodyFont != "serif" {
-		t.Errorf("executive bodyFont = %q; want serif", exec.BodyFont)
+	// Real-design tokens are set where the designs demand them.
+	jake, _ := GetTemplate(TemplateJake)
+	if jake.SectionStyle != SectionStyleCaps {
+		t.Errorf("jake sectionStyle = %q; want caps", jake.SectionStyle)
 	}
-	dev, _ := GetTemplate(TemplateDeveloper)
-	if dev.BodyFont != "mono" {
-		t.Errorf("developer bodyFont = %q; want mono", dev.BodyFont)
+	acv, _ := GetTemplate(TemplateAwesomeCV)
+	if acv.SectionStyle != SectionStyleMarker {
+		t.Errorf("awesome-cv sectionStyle = %q; want marker", acv.SectionStyle)
 	}
-	split, _ := GetTemplate(TemplateSplit)
-	if split.RailSide != "right" {
-		t.Errorf("split railSide = %q; want right", split.RailSide)
+	deedy, _ := GetTemplate(TemplateDeedy)
+	if !deedy.OnePage || deedy.ColumnRatio < 0.7 || deedy.Layout != LayoutSidebar {
+		t.Errorf("deedy should be a one-page asymmetric sidebar: %+v", deedy)
+	}
+	mcd, _ := GetTemplate(TemplateMcDowell)
+	if mcd.SectionStyle != SectionStyleSoft {
+		t.Errorf("mcdowell sectionStyle = %q; want soft", mcd.SectionStyle)
+	}
+	br, _ := GetTemplate(TemplateBillRyan)
+	if br.BodyFont != "serif" {
+		t.Errorf("billryan bodyFont = %q; want serif", br.BodyFont)
+	}
+	ken, _ := GetTemplate(TemplateKendall)
+	if ken.RailBackground != "dark" || ken.Layout != LayoutSidebar {
+		t.Errorf("kendall should be a dark-sidebar layout: %+v", ken)
+	}
+	mac, _ := GetTemplate(TemplateMacchiato)
+	if mac.RailBackground != "accent" || mac.NameStyle != NameStyleColored {
+		t.Errorf("macchiato should have an accent rail + colored name: %+v", mac)
+	}
+	bank, _ := GetTemplate(TemplateBanking)
+	if !bank.ContactLine || bank.SectionStyle != SectionStyleRuleAbove || bank.NameStyle != NameStyleCentered {
+		t.Errorf("banking should have a contact line + ruled centered header: %+v", bank)
 	}
 
 	// Every template declares a positive space budget (the AI + planner use it).
@@ -66,76 +94,23 @@ func TestTemplatesRegistry(t *testing.T) {
 			t.Errorf("template %q missing budget fields: %+v", tmpl.ID, b)
 		}
 	}
-
-	// Header alignment + rule tokens are promoted onto the manifest so the web
-	// gallery's miniature previews stay faithful to the real renderers.
-	classic, _ := GetTemplate(TemplateClassic)
-	if classic.HeaderAlign != "left" || !classic.ShowRule {
-		t.Errorf("classic preview tokens = %q/%v; want left/true", classic.HeaderAlign, classic.ShowRule)
-	}
-	modern, _ := GetTemplate(TemplateModern)
-	if modern.HeaderAlign != "center" || !modern.ShowRule {
-		t.Errorf("modern preview tokens = %q/%v; want center/true", modern.HeaderAlign, modern.ShowRule)
-	}
-	exec, _ = GetTemplate(TemplateExecutive)
-	if exec.HeaderAlign != "center" || exec.ShowRule {
-		t.Errorf("executive preview tokens = %q/%v; want center/false", exec.HeaderAlign, exec.ShowRule)
-	}
-	mono, _ := GetTemplate(TemplateMonochrome)
-	if mono.ShowRule {
-		t.Error("monochrome showRule = true; want false (no rule)")
-	}
 }
 
 func TestTemplateManifestSerializesShowRule(t *testing.T) {
 	// `false` must round-trip through JSON (no omitempty) — the UI decides
 	// whether to draw the header rule from this token.
-	exec, _ := GetTemplate(TemplateExecutive)
-	data, err := json.Marshal(exec)
+	bank, _ := GetTemplate(TemplateBanking)
+	data, err := json.Marshal(bank)
 	if err != nil {
-		t.Fatalf("marshal executive: %v", err)
+		t.Fatalf("marshal banking: %v", err)
 	}
 	if !strings.Contains(string(data), `"showRule":false`) {
-		t.Errorf("executive manifest should carry explicit showRule:false, got %s", data)
+		t.Errorf("banking manifest should carry explicit showRule:false, got %s", data)
 	}
-	classic, _ := GetTemplate(TemplateClassic)
-	dataC, err := json.Marshal(classic)
-	if err != nil {
-		t.Fatalf("marshal classic: %v", err)
-	}
-	if !strings.Contains(string(dataC), `"showRule":true`) {
-		t.Errorf("classic manifest should carry explicit showRule:true, got %s", dataC)
-	}
-}
-
-func TestRenderMarkdownForSectionOrder(t *testing.T) {
-	doc := ImprovedDoc{
-		FullName: "Ada Lovelace",
-		Summary:  "Builds reliable platforms.",
-		Skills:   []string{"Go", "SQL"},
-		Experience: []ImprovedRole{{
-			Title: "Engineer", Org: "Analytical Engine", Period: "1843",
-			Bullets: []string{"Designed algorithms"},
-		}},
-		Education: []string{"Self-taught mathematics"},
-	}
-
-	sidebar, _ := GetTemplate(TemplateSidebar)
-	md := RenderMarkdownFor(doc, sidebar)
-	if !strings.Contains(md, "## Skills") || !strings.Contains(md, "## Summary") {
-		t.Fatalf("sidebar markdown missing sections:\n%s", md)
-	}
-	if strings.Index(md, "## Skills") > strings.Index(md, "## Summary") {
-		t.Fatalf("sidebar markdown should lead with Skills (the rail):\n%s", md)
-	}
-
-	compact, _ := GetTemplate(TemplateCompact)
-	mdC := RenderMarkdownFor(doc, compact)
-	if !strings.Contains(mdC, "## Experience") || !strings.Contains(mdC, "## Skills") {
-		t.Fatalf("compact markdown missing sections:\n%s", mdC)
-	}
-	if strings.Index(mdC, "## Experience") > strings.Index(mdC, "## Skills") {
-		t.Fatalf("compact markdown should list Experience before Skills:\n%s", mdC)
+	bill, _ := GetTemplate(TemplateBillRyan)
+	dataB, _ := json.Marshal(bill)
+	if !strings.Contains(string(dataB), `"showRule":true`) {
+		t.Errorf("billryan manifest should carry explicit showRule:true, got %s", dataB)
 	}
 }
 
@@ -152,55 +127,52 @@ func TestRenderLaTeXForTemplates(t *testing.T) {
 		Education: []string{"Self-taught mathematics"},
 	}
 
-	modern, _ := GetTemplate(TemplateModern)
-	tex := RenderLaTeXFor(doc, modern)
-	if !containsAll(tex, `\definecolor{accent}{HTML}{8B5CF6}`, `\begin{center}`, `\rsec{Summary}`) {
-		t.Fatalf("modern latex missing design markers:\n%s", tex)
-	}
-	if !contains(tex, `{\color{accent}\textbf{Systems Engineer}}`) {
-		t.Fatalf("modern latex should accent the headline:\n%s", tex)
+	jake, _ := GetTemplate(TemplateJake)
+	texJ := RenderLaTeXFor(doc, jake)
+	if !containsAll(texJ, `\newcommand{\rsec}[1]{\par\vspace{0.55em}`, `\noindent{\LARGE\textbf{Ada Lovelace}}`) {
+		t.Fatalf("jake latex missing caps sections / left header:\n%s", texJ)
 	}
 
-	sidebar, _ := GetTemplate(TemplateSidebar)
-	texS := RenderLaTeXFor(doc, sidebar)
-	if !containsAll(texS, `\begin{minipage}[t]{0.30\textwidth}`, `\begin{minipage}[t]{0.66\textwidth}`) {
-		t.Fatalf("sidebar latex should render two minipage columns:\n%s", texS)
+	awesome, _ := GetTemplate(TemplateAwesomeCV)
+	texA := RenderLaTeXFor(doc, awesome)
+	if !containsAll(texA, `\definecolor{accent}{HTML}{00539B}`, `\raisebox{1.5pt}{\rule{2.6mm}{2.6mm}}`) {
+		t.Fatalf("awesome-cv latex missing accent marker style:\n%s", texA)
 	}
 
-	compact, _ := GetTemplate(TemplateCompact)
-	texC := RenderLaTeXFor(doc, compact)
-	if !containsAll(texC, `\documentclass[10pt,a4paper]{article}`, `margin=0.5in`) {
-		t.Fatalf("compact latex should use 10pt + 0.5in margin:\n%s", texC)
+	deedy, _ := GetTemplate(TemplateDeedy)
+	texD := RenderLaTeXFor(doc, deedy)
+	if !containsAll(texD, `\documentclass[10pt,a4paper]{article}`, `margin=0.5in`) {
+		t.Fatalf("deedy latex should be 10pt + 0.5in:\n%s", texD)
+	}
+	if !strings.Contains(texD, `0.76\textwidth`) || !strings.Contains(texD, `0.22\textwidth`) {
+		t.Fatalf("deedy latex should use asymmetric 0.76/0.22 columns:\n%s", texD)
 	}
 
-	classic, _ := GetTemplate(TemplateClassic)
-	texK := RenderLaTeXFor(doc, classic)
-	if !containsAll(texK, `\documentclass[11pt,a4paper]{article}`, `margin=0.75in`) {
-		t.Fatalf("classic latex should use 11pt + 0.75in margin:\n%s", texK)
+	kendall, _ := GetTemplate(TemplateKendall)
+	texK := RenderLaTeXFor(doc, kendall)
+	if !containsAll(texK, `\definecolor{railbg}{HTML}{111827}`, `\colorbox{railbg}`) {
+		t.Fatalf("kendall latex should wrap the rail in a dark colorbox:\n%s", texK)
 	}
 
-	developer, _ := GetTemplate(TemplateDeveloper)
-	texD := RenderLaTeXFor(doc, developer)
-	if !contains(texD, `\renewcommand{\familydefault}{\ttdefault}`) {
-		t.Fatalf("developer latex should set a monospace family:\n%s", texD)
+	macchiato, _ := GetTemplate(TemplateMacchiato)
+	texM := RenderLaTeXFor(doc, macchiato)
+	if !containsAll(texM, `\colorbox{railbg}`, `\color{accent}\textbf{Ada Lovelace}`) {
+		t.Fatalf("macchiato latex should accent the name + color the rail:\n%s", texM)
 	}
 
-	executive, _ := GetTemplate(TemplateExecutive)
-	texE := RenderLaTeXFor(doc, executive)
-	if strings.Contains(texE, `\usepackage{helvet}`) {
-		t.Fatalf("executive latex should keep the serif default (no helvet):\n%s", texE)
+	banking, _ := GetTemplate(TemplateBanking)
+	texB := RenderLaTeXFor(doc, banking)
+	if !contains(texB, `{\color{accent}\rule{\textwidth}{0.5pt}}`) {
+		t.Fatalf("banking latex should have ruled sections:\n%s", texB)
 	}
-
-	split, _ := GetTemplate(TemplateSplit)
-	texSp := RenderLaTeXFor(doc, split)
-	if !containsAll(texSp, `\begin{minipage}[t]{0.66\textwidth}`, `\begin{minipage}[t]{0.30\textwidth}`) {
-		t.Fatalf("split latex should render two minipage columns:\n%s", texSp)
+	// The contact line only renders when the doc carries contact details.
+	if strings.Contains(texB, `\textcolor{gray}`) {
+		t.Fatalf("banking latex should omit the contact line without contact data:\n%s", texB)
 	}
-	// Split puts experience (the wide column) BEFORE the skills rail.
-	mainIdx := strings.Index(texSp, `\begin{minipage}[t]{0.66\textwidth}`)
-	railIdx := strings.Index(texSp, `\begin{minipage}[t]{0.30\textwidth}`)
-	if mainIdx == -1 || railIdx == -1 || mainIdx > railIdx {
-		t.Fatalf("split latex should lead with the main column (right rail):\n%s", texSp)
+	doc.Email = "ada@example.com"
+	texB2 := RenderLaTeXFor(doc, banking)
+	if !containsAll(texB2, `\textcolor{gray}`, `ada@example.com`) {
+		t.Fatalf("banking latex should render the email contact line:\n%s", texB2)
 	}
 }
 
@@ -230,22 +202,5 @@ func TestRenderNativePDFForAllTemplates(t *testing.T) {
 		if st.Size() == 0 {
 			t.Errorf("RenderNativePDFFor(%s): empty pdf", tmpl.ID)
 		}
-	}
-}
-
-func TestRenderMarkdownForClassicBackCompat(t *testing.T) {
-	doc := ImprovedDoc{
-		FullName: "Ada Lovelace",
-		Summary:  "Builds reliable platforms.",
-		Skills:   []string{"Go", "SQL"},
-		Experience: []ImprovedRole{{
-			Title: "Engineer", Org: "Analytical Engine",
-			Bullets: []string{"Designed algorithms"},
-		}},
-	}
-	// The Classic wrapper output must still contain the standard sections.
-	md := RenderMarkdown(doc)
-	if !containsAll(md, "Ada Lovelace", "Go · SQL", "Analytical Engine") {
-		t.Fatalf("classic markdown missing pieces:\n%s", md)
 	}
 }

@@ -173,6 +173,27 @@ func polishTemplateBlock(tpl Template) string {
 	default:
 		b.WriteString("Typography: clean sans-serif.\n")
 	}
+	// The section heading style is the template's visual signature (small-caps
+	// for Jake, marker squares for Awesome-CV, ruled heads for Banking, soft
+	// gray for McDowell) — write content that fits those headers.
+	switch tpl.SectionStyle {
+	case SectionStyleCaps:
+		b.WriteString("Section headings: small-caps style — terse section titles.\n")
+	case SectionStyleMarker:
+		b.WriteString("Section headings: filled marker + rule — formal, professional sections.\n")
+	case SectionStyleRuleAbove:
+		b.WriteString("Section headings: a rule above each heading — classic banking style.\n")
+	case SectionStyleSoft:
+		b.WriteString("Section headings: soft gray, sentence case — keep a calm, airy tone.\n")
+	default:
+		b.WriteString("Section headings: uppercase with a thin rule.\n")
+	}
+	if tpl.ContactLine {
+		b.WriteString("Header: the name is centered with a contact line underneath.\n")
+	}
+	if tpl.Source != "" {
+		fmt.Fprintf(&b, "Design source: %s\n", tpl.Source)
+	}
 	if tpl.OnePage {
 		b.WriteString("Constraint: keep the whole resume to ONE page — be ruthless with length.\n")
 	}

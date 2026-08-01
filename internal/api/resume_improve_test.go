@@ -83,20 +83,20 @@ func TestGetResumeTemplates(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &tmpls); err != nil {
 		t.Fatalf("bad JSON: %v", err)
 	}
-	if len(tmpls) != 12 {
-		t.Fatalf("got %d templates; want 12", len(tmpls))
+	if len(tmpls) != 8 {
+		t.Fatalf("got %d templates; want 8", len(tmpls))
 	}
 	found := false
 	for _, m := range tmpls {
-		if m["id"] == "classic" {
+		if m["id"] == "jake" {
 			found = true
-			if m["name"] == nil || m["layout"] == nil || m["sections"] == nil {
-				t.Errorf("classic template missing manifest fields: %v", m)
+			if m["name"] == nil || m["layout"] == nil || m["sections"] == nil || m["source"] == nil {
+				t.Errorf("jake template missing manifest fields: %v", m)
 			}
 		}
 	}
 	if !found {
-		t.Error("template registry should include classic")
+		t.Error("template registry should include jake")
 	}
 }
 

@@ -55,6 +55,9 @@ func (f Format) Ext() string {
 type ImprovedDoc struct {
 	FullName     string         `json:"full_name"`
 	Headline     string         `json:"headline"`
+	Email        string         `json:"email,omitempty"`
+	Phone        string         `json:"phone,omitempty"`
+	Location     string         `json:"location,omitempty"`
 	Summary      string         `json:"summary"`
 	Skills       []string       `json:"skills"`
 	Experience   []ImprovedRole `json:"experience"`
@@ -79,6 +82,7 @@ type ImproveInput struct {
 	ResumePath string
 	ResumeText string
 	Profile    *Profile
+	Contact    *Contact
 	Projects   []workcontext.Project
 	Skills     []string
 	TargetRole string
@@ -138,6 +142,14 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		return nil, err
 	}
 	fit, doc := PlanContent(doc, tpl)
+	if in.Contact != nil {
+		if doc.Email == "" {
+			doc.Email = in.Contact.Email
+		}
+		if doc.Phone == "" {
+			doc.Phone = in.Contact.Phone
+		}
+	}
 	doc.GeneratedAt = time.Now()
 	doc.SourcePath = in.ResumePath
 	doc.ProjectCount = len(in.Projects)

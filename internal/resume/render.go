@@ -99,6 +99,7 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 	}
 
 	var b strings.Builder
+	rsec := sectionMacro(tpl.SectionStyle)
 	fmt.Fprintf(&b, `\documentclass[%dpt,a4paper]{article}
 \usepackage[margin=%s]{geometry}
 \usepackage[T1]{fontenc}
@@ -108,8 +109,16 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 \definecolor{accent}{HTML}{%s}
 \pagestyle{empty}
 \setlist[itemize]{leftmargin=*,itemsep=%s,topsep=%s}
-\newcommand{\rsec}[1]{\par\vspace{0.6em}\noindent{\color{accent}\textbf{\MakeUppercase{#1}}}\vspace{0.25em}\par}
-`, size, margin, latexAccentHex(tpl.AccentHex), itemSep, topSep)
+\newcommand{\rsec}[1]{%s}
+`, size, margin, latexAccentHex(tpl.AccentHex), itemSep, topSep, rsec)
+	if tpl.SectionStyle == SectionStyleSoft {
+		b.WriteString(`\definecolor{softsec}{HTML}{6b7280}
+`)
+	}
+	if tpl.RailBackground != "" {
+		fmt.Fprintf(&b, `\definecolor{railbg}{HTML}{%s}
+`, railBackgroundHex(tpl))
+	}
 
 	// Body font family per the template manifest (must stay in the preamble).
 	switch tpl.BodyFont {
@@ -130,19 +139,43 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 	if name == "" {
 		name = "Resume"
 	}
-	b.WriteString(`\begin{center}
-{\LARGE\textbf{` + esc(name) + `}}\\[0.35em]
-`)
+	nameColor := ""
+	if tpl.NameStyle == NameStyleColored {
+		nameColor = `\color{accent}`
+	}
+	headline := ""
 	if doc.Headline != "" {
-		if tpl.ID == TemplateModern || tpl.ID == TemplateSidebar {
-			b.WriteString(`{\color{accent}\textbf{` + esc(doc.Headline) + `}}\\[0.4em]
-`)
+		if tpl.SectionStyle == SectionStyleSoft {
+			headline = `\noindent{\color{softsec}\textbf{` + esc(doc.Headline) + `}}`
 		} else {
-			b.WriteString(esc(doc.Headline) + `\\` + "\n")
+			headline = `\noindent{\color{accent}\textbf{` + esc(doc.Headline) + `}}`
 		}
 	}
-	b.WriteString(`\end{center}
+	if tpl.HeaderAlign == "left" && tpl.NameStyle != NameStyleCentered {
+		b.WriteString(`\noindent{\LARGE` + nameColor + `\textbf{` + esc(name) + `}}\\[0.15em]
 `)
+		if headline != "" {
+			b.WriteString(headline + `\\[0.2em]
+`)
+		}
+	} else {
+		b.WriteString(`\begin{center}
+{\LARGE` + nameColor + `\textbf{` + esc(name) + `}}\\[0.25em]
+`)
+		if headline != "" {
+			b.WriteString(headline + `\\[0.2em]
+`)
+		}
+		b.WriteString(`\end{center}
+`)
+	}
+	if tpl.ContactLine {
+		if parts := contactParts(doc); len(parts) > 0 {
+			fmt.Fprintf(&b, `\begin{center}\small\textcolor{gray}{%s}\end{center}
+
+`, esc(strings.Join(parts, "  ·  ")))
+		}
+	}
 	if design.ShowRule {
 		b.WriteString(`{\color{accent}\rule{\textwidth}{0.6pt}}
 
@@ -217,8 +250,16 @@ func renderSidebarLaTeX(b *strings.Builder, doc ImprovedDoc, esc func(string) st
 
 `, esc(doc.Summary))
 	}
+	railW, mainW := sidebarColumns(tpl)
 	rail := renderSidebarRailLaTeX(doc, esc)
+	// Restring the hardcoded rail/main widths to the template's column ratio
+	// (Deedy is asymmetric: 0.76 main / 0.22 rail) and wrap a colored rail.
+	rail = strings.Replace(rail, "{0.30", fmt.Sprintf("{%g", railW), 1)
 	main := renderSidebarMainLaTeX(doc, esc)
+	main = strings.Replace(main, "{0.66", fmt.Sprintf("{%g", mainW), 1)
+	if tpl.RailBackground != "" {
+		rail = colorizeRailLaTeX(rail, railW)
+	}
 	if tpl.RailSide == "right" {
 		b.WriteString(main)
 		b.WriteString("\\hfill\n")
@@ -273,6 +314,89 @@ func renderSidebarMainLaTeX(doc ImprovedDoc, esc func(string) string) string {
 	b.WriteString(`\end{minipage}
 `)
 	return b.String()
+}
+
+// sidebarColumns derives the rail/main width fractions, honoring the template's
+// ColumnRatio for asymmetric designs (Deedy = 0.76 main / 0.22 rail).
+func sidebarColumns(tpl Template) (railW, mainW float64) {
+	ratio := tpl.ColumnRatio
+	if ratio <= 0 {
+		ratio = 0.66
+	}
+	mainW = ratio
+	railW = 1.0 - ratio - 0.02
+	if railW < 0.18 {
+		railW = 0.18
+	}
+	return railW, mainW
+}
+
+// colorizeRailLaTeX wraps a plain rail minipage in a colored box with white
+// text (Kendall dark rail, Macchiato accent rail). The minipage content is
+// untouched — we only wrap it and flip the text color.
+func colorizeRailLaTeX(rail string, railW float64) string {
+	rail = strings.Replace(rail, `\begin{minipage}[t]{`, `{\colorbox{railbg}{\begin{minipage}[t]{`, 1)
+	rail = strings.Replace(rail, `\textwidth}`, `\textwidth}\color{white}`, 1)
+	rail = strings.Replace(rail, `\end{minipage}`, `\end{minipage}}}`, 1)
+	return rail
+}
+
+// sectionMacro returns the LaTeX \rsec body for a section style token.
+func sectionMacro(style string) string {
+	switch style {
+	case SectionStyleCaps:
+		return `\par\vspace{0.55em}\noindent{\color{accent}\textbf{\textsc{#1}}}\vspace{0.2em}\par`
+	case SectionStyleMarker:
+		return `\par\vspace{0.6em}\noindent{\color{accent}\raisebox{1.5pt}{\rule{2.6mm}{2.6mm}}}\hspace{2mm}{\color{accent}\textbf{\MakeUppercase{#1}}}\par\vspace{0.15em}{\color{accent}\rule{\textwidth}{0.3pt}}\par`
+	case SectionStyleRuleAbove:
+		return `\par\vspace{0.5em}\noindent{\color{accent}\rule{\textwidth}{0.5pt}}\\[0.2em]{\color{accent}\textbf{\MakeUppercase{#1}}}\par`
+	case SectionStyleSoft:
+		return `\par\vspace{0.6em}\noindent{\color{softsec}\textbf{#1}}\vspace{0.2em}\par`
+	default: // plain
+		return `\par\vspace{0.6em}\noindent{\color{accent}\textbf{\MakeUppercase{#1}}}\vspace{0.25em}\par`
+	}
+}
+
+// contactParts joins the document's contact details for a contact line.
+func contactParts(doc ImprovedDoc) []string {
+	var parts []string
+	for _, p := range []string{doc.Email, doc.Phone, doc.Location} {
+		if strings.TrimSpace(p) != "" {
+			parts = append(parts, p)
+		}
+	}
+	return parts
+}
+
+// railBackgroundHex returns the LaTeX fill color for a template's rail.
+func railBackgroundHex(tpl Template) string {
+	switch tpl.RailBackground {
+	case "dark":
+		return "111827"
+	case "accent":
+		return latexAccentHex(tpl.AccentHex)
+	case "tint":
+		return lightenHex(tpl.AccentHex, 0.9)
+	default:
+		return "ffffff"
+	}
+}
+
+// lightenHex mixes a "#rrggbb" color toward white by f (0-1).
+func lightenHex(hex string, f float64) string {
+	hex = strings.TrimPrefix(strings.TrimSpace(hex), "#")
+	if len(hex) != 6 {
+		return "ffffff"
+	}
+	comp := func(s string) int {
+		v := 0
+		fmt.Sscanf(s, "%02x", &v)
+		return v
+	}
+	r := int(float64(comp(hex[0:2])) + float64(255-comp(hex[0:2]))*f)
+	g := int(float64(comp(hex[2:4])) + float64(255-comp(hex[2:4]))*f)
+	bl := int(float64(comp(hex[4:6])) + float64(255-comp(hex[4:6]))*f)
+	return fmt.Sprintf("%02x%02x%02x", r, g, bl)
 }
 
 // renderRoles writes the experience entries (title + org, period right-hfill,
