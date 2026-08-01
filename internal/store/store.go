@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	_ "modernc.org/sqlite"
 )
 
@@ -61,11 +62,7 @@ type Store struct {
 }
 
 func Open() (*Store, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return nil, err
-	}
-	dir := filepath.Join(home, ".nexus")
+	dir := nexusdir.Home()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}

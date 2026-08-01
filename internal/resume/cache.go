@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 )
 
 // cacheVersion bumps whenever the on-disk cache format changes (e.g. Profile
@@ -23,11 +25,7 @@ type CachedAnalysis struct {
 }
 
 func cachePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".nexus", "resume_analysis.json"), nil
+	return filepath.Join(nexusdir.Home(), "resume_analysis.json"), nil
 }
 
 func fileMeta(path string) (modUnix, size int64, err error) {

@@ -9,14 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 )
 
 func dir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".nexus"), nil
+	return nexusdir.Home(), nil
 }
 
 func path() (string, error) {

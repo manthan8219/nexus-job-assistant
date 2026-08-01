@@ -9,14 +9,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 )
 
 func path() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".nexus", "outreach.json"), nil
+	return filepath.Join(nexusdir.Home(), "outreach.json"), nil
 }
 
 func Load() ([]Item, error) {
@@ -42,11 +39,7 @@ func Load() ([]Item, error) {
 }
 
 func saveAll(items []Item) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return err
-	}
-	dir := filepath.Join(home, ".nexus")
+	dir := nexusdir.Home()
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return err
 	}

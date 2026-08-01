@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/manthan8219/nexus-job-assistant/internal/api"
@@ -140,7 +141,16 @@ func main() {
 			eng = nil
 		}
 
-		addr := fmt.Sprintf(":%d", *apiPort)
+		// Platforms like Vercel inject a PORT env var that the server must
+		// bind to (the function won't receive traffic otherwise). --api-port
+		// still wins for local runs when PORT is absent.
+		port := *apiPort
+		if p := os.Getenv("PORT"); p != "" {
+			if n, err := strconv.Atoi(p); err == nil && n > 0 {
+				port = n
+			}
+		}
+		addr := fmt.Sprintf(":%d", port)
 		srv := api.New(cfg, st, eng, addr)
 		if err := srv.ListenAndServe(context.Background()); err != nil {
 			fmt.Fprintf(os.Stderr, "api server: %v\n", err)

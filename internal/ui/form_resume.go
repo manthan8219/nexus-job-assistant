@@ -15,6 +15,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
@@ -222,11 +223,9 @@ func (m *FormModel) updateAC(input string) {
 	// Expand leading ~
 	expanded := input
 	if input == "~" || input == "~/" {
-		home, _ := os.UserHomeDir()
-		expanded = home + "/"
+		expanded = nexusdir.UserHome() + "/"
 	} else if strings.HasPrefix(input, "~/") {
-		home, _ := os.UserHomeDir()
-		expanded = filepath.Join(home, input[2:])
+		expanded = filepath.Join(nexusdir.UserHome(), input[2:])
 		if strings.HasSuffix(input, "/") {
 			expanded += "/"
 		}
