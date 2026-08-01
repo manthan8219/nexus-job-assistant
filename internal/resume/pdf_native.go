@@ -18,6 +18,14 @@ func RenderNativePDF(doc ImprovedDoc, path string) error {
 // This is the fallback when no LaTeX engine is installed; design fidelity
 // mirrors the LaTeX renderer as closely as gofpdf allows.
 func RenderNativePDFFor(doc ImprovedDoc, tpl Template, path string) error {
+	_, err := RenderNativePDFForCounted(doc, tpl, path)
+	return err
+}
+
+// RenderNativePDFForCounted renders like RenderNativePDFFor and also reports
+// how many pages the produced document uses. The fit pipeline uses it to
+// verify the content really fits the template's target page count.
+func RenderNativePDFForCounted(doc ImprovedDoc, tpl Template, path string) (int, error) {
 	if tpl.Layout == LayoutSidebar {
 		return renderNativeSidebar(doc, tpl, path)
 	}
@@ -26,7 +34,7 @@ func RenderNativePDFFor(doc ImprovedDoc, tpl Template, path string) error {
 
 // renderNativeColumn renders the single-column templates (classic / modern /
 // compact) with design tokens from the manifest.
-func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) error {
+func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error) {
 	design := tpl.Design
 	margin := 16.0
 	if tpl.ID == TemplateCompact {
@@ -181,9 +189,9 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) error {
 	}
 
 	if err := pdf.OutputFileAndClose(path); err != nil {
-		return fmt.Errorf("write pdf: %w", err)
+		return 0, fmt.Errorf("write pdf: %w", err)
 	}
-	return nil
+	return pdf.PageNo(), nil
 }
 
 // fontFor maps a template body-font token to a core gofpdf font family.
@@ -201,7 +209,7 @@ func fontFor(bodyFont string) string {
 // renderNativeSidebar renders the Sidebar/Split templates: full-width header
 // and summary, then skills + education in a rail on the template-declared side
 // and experience in the main column.
-func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) error {
+func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) (int, error) {
 	design := tpl.Design
 	accent := design.AccentRGB
 	if accent == [3]int{} {
@@ -387,8 +395,7 @@ func renderNativeSidebar(doc ImprovedDoc, tpl Template, path string) error {
 	}
 
 	if err := pdf.OutputFileAndClose(path); err != nil {
-		return fmt.Errorf("write pdf: %w", err)
+		return 0, fmt.Errorf("write pdf: %w", err)
 	}
-	return nil
+	return pdf.PageNo(), nil
 }
-

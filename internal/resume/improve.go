@@ -96,6 +96,7 @@ type ImproveOutput struct {
 	PreviewMD    string
 	TemplateID   string
 	TemplateName string
+	Fit          FitPlan // content→template plan + verified page count
 }
 
 // GenerateImproved builds a stronger resume from analysis + work context, then exports.
@@ -126,10 +127,16 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		return nil, err
 	}
 
+	// Polish loop: AI writes content that follows the template's sections,
+	// order, layout, and budget (see polishTemplateBlock). Then the
+	// deterministic planner fits the produced doc to the template's caps and
+	// estimates the page cost — the pipeline renders the trimmed doc so the
+	// final PDF really matches the chosen design.
 	doc, review, err := polishGenerate(ctx, ai, in, tpl, nil)
 	if err != nil {
 		return nil, err
 	}
+	fit, doc := PlanContent(doc, tpl)
 	doc.GeneratedAt = time.Now()
 	doc.SourcePath = in.ResumePath
 	doc.ProjectCount = len(in.Projects)
@@ -148,6 +155,7 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 		PreviewMD:    RenderMarkdownFor(doc, tpl),
 		TemplateID:   tpl.ID,
 		TemplateName: tpl.Name,
+		Fit:          fit,
 	}
 
 	want := formatSet(formats)
@@ -182,6 +190,24 @@ func GenerateImproved(ctx context.Context, ai AIOptions, in ImproveInput) (*Impr
 	if conv.Note != "" {
 		out.PDFNote = conv.Note
 	}
+
+	// Verify the real render's page count using the deterministic native
+	// renderer (always available, same manifest geometry). Count on a temp
+	// path so an existing LaTeX/pandoc PDF is never overwritten.
+	if tmp, terr := os.CreateTemp("", "nexus-fit-check-*.pdf"); terr == nil {
+		tmpPath := tmp.Name()
+		_ = tmp.Close()
+		defer os.Remove(tmpPath)
+		if pages, perr := RenderNativePDFForCounted(doc, tpl, tmpPath); perr == nil {
+			fit.Pages = pages
+			if tpl.OnePage && pages > 1 {
+				fit.Warnings = append(fit.Warnings,
+					fmt.Sprintf("Rendered %d pages — this template targets one page. Shorten the summary or trim experience.", pages))
+			}
+			out.Fit = fit
+		}
+	}
+
 	label := doc.TargetRole
 	if label == "" {
 		label = doc.Headline

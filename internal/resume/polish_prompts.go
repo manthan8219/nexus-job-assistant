@@ -176,6 +176,14 @@ func polishTemplateBlock(tpl Template) string {
 	if tpl.OnePage {
 		b.WriteString("Constraint: keep the whole resume to ONE page — be ruthless with length.\n")
 	}
+	// The planner enforces these exact caps after generation (PlanContent), so
+	// the creator should write within them to avoid deterministic trimming.
+	budget := budgetFor(tpl)
+	b.WriteString("Content budget (the planner enforces these caps — write within them or content gets trimmed):\n")
+	fmt.Fprintf(&b, "  - Summary: at most %d lines (~%d chars).\n", budget.MaxSummaryLines, budget.MaxSummaryLines*budget.CharsPerLine)
+	fmt.Fprintf(&b, "  - Experience: at most %d roles, %d bullets each, each bullet under ~%d chars (one line when possible).\n", budget.MaxRoles, budget.MaxBulletsPerRole, budget.CharsPerLine)
+	fmt.Fprintf(&b, "  - Skills: at most %d, ordered by relevance to the target role.\n", budget.MaxSkills)
+	fmt.Fprintf(&b, "  - Education: at most %d entries.\n", budget.MaxEducation)
 	b.WriteString("Sections, in order:\n")
 	for _, sec := range tpl.Sections {
 		fmt.Fprintf(&b, "  - %s\n", sec.Label)

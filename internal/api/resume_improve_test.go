@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
 func TestResumeImproveRequiresAIAssist(t *testing.T) {
@@ -99,3 +100,44 @@ func TestGetResumeTemplates(t *testing.T) {
 	}
 }
 
+func TestImproveResponseIncludesFit(t *testing.T) {
+	out := &resume.ImproveOutput{
+		PreviewMD:    "# Ada",
+		Dir:          "~/.nexus/resumes/improved-x",
+		TemplateID:   "compact",
+		TemplateName: "Compact",
+		Review:       resume.PolishReview{Summary: "ok", ATSScore: 88, QualityScore: 84},
+		Fit: resume.FitPlan{
+			TemplateID:     "compact",
+			Layout:         resume.LayoutSingle,
+			Budget:         resume.SpaceBudget{TargetPages: 1, MaxRoles: 5, CharsPerLine: 100},
+			PlannedLines:   42,
+			TargetLines:    54,
+			EstimatedPages: 1,
+			Pages:          1,
+			FitScore:       100,
+		},
+	}
+	resp := improveResponse(out)
+	if resp["templateId"] != "compact" {
+		t.Errorf("templateId = %v; want compact", resp["templateId"])
+	}
+	fit, ok := resp["fit"].(resume.FitPlan)
+	if !ok {
+		t.Fatalf("fit = %T; want resume.FitPlan", resp["fit"])
+	}
+	if fit.TemplateID != "compact" || fit.Pages != 1 || fit.FitScore != 100 {
+		t.Errorf("unexpected fit payload: %+v", fit)
+	}
+	// The fit object must survive JSON serialization (what the web client sees).
+	b, err := json.Marshal(resp)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !bytes.Contains(b, []byte(`"fit"`)) {
+		t.Error("fit key missing from improve JSON")
+	}
+	if !bytes.Contains(b, []byte(`"fitScore":100`)) {
+		t.Errorf("fitScore missing from improve JSON: %s", b)
+	}
+}
