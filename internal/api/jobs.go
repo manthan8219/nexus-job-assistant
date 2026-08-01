@@ -31,6 +31,10 @@ type Application struct {
 	// SubmittedPayload is the JSON audit of the exact submission (KAN-33).
 	// Emitted as an object when recorded; omitted entirely otherwise.
 	SubmittedPayload json.RawMessage `json:"submittedPayload,omitempty"`
+	// ResponseScore is the per-application reply probability (KAN-19),
+	// 0-100; omitted when not meaningful (0).
+	ResponseScore   int    `json:"responseScore,omitempty"`
+	ResponseSummary string `json:"responseSummary,omitempty"`
 }
 
 // handleGetJobs returns all applications, optionally filtered by query.
@@ -60,9 +64,24 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 		results = apps
 	}
 
+	// Load the per-provider reply-probability map once for this request so each
+	// application can carry a reply-probability score (KAN-19). Thin history
+	// simply scores lower — never fails the request.
+	providerReply := map[string]int{}
+	if snap, snapErr := s.store.AnalyticsSnapshot(); snapErr == nil && snap != nil {
+		for _, p := range snap.PerProvider {
+			providerReply[p.Provider] = p.ReplyProbability
+		}
+	}
+
 	frontend := make([]Application, len(results))
 	for i, a := range results {
-		frontend[i] = storeAppToFrontend(a)
+		fe := storeAppToFrontend(a)
+		if score, summary := responseScoreFor(a.FitScore, a.PostedAt, providerReply[a.Provider]); score > 0 {
+			fe.ResponseScore = score
+			fe.ResponseSummary = summary
+		}
+		frontend[i] = fe
 	}
 	writeJSON(w, http.StatusOK, frontend)
 }
