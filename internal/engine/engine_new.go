@@ -40,6 +40,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/teamtailor"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/thehub"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/themuse"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/usajobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/weworkremotely"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workable"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workday"
@@ -125,6 +126,9 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	// Key-gated job finders — only registered when the API key is configured.
 	if id, key := cfg.ProviderKeys["adzuna_id"], cfg.ProviderKeys["adzuna_key"]; id != "" && key != "" {
 		providers = append(providers, adzuna.New(id, key, ""))
+	}
+	if usaKey := cfg.ProviderKeys["usajobs"]; usaKey != "" {
+		providers = append(providers, usajobs.New(usaKey, cfg.Email))
 	}
 
 	// Per-company ATSes (Group C)
