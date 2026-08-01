@@ -58,6 +58,9 @@ type Item struct {
 	FollowUpStep int `json:"follow_up_step,omitempty"`
 	// NextSendAt is when a StatusFollowUpDue item becomes actionable.
 	NextSendAt time.Time `json:"next_send_at,omitempty"`
+	// Variant tags the item for A/B template testing (KAN-27): e.g. "A" or "B".
+	// The Response Center compares reply rates across variants.
+	Variant string `json:"variant,omitempty"`
 }
 
 type StoreFile struct {

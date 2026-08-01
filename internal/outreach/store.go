@@ -61,6 +61,10 @@ func saveAll(items []Item) error {
 	return os.WriteFile(p, data, 0600)
 }
 
+// SaveAll persists the full outreach item set (exported for the API layer,
+// e.g. the A/B variant tag endpoint).
+func SaveAll(items []Item) error { return saveAll(items) }
+
 func Upsert(item Item) error {
 	items, err := Load()
 	if err != nil {
