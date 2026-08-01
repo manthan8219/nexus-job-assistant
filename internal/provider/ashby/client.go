@@ -19,6 +19,12 @@ type Client struct {
 	http      *http.Client
 	companies []ashbyCompany
 	base      []ashbyCompany // embedded list; MergeBoards rebuilds from this
+	// jobsHost overrides the board page host for tests; defaults to
+	// https://jobs.ashbyhq.com.
+	jobsHost string
+	// apiHost overrides the apply API host for tests; defaults to
+	// https://api.ashbyhq.com.
+	apiHost string
 }
 
 // New creates an Ashby client from embedded JSON bytes.
@@ -32,6 +38,8 @@ func New(companiesJSON []byte) (*Client, error) {
 		http:      &http.Client{Timeout: 30 * time.Second},
 		companies: companies,
 		base:      base,
+		jobsHost:  "https://jobs.ashbyhq.com",
+		apiHost:   "https://api.ashbyhq.com",
 	}, nil
 }
 
@@ -116,5 +124,5 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 
 // Apply submits an application for a single Ashby job.
 func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	return submitApplication(ctx, c.http, job, profile)
+	return c.submitApplication(ctx, job, profile)
 }

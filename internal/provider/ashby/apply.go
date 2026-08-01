@@ -3,6 +3,7 @@ package ashby
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime/multipart"
@@ -14,10 +15,15 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 )
 
+// errOrgKeyNotFound marks a board page that does not expose the org API key
+// (a content condition — distinct from a transport failure, which should be
+// reported as a hard failure rather than handed off for manual apply).
+var errOrgKeyNotFound = errors.New("ashby: org apiKey not found in page HTML")
+
 // fetchOrgAPIKey fetches the Ashby org API key embedded in the job board page HTML.
 // The key appears in the __NEXT_DATA__ script as "apiKey":"<key>".
-func fetchOrgAPIKey(ctx context.Context, client *http.Client, slug string) (string, error) {
-	url := fmt.Sprintf("https://jobs.ashbyhq.com/%s", slug)
+func (c *Client) fetchOrgAPIKey(ctx context.Context, slug string) (string, error) {
+	url := fmt.Sprintf("%s/%s", c.jobsHost, slug)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -25,7 +31,7 @@ func fetchOrgAPIKey(ctx context.Context, client *http.Client, slug string) (stri
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; job-search-bot/1.0)")
 
-	resp, err := client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -40,30 +46,33 @@ func fetchOrgAPIKey(ctx context.Context, client *http.Client, slug string) (stri
 	marker := `"apiKey":"`
 	idx := strings.Index(html, marker)
 	if idx == -1 {
-		return "", fmt.Errorf("apiKey not found in page HTML")
+		return "", errOrgKeyNotFound
 	}
 
 	start := idx + len(marker)
 	end := strings.Index(html[start:], `"`)
 	if end == -1 {
-		return "", fmt.Errorf("apiKey value unterminated in page HTML")
+		return "", errOrgKeyNotFound
 	}
 
 	key := html[start : start+end]
 	if key == "" {
-		return "", fmt.Errorf("apiKey is empty")
+		return "", errOrgKeyNotFound
 	}
 	return key, nil
 }
 
 // submitApplication attempts to apply to an Ashby job on behalf of the user.
-func submitApplication(ctx context.Context, client *http.Client, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	apiKey, err := fetchOrgAPIKey(ctx, client, job.Board)
+func (c *Client) submitApplication(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
+	apiKey, err := c.fetchOrgAPIKey(ctx, job.Board)
 	if err != nil {
-		return provider.ApplyResult{
-			Status: "skipped",
-			Reason: fmt.Sprintf("could not fetch org API key — apply manually at: %s", job.URL),
-		}, nil
+		if errors.Is(err, errOrgKeyNotFound) {
+			return provider.ApplyResult{
+				Status: "skipped",
+				Reason: fmt.Sprintf("could not fetch org API key — apply manually at: %s", job.URL),
+			}, nil
+		}
+		return provider.ApplyResult{Status: "failed", Reason: err.Error()}, nil
 	}
 
 	var body bytes.Buffer
@@ -95,14 +104,14 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 		return provider.ApplyResult{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.ashbyhq.com/applicationForm.submit", &body)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiHost+"/applicationForm.submit", &body)
 	if err != nil {
 		return provider.ApplyResult{}, err
 	}
 	req.Header.Set("Content-Type", w.FormDataContentType())
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; job-search-bot/1.0)")
 
-	resp, err := client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return provider.ApplyResult{Status: "failed", Reason: err.Error()}, nil
 	}
