@@ -78,6 +78,10 @@ type Server struct {
 	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
 	sseHeartbeat time.Duration              // interval between periodic snapshot pushes
 
+	// worker is the always-on outreach pipeline (find contact → AI draft →
+	// ready) that runs in API mode. Nil when no store is available.
+	worker *outreach.Worker
+
 	// txtResolver is the DNS backend for deliverability audits. Nil means
 	// net.DefaultResolver; tests inject a fake so no real DNS is touched.
 	txtResolver deliverability.TxtResolver
@@ -106,6 +110,10 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 			_ = st.SaveOutreachLog(e)
 		})
 	}
+	// Always-on outreach worker (KAN-15): in API mode the worker drives the
+	// find-contact → AI-draft → ready pipeline for every recorded application,
+	// gated on consent + auto-queue like the TUI pipeline. The worker reads the
+	// in-memory config so API-mode edits apply without a disk reload.
 	return &Server{
 		cfg:              cfg,
 		store:            st,
@@ -118,9 +126,26 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		notifier:         mn,
 		companies:        cdb,
 		contacts:         ktdb,
+		worker:           wireOutreachWorker(cfg, st, eng),
 		subscribers:      make(map[chan struct{}]struct{}),
 		sseHeartbeat:     15 * time.Second,
 	}
+}
+
+// wireOutreachWorker builds the API-mode outreach worker and connects the
+// engine's OnApplied hook to its auto-queue, so every recorded application
+// flows into the find-contact → AI-draft → ready pipeline. Returns nil when
+// there is no store. Split out so tests can exercise the wiring hermetically
+// without opening the server's real ~/.nexus databases.
+func wireOutreachWorker(cfg *config.Config, st *store.Store, eng *engine.Engine) *outreach.Worker {
+	if st == nil {
+		return nil
+	}
+	wk := outreach.NewWorker(st, func() (*config.Config, error) { return cfg, nil })
+	if eng != nil && eng.OnApplied == nil {
+		eng.OnApplied = wk.EnqueueAuto
+	}
+	return wk
 }
 
 // ListenAndServe starts the HTTP server and blocks until SIGINT/SIGTERM.
@@ -149,6 +174,13 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 
 	// Daily safe dry-run scheduler (runs even when no browser is open).
 	go s.scheduleDailyRuns(ctx)
+
+	// Start the always-on outreach worker for API mode (KAN-15): find contact,
+	// AI-draft, review, and mark items ready for every recorded application.
+	if s.worker != nil {
+		s.worker.Start(ctx)
+		defer s.worker.Finish()
+	}
 
 	log.Printf("Nexus API server listening on %s", s.addr)
 	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
