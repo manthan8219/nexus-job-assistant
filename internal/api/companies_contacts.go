@@ -1,11 +1,15 @@
 package api
 
 import (
+	"context"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/companies"
+	"github.com/manthan8219/nexus-job-assistant/internal/osint"
 )
 
 // Company mirrors the frontend Company type.
@@ -201,24 +205,94 @@ func (s *Server) handleGetCompanyJobs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, frontend)
 }
 
-// handleGetContactsSearch searches for contacts via OSINT (stub).
+// handleGetContactsSearch runs OSINT (hunter/apollo/github/scraper/pattern)
+// for a company/domain and returns { contacts, sources, errors }. Pattern
+// generation works with no API keys, so a search always yields something.
 func (s *Server) handleGetContactsSearch(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, []any{})
-}
+	company := strings.TrimSpace(r.URL.Query().Get("company"))
+	domain := strings.TrimSpace(r.URL.Query().Get("domain"))
+	if company == "" && domain == "" {
+		writeError(w, http.StatusBadRequest, "company or domain is required")
+		return
+	}
 
-// handleGetContactsSaved returns saved contacts (stub).
-func (s *Server) handleGetContactsSaved(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, []any{})
-}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
 
-// handlePutContactsSaved saves a contact (stub).
-func (s *Server) handlePutContactsSaved(w http.ResponseWriter, r *http.Request) {
+	// Keys are optional env vars; without them hunter/apollo are skipped and
+	// the pattern + github sources still produce results.
+	finder := osint.NewFinder(os.Getenv("HUNTER_API_KEY"), os.Getenv("APOLLO_API_KEY"))
+	res := finder.Search(ctx, company, domain)
+	if res.Contacts == nil {
+		res.Contacts = []osint.Contact{}
+	}
+	if res.Sources == nil {
+		res.Sources = []string{}
+	}
+	if res.Errors == nil {
+		res.Errors = []string{}
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"id": 0, "message": "contact CRUD coming soon",
+		"contacts": res.Contacts,
+		"sources":  res.Sources,
+		"errors":   res.Errors,
 	})
 }
 
-// handleDeleteContactsSaved deletes a saved contact (stub).
+// handleGetContactsSaved lists saved contacts, optionally filtered by ?q=.
+func (s *Server) handleGetContactsSaved(w http.ResponseWriter, r *http.Request) {
+	if s.contacts == nil {
+		writeJSON(w, http.StatusOK, []osint.Contact{})
+		return
+	}
+	items, err := s.contacts.List(r.URL.Query().Get("q"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "list contacts: "+err.Error())
+		return
+	}
+	if items == nil {
+		items = []osint.Contact{}
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+// handlePutContactsSaved saves a contact (upsert) and returns the stored row.
+func (s *Server) handlePutContactsSaved(w http.ResponseWriter, r *http.Request) {
+	if s.contacts == nil {
+		writeError(w, http.StatusInternalServerError, "contacts store unavailable")
+		return
+	}
+	var c osint.Contact
+	if err := readJSON(r, &c); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+	if c.Email == "" && c.LinkedIn == "" {
+		writeError(w, http.StatusBadRequest, "email or linkedIn is required")
+		return
+	}
+	saved, err := s.contacts.Save(c)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "save contact: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, saved)
+}
+
+// handleDeleteContactsSaved deletes a saved contact by id.
 func (s *Server) handleDeleteContactsSaved(w http.ResponseWriter, r *http.Request) {
+	if s.contacts == nil {
+		writeError(w, http.StatusInternalServerError, "contacts store unavailable")
+		return
+	}
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid contact id")
+		return
+	}
+	if err := s.contacts.Delete(id); err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

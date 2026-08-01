@@ -19,18 +19,18 @@ const verifyBatchTimeout = 2 * time.Minute
 
 // Contact represents a found HR/recruiter contact.
 type Contact struct {
-	ID         int64
-	Company    string
-	Domain     string
-	Name       string
-	Title      string
-	Email      string
-	EmailType  string // "work" | "personal" | "pattern"
-	LinkedIn   string
-	Source     string // "hunter", "apollo", "github", "pattern"
-	Confidence int    // 0-100
-	FoundAt    time.Time
-	Notes      string
+	ID         int64     `json:"id"`
+	Company    string    `json:"company"`
+	Domain     string    `json:"domain"`
+	Name       string    `json:"name"`
+	Title      string    `json:"title"`
+	Email      string    `json:"email"`
+	EmailType  string    `json:"emailType"` // "work" | "personal" | "pattern"
+	LinkedIn   string    `json:"linkedIn"`
+	Source     string    `json:"source"`     // "hunter", "apollo", "github", "pattern"
+	Confidence int       `json:"confidence"` // 0-100
+	FoundAt    time.Time `json:"foundAt"`
+	Notes      string    `json:"notes"`
 }
 
 // Finder searches for HR contacts at a given company/domain.
