@@ -98,6 +98,29 @@ func (s *Server) handleGetResumeTemplates(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, resume.Templates())
 }
 
+// handleGetResumeTemplatePreviewPDF renders the sample persona into the named
+// template with the real PDF renderer, so the gallery's "view the actual
+// document" action shows exactly what that template produces — same engine,
+// same fonts, same layout that real resumes are written with.
+func (s *Server) handleGetResumeTemplatePreviewPDF(w http.ResponseWriter, r *http.Request) {
+	templateID := r.PathValue("id")
+	if templateID == "" {
+		writeError(w, http.StatusBadRequest, "missing template id")
+		return
+	}
+	pdfBytes, err := resume.RenderTemplatePreviewPDF(templateID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "inline; filename=\""+templateID+"-preview.pdf\"")
+	w.Header().Set("Cache-Control", "public, max-age=3600")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(pdfBytes)
+}
+
 // handleGetResumeProjects returns work history projects from the workcontext store.
 func (s *Server) handleGetResumeProjects(w http.ResponseWriter, r *http.Request) {
 	projects, err := workcontext.Load()

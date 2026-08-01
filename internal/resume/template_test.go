@@ -1,6 +1,7 @@
 package resume
 
 import (
+	"encoding/json"
 	"os"
 	"strings"
 	"testing"
@@ -55,6 +56,46 @@ func TestTemplatesRegistry(t *testing.T) {
 	split, _ := GetTemplate(TemplateSplit)
 	if split.RailSide != "right" {
 		t.Errorf("split railSide = %q; want right", split.RailSide)
+	}
+
+	// Header alignment + rule tokens are promoted onto the manifest so the web
+	// gallery's miniature previews stay faithful to the real renderers.
+	classic, _ := GetTemplate(TemplateClassic)
+	if classic.HeaderAlign != "left" || !classic.ShowRule {
+		t.Errorf("classic preview tokens = %q/%v; want left/true", classic.HeaderAlign, classic.ShowRule)
+	}
+	modern, _ := GetTemplate(TemplateModern)
+	if modern.HeaderAlign != "center" || !modern.ShowRule {
+		t.Errorf("modern preview tokens = %q/%v; want center/true", modern.HeaderAlign, modern.ShowRule)
+	}
+	exec, _ = GetTemplate(TemplateExecutive)
+	if exec.HeaderAlign != "center" || exec.ShowRule {
+		t.Errorf("executive preview tokens = %q/%v; want center/false", exec.HeaderAlign, exec.ShowRule)
+	}
+	mono, _ := GetTemplate(TemplateMonochrome)
+	if mono.ShowRule {
+		t.Error("monochrome showRule = true; want false (no rule)")
+	}
+}
+
+func TestTemplateManifestSerializesShowRule(t *testing.T) {
+	// `false` must round-trip through JSON (no omitempty) — the UI decides
+	// whether to draw the header rule from this token.
+	exec, _ := GetTemplate(TemplateExecutive)
+	data, err := json.Marshal(exec)
+	if err != nil {
+		t.Fatalf("marshal executive: %v", err)
+	}
+	if !strings.Contains(string(data), `"showRule":false`) {
+		t.Errorf("executive manifest should carry explicit showRule:false, got %s", data)
+	}
+	classic, _ := GetTemplate(TemplateClassic)
+	dataC, err := json.Marshal(classic)
+	if err != nil {
+		t.Fatalf("marshal classic: %v", err)
+	}
+	if !strings.Contains(string(dataC), `"showRule":true`) {
+		t.Errorf("classic manifest should carry explicit showRule:true, got %s", dataC)
 	}
 }
 

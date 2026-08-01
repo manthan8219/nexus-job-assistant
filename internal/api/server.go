@@ -265,6 +265,7 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/resume/analyze", s.handlePostResumeAnalyze)
 	mux.HandleFunc("POST /api/resume/upload", s.handlePostResumeUpload)
 	mux.HandleFunc("GET /api/resume/templates", s.handleGetResumeTemplates)
+	mux.HandleFunc("GET /api/resume/templates/{id}/preview.pdf", s.handleGetResumeTemplatePreviewPDF)
 	mux.HandleFunc("GET /api/resume/projects", s.handleGetResumeProjects)
 	mux.HandleFunc("PUT /api/resume/projects", s.handlePutResumeProjects)
 	mux.HandleFunc("DELETE /api/resume/projects/{id}", s.handleDeleteResumeProjects)

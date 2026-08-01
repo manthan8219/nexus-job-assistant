@@ -75,7 +75,13 @@ type Template struct {
 	ATSNote     string            `json:"atsNote"`
 	RailSide    string            `json:"railSide,omitempty"` // "left" | "right" (sidebar layouts)
 	BodyFont    string            `json:"bodyFont,omitempty"` // "sans" | "serif" | "mono"
-	Design      TemplateDesign    `json:"-"`
+	// Header alignment + rule tokens are promoted from Design before the
+	// manifest is served so the web gallery can render faithful miniatures.
+	HeaderAlign string `json:"headerAlign,omitempty"` // "left" | "center"
+	// NOTE: no omitempty on ShowRule — `false` must round-trip so the UI
+	// knows a template deliberately has no rule under the header.
+	ShowRule bool           `json:"showRule"` // accent rule under the header
+	Design   TemplateDesign `json:"-"`
 }
 
 // TemplateIDs returns the ordered registry ids (used by the API docs/tests).
@@ -89,7 +95,7 @@ func TemplateIDs() []string {
 
 // Templates returns the curated template registry.
 func Templates() []Template {
-	return []Template{
+	templates := []Template{
 		classicTemplate(),
 		modernTemplate(),
 		sidebarTemplate(),
@@ -103,6 +109,14 @@ func Templates() []Template {
 		monochromeTemplate(),
 		nordicTemplate(),
 	}
+	// Promote the design tokens the web preview needs (header alignment +
+	// rule) onto the served manifest so UI miniatures stay faithful to the
+	// real renderers.
+	for i := range templates {
+		templates[i].HeaderAlign = templates[i].Design.HeaderAlign
+		templates[i].ShowRule = templates[i].Design.ShowRule
+	}
+	return templates
 }
 
 // GetTemplate resolves a template by id. An empty id resolves to Classic so
