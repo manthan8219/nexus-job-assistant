@@ -17,6 +17,9 @@ type AnalyticsSnapshot struct {
 	AppliedLast7Days []DayCount `json:"appliedLast7Days"`
 	// AppliedLast30Days is daily applied counts for the last 30 calendar days, oldest first.
 	AppliedLast30Days []DayCount `json:"appliedLast30Days"`
+	// ResponseProbability is the overall 0-100 likelihood of getting any human
+	// response (replied, interview or offer) across all applications (KAN-19).
+	ResponseProbability int `json:"responseProbability"`
 	// GeneratedAt is when the snapshot was computed.
 	GeneratedAt time.Time `json:"generatedAt"`
 }
@@ -39,6 +42,27 @@ type ProviderYield struct {
 	Replied   int    `json:"replied"`
 	Interview int    `json:"interview"`
 	Offer     int    `json:"offer"`
+	// ReplyProbability is the 0-100 likelihood of a response from this
+	// provider, derived from its funnel counts (KAN-19).
+	ReplyProbability int `json:"replyProbability"`
+}
+
+// replyProbability scores how likely a human response is given a provider's
+// funnel: any replied, interview or offer outcome counts as a response.
+// Zero applied (or no data) scores 0; the result is clamped to 0-100.
+func replyProbability(applied, replied, interview, offer int) int {
+	if applied <= 0 {
+		return 0
+	}
+	responses := replied + interview + offer
+	p := 100 * responses / applied
+	if p < 0 {
+		return 0
+	}
+	if p > 100 {
+		return 100
+	}
+	return p
 }
 
 // DayCount is the number of applications recorded on one calendar day.
@@ -124,8 +148,11 @@ func (s *Store) AnalyticsSnapshot() (*AnalyticsSnapshot, error) {
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		snap.PerProvider = append(snap.PerProvider, *provider[name])
+		py := provider[name]
+		py.ReplyProbability = replyProbability(py.Applied, py.Replied, py.Interview, py.Offer)
+		snap.PerProvider = append(snap.PerProvider, *py)
 	}
+	snap.ResponseProbability = replyProbability(snap.Funnel.Applied, snap.Funnel.Replied, snap.Funnel.Interview, snap.Funnel.Offer)
 
 	snap.AppliedLast7Days = dayBuckets(byDay, dayStart, 7)
 	snap.AppliedLast30Days = dayBuckets(byDay, dayStart, 30)
