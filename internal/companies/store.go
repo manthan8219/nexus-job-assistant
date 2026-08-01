@@ -30,7 +30,8 @@ func defaultDBPath() (string, error) {
 	return filepath.Join(dir, "companies.db"), nil
 }
 
-// OpenDefault opens ~/.nexus/companies.db (creates dir + schema).
+// OpenDefault opens ~/.nexus/companies.db (creates dir + schema), seeding the
+// embedded catalogs and kicking off the background network seed.
 func OpenDefault() (*DB, error) {
 	path, err := defaultDBPath()
 	if err != nil {
@@ -41,6 +42,22 @@ func OpenDefault() (*DB, error) {
 		return nil, err
 	}
 	db.ensureSeeded(path)
+	return db, nil
+}
+
+// OpenDefaultEmbedded opens ~/.nexus/companies.db and seeds only the embedded
+// catalogs (boards + India employers) — no network fetch. Used by the API
+// server so startup is deterministic and offline-friendly.
+func OpenDefaultEmbedded() (*DB, error) {
+	path, err := defaultDBPath()
+	if err != nil {
+		return nil, err
+	}
+	db, err := Open(path)
+	if err != nil {
+		return nil, err
+	}
+	db.seedEmbeddedOnly()
 	return db, nil
 }
 
@@ -59,6 +76,12 @@ func Open(path string) (*DB, error) {
 		return nil, err
 	}
 	if _, err := db.Exec(`PRAGMA journal_mode=WAL`); err != nil {
+		db.Close()
+		return nil, err
+	}
+	// Wait (up to 5s) for other writers (e.g. the background network seed)
+	// instead of failing immediately with SQLITE_BUSY.
+	if _, err := db.Exec(`PRAGMA busy_timeout = 5000`); err != nil {
 		db.Close()
 		return nil, err
 	}

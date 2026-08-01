@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/companies"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
@@ -67,6 +68,7 @@ type Server struct {
 	logLines         []string
 	cancel           context.CancelFunc
 	notifier         notifier.MultiNotifier
+	companies        *companies.DB // company footprint store (~/.nexus/companies.db)
 
 	notifyMu     sync.Mutex
 	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
@@ -85,6 +87,9 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		GmailAppPassword:   cfg.GmailAppPassword,
 		EmailNotifications: cfg.EmailNotifications,
 	})
+	// Open the companies store best-effort (embedded catalogs only — no
+	// network); handlers degrade gracefully if nil.
+	cdb, _ := companies.OpenDefaultEmbedded()
 	return &Server{
 		cfg:              cfg,
 		store:            st,
@@ -95,6 +100,7 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		liveFeed:         make([]DashRecent, 0),
 		recent:           make([]DashRecent, 0),
 		notifier:         mn,
+		companies:        cdb,
 		subscribers:      make(map[chan struct{}]struct{}),
 		sseHeartbeat:     15 * time.Second,
 	}
