@@ -191,6 +191,8 @@ func statusBadge(s store.Status) string {
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreyMid)).Render("skipped   ")
 	case store.StatusFailed:
 		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorRed)).Render("failed    ")
+	case store.StatusQueued:
+		return lipgloss.NewStyle().Foreground(lipgloss.Color(colorPurple)).Render("queued    ")
 	default:
 		return string(s)
 	}

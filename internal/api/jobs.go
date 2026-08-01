@@ -25,6 +25,7 @@ type Application struct {
 	Description string `json:"description,omitempty"`
 	Outcome     string `json:"outcome"`
 	OutcomeAt   string `json:"outcomeAt"`
+	Approved    bool   `json:"approved"`
 }
 
 // handleGetJobs returns all applications, optionally filtered by query.
@@ -61,6 +62,22 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, frontend)
 }
 
+// parsePathID parses a numeric path value ("{id}") into an int64.
+func parsePathID(r *http.Request) (int64, bool) {
+	idStr := r.PathValue("id")
+	if idStr == "" {
+		return 0, false
+	}
+	var id int64
+	for _, c := range idStr {
+		if c < '0' || c > '9' {
+			return 0, false
+		}
+		id = id*10 + int64(c-'0')
+	}
+	return id, true
+}
+
 // handlePatchJobOutcome cycles the outcome of an application.
 func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
 	if s.store == nil {
@@ -68,9 +85,9 @@ func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	idStr := r.PathValue("id")
-	if idStr == "" {
-		writeError(w, http.StatusBadRequest, "missing job id")
+	id, ok := parsePathID(r)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid job id")
 		return
 	}
 
@@ -82,17 +99,37 @@ func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var id int64
-	for _, c := range idStr {
-		if c < '0' || c > '9' {
-			writeError(w, http.StatusBadRequest, "invalid job id")
-			return
-		}
-		id = id*10 + int64(c-'0')
-	}
-
 	if err := s.store.SetOutcome(id, store.Outcome(body.Outcome)); err != nil {
 		writeError(w, http.StatusInternalServerError, "set outcome: "+err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// handlePostApplicationApproved marks/unmarks an application for a real apply
+// (the review-queue approve → apply flow).
+func (s *Server) handlePostApplicationApproved(w http.ResponseWriter, r *http.Request) {
+	if s.store == nil {
+		writeError(w, http.StatusInternalServerError, "store not available")
+		return
+	}
+
+	id, ok := parsePathID(r)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid job id")
+		return
+	}
+
+	var body struct {
+		Approved bool `json:"approved"`
+	}
+	if err := readJSON(r, &body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+		return
+	}
+
+	if err := s.store.SetApproved(id, body.Approved); err != nil {
+		writeError(w, http.StatusInternalServerError, "set approved: "+err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
@@ -115,5 +152,6 @@ func storeAppToFrontend(a store.Application) Application {
 		FitSummary: a.FitSummary,
 		Outcome:    string(a.Outcome),
 		OutcomeAt:  a.OutcomeAt.Format(time.RFC3339),
+		Approved:   a.Approved,
 	}
 }

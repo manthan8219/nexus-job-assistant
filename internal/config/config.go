@@ -132,6 +132,16 @@ type Config struct {
 	GmailOAuthClientID     string `json:"gmail_oauth_client_id,omitempty"`
 	GmailOAuthClientSecret string `json:"gmail_oauth_client_secret,omitempty"`
 	GmailOAuthRefreshToken string `json:"gmail_oauth_refresh_token,omitempty"`
+
+	// Automation — daily safe dry-run + email run updates.
+	// DailyRunEnabled triggers one search-only run per day at DailyRunAt
+	// (the web UI fires it while the dashboard is open; a future daemon can
+	// run it while closed).
+	DailyRunEnabled bool   `json:"daily_run_enabled,omitempty"`
+	DailyRunAt      string `json:"daily_run_at,omitempty"` // "HH:MM" 24h
+	// EmailNotifications opts into email run summaries (needs Email +
+	// GmailAppPassword; delivered by the email notifier channel).
+	EmailNotifications bool `json:"email_notifications,omitempty"`
 }
 
 func Dir() (string, error) {

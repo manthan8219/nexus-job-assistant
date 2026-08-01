@@ -7,6 +7,8 @@ package engine
 // concerns in engine_apply.go / engine_score.go / engine_config.go / engine_notify.go.
 
 import (
+	"time"
+
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
@@ -50,6 +52,10 @@ type Engine struct {
 	AutoApply    bool // when false, skip apply and record as skipped
 	Verbose      bool
 	OnlyProvider string
+
+	// applyDelay optionally overrides the inter-apply pause (tests inject a
+	// zero delay; nil uses the human-like default).
+	applyDelay func(minSecs int) time.Duration
 
 	// Cached for one run — resume text for sequential fit scoring.
 	resumeText    string
