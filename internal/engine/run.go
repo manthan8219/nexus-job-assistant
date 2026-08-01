@@ -230,7 +230,11 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 		reason = "queued — awaiting your approval"
 	} else {
 		e.log("  → Applying: %s @ %s", job.Title, job.Company)
-		result, err := e.providerFor(job.Provider).Apply(ctx, job, profile)
+		// Auto-tailor before high-fit apply (KAN-20): TailorPerJob swaps the
+		// apply profile's resume for a tailored PDF when the fit clears the
+		// floor. Fails open — the base resume is used if tailoring can't run.
+		p := e.tailorBeforeApply(ctx, job, preScore, profile)
+		result, err := e.providerFor(job.Provider).Apply(ctx, job, p)
 		applyErr = err
 		if err != nil {
 			e.log("  ✗ Error: %v", err)
