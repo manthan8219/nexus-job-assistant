@@ -12,6 +12,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/data"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/adzuna"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/arbeitnow"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/ashby"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/bamboohr"
@@ -120,6 +121,11 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	providers = append(providers, weworkremotely.New())
 	providers = append(providers, jobspresso.New())
 	providers = append(providers, nodesk.New())
+
+	// Key-gated job finders — only registered when the API key is configured.
+	if id, key := cfg.ProviderKeys["adzuna_id"], cfg.ProviderKeys["adzuna_key"]; id != "" && key != "" {
+		providers = append(providers, adzuna.New(id, key, ""))
+	}
 
 	// Per-company ATSes (Group C)
 	bhr, err := bamboohr.New(data.BambooHRCompaniesJSON)
