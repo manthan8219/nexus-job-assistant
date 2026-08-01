@@ -1,0 +1,14 @@
+.git
+.gitignore
+.github
+*.md
+*.log
+node_modules
+dist
+coverage
+scripts
+docs
+tmp
+nexus
+nexus.exe
+test-apply

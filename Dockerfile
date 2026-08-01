@@ -1,41 +1,33 @@
-# Stage 1: Build the Go binary
-FROM golang:1.26-alpine AS builder
+# Nexus API backend — image for Render (or any Docker host).
+#
+# Notes:
+#  - All data files (companies.json, cities index, …) are go:embedded, so
+#    the binary is self-contained.
+#  - Playwright browsers for real auto-apply are NOT installed; search,
+#    queue, dry-run, and the full API work without them. To enable real
+#    applies later, run `cmd/pwinstall` in a browser-capable base image.
+#  - Runs `nexus --api` and honors the PORT env var Render injects.
+#  - Runs as root so a Render persistent disk mounted at NEXUS_HOME is
+#    always writable.
 
-RUN apk add --no-cache gcc musl-dev
+FROM golang:1.26-alpine AS build
+WORKDIR /src
+RUN apk add --no-cache ca-certificates tzdata
 
-WORKDIR /app
-
-# Cache dependencies
+# Cache module downloads before copying sources.
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copy source
 COPY . .
+# modernc.org/sqlite is pure Go → CGO_ENABLED=0 yields a static binary.
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/nexus .
 
-# Build the static binary (CGO_ENABLED=0 for Alpine compatibility)
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/nexus .
-
-# Stage 2: Runtime image
 FROM alpine:3.20
-
-RUN apk add --no-cache ca-certificates tzdata
-
-# Create nexus user
-RUN adduser -D -h /home/nexus nexus
-
-# Create the data directory
-RUN mkdir -p /home/nexus/.nexus && chown -R nexus:nexus /home/nexus/.nexus
-
-COPY --from=builder /app/nexus /usr/local/bin/nexus
-COPY --from=builder /app/data /app/data
-
-# Default data directory volume
-VOLUME /home/nexus/.nexus
-
+RUN apk add --no-cache ca-certificates tzdata \
+    && mkdir -p /var/lib/nexus
+COPY --from=build /out/nexus /usr/local/bin/nexus
+ENV NEXUS_HOME=/var/lib/nexus
 EXPOSE 8080
+CMD ["nexus", "--api"]
 
-USER nexus
-WORKDIR /home/nexus
-
-ENTRYPOINT ["nexus"]
 CMD ["--api", "--api-port", "8080"]

@@ -1,0 +1,22 @@
+# Render Blueprint — deploy the Nexus API backend with a persistent disk.
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Plan note: Persistent Disks require a paid instance (starter or pro).
+# On the free plan, drop the `disk:` block and set NEXUS_HOME to /tmp/nexus
+# (data resets on restart), then pin https://<service>.onrender.com/health
+# with a free uptime pinger (UptimeRobot, cron-job.org) so the service does
+# not spin down after 15 minutes of inactivity.
+services:
+  - type: web
+    name: nexus-api
+    runtime: docker
+    plan: starter # or: free (see note above)
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NEXUS_HOME
+        value: /var/lib/nexus
+    disk:
+      name: nexus-data
+      mountPath: /var/lib/nexus
+      sizeGB: 1
