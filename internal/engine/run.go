@@ -102,6 +102,9 @@ func (e *Engine) RunOnce(ctx context.Context) error {
 			if batch.err != nil {
 				continue
 			}
+			if e.cfg != nil && e.cfg.FreshJobPriority {
+				sortFreshFirst(batch.jobs)
+			}
 			e.log("[%s] Found %d matching jobs — streaming to live feed", batch.name, len(batch.jobs))
 			for _, job := range batch.jobs {
 				if job.URL == "" || seen[job.URL] {
@@ -172,13 +175,16 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 
 	if e.cfg != nil && companyBlocked(job.Company, e.cfg.CompanyBlocklist) {
 		e.log("  skip [blocklist] %s @ %s", job.Title, job.Company)
-		_ = e.store.Insert(store.Application{
-			Provider: job.Provider, Company: job.Company, Role: job.Title,
-			URL: job.URL, Status: store.StatusSkipped, Reason: "company blocklist",
-			AppliedAt: time.Now(), Location: job.Location, Remote: job.Remote,
-			PostedAt: job.PostedAt, Description: job.Description,
-		})
-		e.sendResult(Result{Job: job, Status: "skipped", Reason: "company blocklist"})
+		e.skipJob(job, "company blocklist")
+		return false, false
+	}
+
+	// Stale cutoff (KAN-18): listings older than the configured cutoff get an
+	// honest skip instead of burning an application on a stale posting.
+	if e.cfg != nil && staleJob(job, time.Now(), e.cfg.StaleJobCutoffDays) {
+		reason := fmt.Sprintf("stale job — posted more than %d days ago", e.cfg.StaleJobCutoffDays)
+		e.log("  skip [stale] %s @ %s — %s", job.Title, job.Company, reason)
+		e.skipJob(job, reason)
 		return false, false
 	}
 

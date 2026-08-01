@@ -62,6 +62,14 @@ type Config struct {
 	// is active) are recorded as skipped instead of applied. 0 = off.
 	MinFitScore      int    `json:"min_fit_score,omitempty"`
 	CompanyBlocklist string `json:"company_blocklist,omitempty"` // comma-separated company names to skip
+	// FreshJobPriority applies freshly-posted jobs before older ones within
+	// each provider's search batch (newest PostedAt first). Off by default.
+	FreshJobPriority bool `json:"fresh_job_priority,omitempty"`
+	// StaleJobCutoffDays skips jobs whose posting date is older than this many
+	// days instead of applying to them (0 = disabled). Jobs without a known
+	// posting date are never skipped — we fail open rather than drop a listing
+	// we cannot date.
+	StaleJobCutoffDays int `json:"stale_job_cutoff_days,omitempty"`
 	// WorkAuth: authorized | citizen | need_sponsorship | unspecified
 	WorkAuth string `json:"work_auth,omitempty"`
 	// NoticePeriodDays and OfficeDaysPerWeek answer the two custom
