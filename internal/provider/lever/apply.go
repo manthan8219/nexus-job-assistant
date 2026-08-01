@@ -14,8 +14,8 @@ import (
 )
 
 // submitApplication attempts to apply to a Lever job on behalf of the user.
-func submitApplication(ctx context.Context, client *http.Client, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	applyURL := fmt.Sprintf("https://jobs.lever.co/%s/%s/apply", job.Board, job.ID)
+func (c *Client) submitApplication(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
+	applyURL := fmt.Sprintf("%s/%s/%s/apply", c.baseURL, job.Board, job.ID)
 
 	var body bytes.Buffer
 	w := multipart.NewWriter(&body)
@@ -47,7 +47,7 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 	// Lever follows redirect on success — use a client that does NOT follow redirects
 	// so we can detect the 302 ourselves.
 	noRedirectClient := &http.Client{
-		Timeout: client.Timeout,
+		Timeout: c.http.Timeout,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -73,8 +73,9 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 		return provider.ApplyResult{Status: "applied"}, nil
 	}
 
-	// 4xx — direct applicant to apply manually
-	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
+	// 4xx (except 429) — direct applicant to apply manually. 429 is
+	// transient and reported as a failure the engine can retry later.
+	if resp.StatusCode >= 400 && resp.StatusCode < 500 && resp.StatusCode != http.StatusTooManyRequests {
 		return provider.ApplyResult{
 			Status: "skipped",
 			Reason: fmt.Sprintf("apply manually at %s", job.URL),
