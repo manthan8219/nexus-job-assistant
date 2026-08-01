@@ -33,7 +33,7 @@ type srResume struct {
 }
 
 // submitApplication POSTs a candidate application to the SmartRecruiters API.
-func submitApplication(ctx context.Context, client *http.Client, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
+func (c *Client) submitApplication(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
 	payload := srCandidatePayload{
 		FirstName:   profile.FirstName,
 		LastName:    profile.LastName,
@@ -57,7 +57,7 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 		return provider.ApplyResult{}, err
 	}
 
-	url := fmt.Sprintf("%s/v1/companies/%s/postings/%s/candidates", baseURL, job.Board, job.ID)
+	url := fmt.Sprintf("%s/v1/companies/%s/postings/%s/candidates", c.apiBase, job.Board, job.ID)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
@@ -66,7 +66,7 @@ func submitApplication(ctx context.Context, client *http.Client, job provider.Jo
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; job-search-bot/1.0)")
 
-	resp, err := client.Do(req)
+	resp, err := c.http.Do(req)
 	if err != nil {
 		return provider.ApplyResult{Status: "failed", Reason: err.Error()}, nil
 	}

@@ -19,6 +19,9 @@ type Client struct {
 	http      *http.Client
 	companies []srCompanyEntry
 	base      []srCompanyEntry
+	// apiBase overrides the SmartRecruiters API host for tests; defaults to
+	// baseURL.
+	apiBase string
 }
 
 // New creates a SmartRecruiters client from embedded JSON bytes.
@@ -32,6 +35,7 @@ func New(companiesJSON []byte) (*Client, error) {
 		http:      &http.Client{Timeout: 30 * time.Second},
 		companies: companies,
 		base:      base,
+		apiBase:   baseURL,
 	}, nil
 }
 
@@ -116,5 +120,5 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 
 // Apply submits an application for a single SmartRecruiters job.
 func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
-	return submitApplication(ctx, c.http, job, profile)
+	return c.submitApplication(ctx, job, profile)
 }
