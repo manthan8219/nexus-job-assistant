@@ -19,6 +19,8 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/breezy"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerjet"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerscraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/dynamitejobs"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/euroremotejobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/fourday"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/getonbrd"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/greenhouse"
@@ -36,6 +38,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/personio"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/pinpoint"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/recruitee"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteco"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteok"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remotive"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/smartrecruiters"
@@ -124,6 +127,9 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	providers = append(providers, weworkremotely.New())
 	providers = append(providers, jobspresso.New())
 	providers = append(providers, nodesk.New())
+	providers = append(providers, remoteco.New())
+	providers = append(providers, dynamitejobs.New())
+	providers = append(providers, euroremotejobs.New())
 
 	// Key-gated job finders — only registered when the API key is configured.
 	if id, key := cfg.ProviderKeys["adzuna_id"], cfg.ProviderKeys["adzuna_key"]; id != "" && key != "" {
