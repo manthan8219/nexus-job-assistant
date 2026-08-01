@@ -50,3 +50,47 @@ func TestSuggestTitlesOfflineFallback(t *testing.T) {
 		t.Errorf("expected at most 6 suggestions, got %d", len(cap))
 	}
 }
+
+func TestSuggestProfession(t *testing.T) {
+	cases := []struct {
+		name   string
+		intent string
+		want   string
+	}{
+		{"cardiologist", "I'm a cardiologist, remote", "Healthcare"},
+		{"nurse", "Registered Nurse, hospital", "Healthcare"},
+		{"veterinarian", "Veterinarian, clinic", "Healthcare"},
+		{"data analyst", "Data Analyst, SQL", "Data/AI"},
+		{"data engineer", "Senior Data Engineer, warehouse", "Data/AI"},
+		{"ml engineer", "Machine Learning Engineer", "Data/AI"},
+		{"go engineer", "Senior Go Engineer, backend", "Engineering"},
+		{"devops", "DevOps platform engineer", "Engineering"},
+		{"designer", "Product Designer, Figma", "Design"},
+		{"ux designer", "UX designer, mobile", "Design"},
+		{"research scientist", "Research scientist, genomics", "Research/Science"},
+		{"chemist", "Chemist in a lab", "Research/Science"},
+		{"marketing", "Growth marketing manager", "Marketing"},
+		{"sales", "Sales account executive", "Sales"},
+		{"accountant", "Accountant", "Finance"},
+		{"teacher", "Math teacher, high school", "Education"},
+		{"lawyer", "Corporate lawyer", "Legal"},
+		{"recruiter", "Recruiter at a startup", "HR"},
+		{"hr manager", "HR manager, people ops", "HR"},
+		{"writer", "Technical writer", "Writing"},
+		{"electrician", "Electrician, residential", "Trade/Construction"},
+		{"support", "Customer support specialist", "Customer Support"},
+		{"project manager", "Project manager, agile", "Project Management"},
+		{"product manager", "Product manager, fintech", "Project Management"},
+		{"unknown", "Life Coach, Wellness", ""},
+		{"exploring", "exploring", ""},
+		{"empty", "", ""},
+		{"email does not imply ai", "Email me at a@example.com", ""},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := SuggestProfession(c.intent); got != c.want {
+				t.Errorf("SuggestProfession(%q) = %q; want %q", c.intent, got, c.want)
+			}
+		})
+	}
+}

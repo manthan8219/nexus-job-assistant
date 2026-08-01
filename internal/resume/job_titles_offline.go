@@ -1,6 +1,9 @@
 package resume
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // titleBucket maps a set of profession keywords to suggested job titles.
 // Used by the offline suggestion fallback so onboarding works for ANY
@@ -147,4 +150,140 @@ func splitIntentTokens(intent string) []string {
 		out = append(out, p)
 	}
 	return out
+}
+
+// professionBucket maps a friendly profession label to the keywords that
+// detect it. Order matters: SuggestProfession returns the FIRST matching label,
+// so specific domains (Data/AI, Research/Science) precede broad siblings
+// (Engineering), and ambiguous roles (e.g. "HR manager") land on the domain
+// they belong to rather than the generic Project Management bucket.
+type professionBucket struct {
+	label    string
+	keywords []string
+}
+
+// professionCatalog drives SuggestProfession and mirrors the title buckets in
+// titleCatalog while keeping the labels friendly and mutually exclusive.
+var professionCatalog = []professionBucket{
+	{
+		label: "Healthcare",
+		keywords: []string{"doctor", "physician", "cardiolog", "surgeon", "nurse",
+			"medical", "health", "dentist", "pharma", "clinical", "radiology",
+			"pediatric", "therapist", "psycholog", "veterinar", "vet"},
+	},
+	{
+		label: "Data/AI",
+		keywords: []string{"data scien", "data analyst", "data engineer",
+			"machine learning", "deep learning", "artificial intelligence",
+			"analytics", "statistician", "computer vision", "neural", "nlp",
+			"llm", "mlops", "ml", "ai"},
+	},
+	{
+		label: "Engineering",
+		keywords: []string{"software", "engineer", "backend", "frontend",
+			"full-stack", "full stack", "developer", "programmer", "golang",
+			"python", "java", "javascript", "typescript", "sre", "devops",
+			"platform", "infra", "infrastructure", "cloud", "apis", "api"},
+	},
+	{
+		label: "Research/Science",
+		keywords: []string{"research", "scientist", "biolog", "chemist",
+			"chemistry", "physics", "genomics", "epidemiolog", "laboratory",
+			"lab"},
+	},
+	{
+		label: "Design",
+		keywords: []string{"product designer", "design", "graphic", "visual",
+			"illustrator", "artist", "ux", "ui", "art"},
+	},
+	{
+		label: "Marketing",
+		keywords: []string{"marketing", "marketer", "growth", "seo", "content",
+			"social", "brand", "demand", "campaign"},
+	},
+	{
+		label: "Sales",
+		keywords: []string{"sales", "account executive", "account manager",
+			"business development", "customer success", "sdr", "bdr"},
+	},
+	{
+		label: "Finance",
+		keywords: []string{"finance", "accountant", "accounting", "financial",
+			"fp&a", "audit", "taxation", "taxes", "treasury", "investment",
+			"banking", "tax"},
+	},
+	{
+		label: "Education",
+		keywords: []string{"teacher", "education", "professor", "instructor",
+			"tutor", "lecturer", "curriculum", "academic"},
+	},
+	{
+		label: "Legal",
+		keywords: []string{"lawyer", "legal", "attorney", "paralegal", "counsel",
+			"compliance"},
+	},
+	{
+		label: "HR",
+		keywords: []string{"human resources", "recruiter", "talent", "people ops",
+			"benefits", "hr"},
+	},
+	{
+		label: "Writing",
+		keywords: []string{"writer", "writing", "editor", "journalist",
+			"copywriter", "content writer", "author"},
+	},
+	{
+		label: "Trade/Construction",
+		keywords: []string{"electrician", "plumber", "plumbing", "carpenter",
+			"carpentry", "welder", "hvac", "construction", "contractor",
+			"machinist", "mechanic", "roofer"},
+	},
+	{
+		label: "Customer Support",
+		keywords: []string{"customer service", "helpdesk", "help desk",
+			"call center", "technical support", "support"},
+	},
+	{
+		label: "Project Management",
+		keywords: []string{"project manager", "project management",
+			"program manager", "product manager", "scrum", "agile", "pmo",
+			"coordinator", "director", "operations", "manager"},
+	},
+}
+
+// SuggestProfession keyword-detects the profession domain of a job intent and
+// returns a friendly label ("Healthcare", "Engineering", "Data/AI", …), or ""
+// when no domain is recognizable. It powers the profession-aware onboarding
+// badge and mirrors the offline title catalog's keyword vocabulary.
+func SuggestProfession(intent string) string {
+	text := strings.ToLower(strings.TrimSpace(intent))
+	if text == "" {
+		return ""
+	}
+	for _, bucket := range professionCatalog {
+		for _, kw := range bucket.keywords {
+			if professionMatches(text, kw) {
+				return bucket.label
+			}
+		}
+	}
+	return ""
+}
+
+var notWord = regexp.MustCompile(`[^a-z0-9]+`)
+
+// professionMatches reports whether keyword appears in text. Longer phrases
+// match as substrings; short tokens (≤ 3 chars, e.g. "ai", "hr", "ui") must
+// match as whole words so they don't fire inside unrelated words ("email",
+// "through", "built", "startup").
+func professionMatches(text, keyword string) bool {
+	if len(keyword) > 3 {
+		return strings.Contains(text, keyword)
+	}
+	for _, tok := range notWord.Split(text, -1) {
+		if tok == keyword {
+			return true
+		}
+	}
+	return false
 }
