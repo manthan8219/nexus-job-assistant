@@ -33,6 +33,9 @@ type Client struct {
 	http      *http.Client
 	companies []rctCompany
 	base      []rctCompany
+	// applyHost overrides the careers-site host for tests; when empty the
+	// host is derived from the job's board subdomain.
+	applyHost string
 }
 
 // New creates a Recruitee client from embedded JSON bytes.
@@ -148,8 +151,10 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 	return jobs, nil
 }
 
-func (c *Client) Apply(_ context.Context, job provider.Job, _ provider.Profile) (provider.ApplyResult, error) {
-	return provider.ApplyResult{Status: "skipped", Reason: "apply manually: " + job.URL}, nil
+// Apply submits an application for a single Recruitee job via the public
+// Careers Site API.
+func (c *Client) Apply(ctx context.Context, job provider.Job, profile provider.Profile) (provider.ApplyResult, error) {
+	return c.submitApplication(ctx, job, profile)
 }
 
 func matchesTitle(title string, keywords []string) bool {
