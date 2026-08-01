@@ -289,16 +289,7 @@ func (w *Worker) loadResume(cfg *config.Config) string {
 
 // applyTemplate fills subject/body from the configured (or default) templates.
 func applyTemplate(cfg *config.Config, it *Item, in ComposeInput) {
-	subjTpl := DefaultEmailSubject()
-	bodyTpl := DefaultEmailBody()
-	if cfg != nil {
-		if strings.TrimSpace(cfg.EmailSubjectTpl) != "" {
-			subjTpl = cfg.EmailSubjectTpl
-		}
-		if strings.TrimSpace(cfg.EmailBodyTpl) != "" {
-			bodyTpl = cfg.EmailBodyTpl
-		}
-	}
+	subjTpl, bodyTpl := emailTemplates(cfg)
 	vars := map[string]string{
 		"contact_name":  orThere(in.ContactName),
 		"contact_email": in.ContactEmail,

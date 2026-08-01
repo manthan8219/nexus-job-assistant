@@ -55,16 +55,7 @@ func Vars(cfg *config.Config, job JobRef, contactName, contactEmail string) map[
 }
 
 func NewEmailDraft(cfg *config.Config, job JobRef, contactName, contactEmail string) Item {
-	subjTpl := DefaultEmailSubject()
-	bodyTpl := DefaultEmailBody()
-	if cfg != nil {
-		if strings.TrimSpace(cfg.EmailSubjectTpl) != "" {
-			subjTpl = cfg.EmailSubjectTpl
-		}
-		if strings.TrimSpace(cfg.EmailBodyTpl) != "" {
-			bodyTpl = cfg.EmailBodyTpl
-		}
-	}
+	subjTpl, bodyTpl := emailTemplates(cfg)
 	vars := Vars(cfg, job, contactName, contactEmail)
 	now := time.Now()
 	st := StatusDraft
@@ -86,6 +77,52 @@ func NewEmailDraft(cfg *config.Config, job JobRef, contactName, contactEmail str
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
+}
+
+// emailTemplates returns the subject/body templates for an email draft,
+// honoring the referral-ask variant and per-type custom overrides. Shared by
+// NewEmailDraft and the worker's applyTemplate so both paths render identically.
+func emailTemplates(cfg *config.Config) (subjTpl, bodyTpl string) {
+	if cfg != nil && cfg.OutreachReferralAsk {
+		subjTpl, bodyTpl = DefaultReferralSubject(), DefaultReferralBody()
+		if strings.TrimSpace(cfg.ReferralSubjectTpl) != "" {
+			subjTpl = cfg.ReferralSubjectTpl
+		}
+		if strings.TrimSpace(cfg.ReferralBodyTpl) != "" {
+			bodyTpl = cfg.ReferralBodyTpl
+		}
+		return subjTpl, bodyTpl
+	}
+	subjTpl, bodyTpl = DefaultEmailSubject(), DefaultEmailBody()
+	if cfg != nil {
+		if strings.TrimSpace(cfg.EmailSubjectTpl) != "" {
+			subjTpl = cfg.EmailSubjectTpl
+		}
+		if strings.TrimSpace(cfg.EmailBodyTpl) != "" {
+			bodyTpl = cfg.EmailBodyTpl
+		}
+	}
+	return subjTpl, bodyTpl
+}
+
+// DefaultReferralSubject is the default subject for referral-ask outreach.
+func DefaultReferralSubject() string {
+	return "Referral — {{role}} at {{company}}"
+}
+
+// DefaultReferralBody is the default referral-ask body: instead of pitching a
+// direct application it asks the contact for a warm intro or a pointer to the
+// person who owns hiring.
+func DefaultReferralBody() string {
+	return `Hi {{contact_name}},
+
+I'm exploring {{role}} roles and {{company}} looks like a great fit for my background as a {{headline}}.
+
+Do you know who owns hiring for {{role}}, or would you be open to an intro? I'd really appreciate any pointer or referral.
+
+Thanks so much,
+{{full_name}}
+{{linkedin}}`
 }
 
 func NewLinkedInDraft(cfg *config.Config, job JobRef, contactName, profileURL string) Item {

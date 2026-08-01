@@ -100,6 +100,14 @@ type Config struct {
 	EmailSubjectTpl   string `json:"email_subject_tpl,omitempty"`
 	EmailBodyTpl      string `json:"email_body_tpl,omitempty"`
 	LinkedInMsgTpl    string `json:"linkedin_msg_tpl,omitempty"`
+	// OutreachReferralAsk switches email drafts to the referral-ask variant
+	// (asks the contact to point you at the right person or refer you) instead
+	// of a direct-interest email. Off by default.
+	OutreachReferralAsk bool `json:"outreach_referral_ask,omitempty"`
+	// ReferralSubjectTpl overrides the referral-ask subject template.
+	ReferralSubjectTpl string `json:"referral_subject_tpl,omitempty"`
+	// ReferralBodyTpl overrides the referral-ask body template.
+	ReferralBodyTpl string `json:"referral_body_tpl,omitempty"`
 	// OutreachMode: confirm (ask before each) | queue (generate batch, tap send repeatedly) | auto (send/open all)
 	OutreachMode string `json:"outreach_mode,omitempty"`
 	// LinkedInMode kept for older configs; prefer OutreachMode. Values: confirm|queue|auto (legacy: assisted|autosend).
