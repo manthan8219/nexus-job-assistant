@@ -107,10 +107,11 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 \usepackage{hyperref}
 \usepackage{xcolor}
 \definecolor{accent}{HTML}{%s}
+\definecolor{title}{HTML}{%s}
 \pagestyle{empty}
 \setlist[itemize]{leftmargin=*,itemsep=%s,topsep=%s}
 \newcommand{\rsec}[1]{%s}
-`, size, margin, latexAccentHex(tpl.AccentHex), itemSep, topSep, rsec)
+`, size, margin, latexAccentHex(tpl.AccentHex), titleHexFor(tpl), itemSep, topSep, rsec)
 	if tpl.SectionStyle == SectionStyleSoft {
 		b.WriteString(`\definecolor{softsec}{HTML}{6b7280}
 `)
@@ -121,6 +122,11 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 	}
 
 	// Body font family per the template manifest (must stay in the preamble).
+	if tpl.SectionStyle == SectionStyleNumbered {
+		b.WriteString(`\newcounter{seccnt}
+`)
+	}
+
 	switch tpl.BodyFont {
 	case "mono":
 		b.WriteString(`\renewcommand{\familydefault}{\ttdefault}
@@ -141,14 +147,14 @@ func RenderLaTeXFor(doc ImprovedDoc, tpl Template) string {
 	}
 	nameColor := ""
 	if tpl.NameStyle == NameStyleColored {
-		nameColor = `\color{accent}`
+		nameColor = `\color{title}`
 	}
 	headline := ""
 	if doc.Headline != "" {
 		if tpl.SectionStyle == SectionStyleSoft {
 			headline = `\noindent{\color{softsec}\textbf{` + esc(doc.Headline) + `}}`
 		} else {
-			headline = `\noindent{\color{accent}\textbf{` + esc(doc.Headline) + `}}`
+			headline = `\noindent{\color{title}\textbf{` + esc(doc.Headline) + `}}`
 		}
 	}
 	if tpl.HeaderAlign == "left" && tpl.NameStyle != NameStyleCentered {
@@ -352,6 +358,10 @@ func sectionMacro(style string) string {
 		return `\par\vspace{0.5em}\noindent{\color{accent}\rule{\textwidth}{0.5pt}}\\[0.2em]{\color{accent}\textbf{\MakeUppercase{#1}}}\par`
 	case SectionStyleSoft:
 		return `\par\vspace{0.6em}\noindent{\color{softsec}\textbf{#1}}\vspace{0.2em}\par`
+	case SectionStyleRuleBelow:
+		return `\par\vspace{0.5em}\noindent{\color{title}\textbf{#1}}\\[0.15em]{\color{accent}\rule{\textwidth}{0.4pt}}\par`
+	case SectionStyleNumbered:
+		return `\par\vspace{0.6em}\noindent{\color{accent}\textbf{\textsc{\stepcounter{seccnt}\theseccnt~#1}}}\vspace{0.25em}\par`
 	default: // plain
 		return `\par\vspace{0.6em}\noindent{\color{accent}\textbf{\MakeUppercase{#1}}}\vspace{0.25em}\par`
 	}
@@ -434,6 +444,17 @@ func latexAccentHex(hex string) string {
 		return strings.ToUpper(hex)
 	}
 	return "059669" // classic green default
+}
+
+// titleHexFor returns the LaTeX hex for a template's title color (section
+// titles + the name). Templates without an explicit title color fall back
+// to the accent so existing designs are untouched.
+func titleHexFor(tpl Template) string {
+	t := tpl.Design.TitleRGB
+	if t != [3]int{} {
+		return fmt.Sprintf("%02X%02X%02X", t[0], t[1], t[2])
+	}
+	return latexAccentHex(tpl.AccentHex)
 }
 
 func latexEscape(s string) string {

@@ -13,6 +13,9 @@ func SampleResume() ImprovedDoc {
 	return ImprovedDoc{
 		FullName: "Maya Okonkwo",
 		Headline: "Senior Product Engineer",
+		Email:    "maya.okonkwo@example.com",
+		Phone:    "+1 (415) 555-0132",
+		Location: "San Francisco, CA",
 		Summary: "Product engineer with 8+ years building high-scale web platforms. " +
 			"Led a five-person team shipping a payments platform used by 2M customers. " +
 			"Strong in Go, React, distributed systems, and product thinking.",

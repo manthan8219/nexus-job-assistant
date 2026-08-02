@@ -83,8 +83,8 @@ func TestGetResumeTemplates(t *testing.T) {
 	if err := json.Unmarshal(rr.Body.Bytes(), &tmpls); err != nil {
 		t.Fatalf("bad JSON: %v", err)
 	}
-	if len(tmpls) != 8 {
-		t.Fatalf("got %d templates; want 8", len(tmpls))
+	if len(tmpls) != 10 {
+		t.Fatalf("got %d templates; want 10", len(tmpls))
 	}
 	found := false
 	for _, m := range tmpls {

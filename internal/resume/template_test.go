@@ -9,8 +9,8 @@ import (
 
 func TestTemplatesRegistry(t *testing.T) {
 	tmpls := Templates()
-	if len(tmpls) != 8 {
-		t.Fatalf("registry has %d templates; want 8", len(tmpls))
+	if len(tmpls) != 10 {
+		t.Fatalf("registry has %d templates; want 10", len(tmpls))
 	}
 	seen := map[string]bool{}
 	for _, tmpl := range tmpls {
@@ -85,6 +85,17 @@ func TestTemplatesRegistry(t *testing.T) {
 	if !bank.ContactLine || bank.SectionStyle != SectionStyleRuleAbove || bank.NameStyle != NameStyleCentered {
 		t.Errorf("banking should have a contact line + ruled centered header: %+v", bank)
 	}
+	mod, _ := GetTemplate(TemplateModern)
+	if mod.SectionStyle != SectionStyleRuleBelow || mod.NameStyle != NameStyleColored || !mod.ContactLine || mod.BodyFont != "serif" {
+		t.Errorf("modern should have ruled-below sections + a colored centered header: %+v", mod)
+	}
+	if mod.AccentHex != "#3498DB" || mod.Design.TitleRGB != [3]int{45, 62, 80} {
+		t.Errorf("modern should pair blue accent rules with dark slate titles: %+v", mod)
+	}
+	acad, _ := GetTemplate(TemplateAcademic)
+	if acad.SectionStyle != SectionStyleNumbered || acad.BodyFont != "serif" || acad.Layout != LayoutSingle {
+		t.Errorf("academic should be a numbered serif single column: %+v", acad)
+	}
 
 	// Every template declares a positive space budget (the AI + planner use it).
 	for _, tmpl := range Templates() {
@@ -156,7 +167,7 @@ func TestRenderLaTeXForTemplates(t *testing.T) {
 
 	macchiato, _ := GetTemplate(TemplateMacchiato)
 	texM := RenderLaTeXFor(doc, macchiato)
-	if !containsAll(texM, `\colorbox{railbg}`, `\color{accent}\textbf{Ada Lovelace}`) {
+	if !containsAll(texM, `\colorbox{railbg}`, `\color{title}\textbf{Ada Lovelace}`) {
 		t.Fatalf("macchiato latex should accent the name + color the rail:\n%s", texM)
 	}
 
@@ -173,6 +184,19 @@ func TestRenderLaTeXForTemplates(t *testing.T) {
 	texB2 := RenderLaTeXFor(doc, banking)
 	if !containsAll(texB2, `\textcolor{gray}`, `ada@example.com`) {
 		t.Fatalf("banking latex should render the email contact line:\n%s", texB2)
+	}
+
+	modern, _ := GetTemplate(TemplateModern)
+	texMod := RenderLaTeXFor(doc, modern)
+	if !containsAll(texMod, `\documentclass[11pt,a4paper]{article}`, `margin=0.6in`,
+		`\definecolor{accent}{HTML}{3498DB}`, `\definecolor{title}{HTML}{2D3E50}`, `\rule{\textwidth}{0.4pt}`) {
+		t.Fatalf("modern latex should be 11pt/0.6in with a blue rule under dark titles:\n%s", texMod)
+	}
+
+	academic, _ := GetTemplate(TemplateAcademic)
+	texAcad := RenderLaTeXFor(doc, academic)
+	if !containsAll(texAcad, `\documentclass[11pt,a4paper]{article}`, `margin=1in`, `\newcounter{seccnt}`, `\theseccnt`) {
+		t.Fatalf("academic latex should be 11pt/1in with numbered sections:\n%s", texAcad)
 	}
 }
 

@@ -56,6 +56,10 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 	if accent == [3]int{} {
 		accent = [3]int{5, 150, 105}
 	}
+	headInk := accent
+	if design.TitleRGB != [3]int{} {
+		headInk = design.TitleRGB
+	}
 	align := "L"
 	if design.HeaderAlign == "center" {
 		align = "C"
@@ -78,7 +82,7 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 	// Name (accent-colored for Macchiato-style headers)
 	nameColor := [3]int{17, 24, 39}
 	if tpl.NameStyle == NameStyleColored {
-		nameColor = accent
+		nameColor = headInk
 	}
 	pdf.SetTextColor(nameColor[0], nameColor[1], nameColor[2])
 	pdf.SetFont(ff, "B", float64(nameSize))
@@ -87,7 +91,7 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 
 	// Headline
 	if doc.Headline != "" {
-		pdf.SetTextColor(accent[0], accent[1], accent[2])
+		pdf.SetTextColor(headInk[0], headInk[1], headInk[2])
 		pdf.SetFont(ff, "B", 11)
 		pdf.SetX(left)
 		pdf.CellFormat(width, 6, doc.Headline, "", 1, align, false, 0, "")
@@ -120,6 +124,7 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 		pdf.Ln(4)
 	}
 
+	secNo := 0
 	writeSection := func(title string) {
 		pdf.Ln(1)
 		switch tpl.SectionStyle {
@@ -160,6 +165,24 @@ func renderNativeColumn(doc ImprovedDoc, tpl Template, path string) (int, error)
 			pdf.SetFont(ff, "B", float64(body))
 			pdf.SetX(left)
 			pdf.CellFormat(width, 6, title, "", 1, "L", false, 0, "")
+			pdf.Ln(1.5)
+			pdf.SetTextColor(17, 24, 39)
+		case SectionStyleRuleBelow: // Modern: title with a rule beneath it
+			pdf.SetTextColor(headInk[0], headInk[1], headInk[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, title, "", 1, "L", false, 0, "")
+			pdf.SetDrawColor(accent[0], accent[1], accent[2])
+			y := pdf.GetY()
+			pdf.Line(left, y, right, y)
+			pdf.Ln(2.5)
+			pdf.SetTextColor(17, 24, 39)
+		case SectionStyleNumbered: // Academic: numbered uppercase heading
+			secNo++
+			pdf.SetTextColor(accent[0], accent[1], accent[2])
+			pdf.SetFont(ff, "B", float64(body))
+			pdf.SetX(left)
+			pdf.CellFormat(width, 6, fmt.Sprintf("%d %s", secNo, strings.ToUpper(title)), "", 1, "L", false, 0, "")
 			pdf.Ln(1.5)
 			pdf.SetTextColor(17, 24, 39)
 		default: // plain: uppercase heading + light rule
