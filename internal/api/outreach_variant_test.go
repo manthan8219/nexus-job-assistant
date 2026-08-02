@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -13,7 +14,11 @@ import (
 // handlePutOutreachItemVariant tags an item for A/B testing (KAN-27) and the
 // value round-trips through the item store.
 func TestOutreachItemVariantRoundTrip(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	// NEXUS_HOME (not just HOME) isolates the store on Windows, where Go's
+	// os.UserHomeDir reads USERPROFILE and ignores $HOME.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("NEXUS_HOME", filepath.Join(home, ".nexus"))
 
 	item := outreach.Item{Channel: outreach.ChannelEmail, Company: "Acme", Role: "Engineer"}
 	if err := outreach.Upsert(item); err != nil {
@@ -68,7 +73,11 @@ func TestOutreachItemVariantRoundTrip(t *testing.T) {
 }
 
 func TestOutreachItemVariantNotFound(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	// NEXUS_HOME (not just HOME) isolates the store on Windows, where Go's
+	// os.UserHomeDir reads USERPROFILE and ignores $HOME.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("NEXUS_HOME", filepath.Join(home, ".nexus"))
 	srv := &Server{}
 	req := httptest.NewRequest(http.MethodPut, "/api/outreach/items/nope/variant", strings.NewReader(`{"variant":"A"}`))
 	req.SetPathValue("id", "nope")
