@@ -25,7 +25,7 @@ func (m CompaniesTabModel) View() string {
 
 	var b strings.Builder
 	b.WriteString("\n  " + labelStyle.Render("COMPANIES") + "  " + m.resultsSummary() + "\n")
-	b.WriteString("  " + mutedStyle.Render("OpenJobs + ATS boards + India priority + Y Combinator + manual. JOBS = scraped roles recorded · enter opens them.") + "\n\n")
+	b.WriteString("  " + mutedStyle.Render("OpenJobs + ATS boards + India priority + Y Combinator + manual. JOBS = discovered roles recorded · enter opens them.") + "\n\n")
 
 	if m.adding {
 		b.WriteString("  " + labelStyle.Render("ADD COMPANY") + "\n")
@@ -143,13 +143,13 @@ func (m CompaniesTabModel) detailView(w, h int) string {
 	}
 	countStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(colorOrange)).Bold(true)
 	if m.detailLoading {
-		b.WriteString("  " + mutedStyle.Render("loading scraped jobs…") + "\n")
+		b.WriteString("  " + mutedStyle.Render("loading discovered jobs…") + "\n")
 	} else {
 		word := "jobs"
 		if len(m.detailJobs) == 1 {
 			word = "job"
 		}
-		b.WriteString("  " + countStyle.Render(fmt.Sprintf("%d scraped %s", len(m.detailJobs), word)) +
+		b.WriteString("  " + countStyle.Render(fmt.Sprintf("%d discovered %s", len(m.detailJobs), word)) +
 			mutedStyle.Render(fmt.Sprintf("  ·  %d applied  ·  %d skipped  ·  %d failed", applied, skipped, failed)) + "\n")
 	}
 
@@ -183,7 +183,7 @@ func (m CompaniesTabModel) detailView(w, h int) string {
 	case m.detailLoading:
 		list.WriteString(mutedStyle.Render("  Loading…"))
 	case len(m.detailJobs) == 0:
-		list.WriteString(mutedStyle.Render("  No scraped jobs recorded for this company yet. Run a search — matching roles will show up here."))
+		list.WriteString(mutedStyle.Render("  No discovered jobs recorded for this company yet. Run a search — matching roles will show up here."))
 	default:
 		cw := companyJobColWidths(w)
 		list.WriteString(mutedStyle.Render(fmt.Sprintf("  %-*s  %-10s  %-4s  %-*s  %-9s  %s",
@@ -321,7 +321,7 @@ func (m CompaniesTabModel) FooterHint() string {
 		return "adding company  ·  tab fields  ·  enter save  ·  esc cancel  ·  ctrl+c quit"
 	}
 	if m.detail {
-		return "scraped jobs  ·  j/k move  ·  o open in browser  ·  esc/q back  ·  ctrl+c quit"
+		return "discovered jobs  ·  j/k move  ·  o open in browser  ·  esc/q back  ·  ctrl+c quit"
 	}
 	if m.CapturesKeys() {
 		return "filtering  ·  enter apply  ·  esc done  ·  ctrl+c quit"

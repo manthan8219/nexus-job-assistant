@@ -99,7 +99,7 @@ func (m FormModel) renderScraperSetupMenu() string {
 	venvReady := scraper.Installed()
 	if !venvReady {
 		// Step 1: venv not set up — show install/start/retry actions.
-		b.WriteString(errorStyle.Render("Career Scraper not set up"))
+		b.WriteString(errorStyle.Render("Job Discovery not set up"))
 		b.WriteString("\n    " + mutedStyle.Render("Needs Python 3.10+ on PATH"))
 		if m.scraperStatus != "" {
 			b.WriteString("\n    " + mutedStyle.Render(m.scraperStatus))
@@ -121,7 +121,7 @@ func (m FormModel) renderScraperSetupMenu() string {
 	}
 
 	// Step 2: venv ready — show backend catalog picker.
-	b.WriteString(primaryStyle.Render("Pick a scraper backend to install:"))
+	b.WriteString(primaryStyle.Render("Pick a discovery backend to install:"))
 	if m.scraperStatus != "" {
 		b.WriteString("\n    " + mutedStyle.Render(m.scraperStatus))
 	}

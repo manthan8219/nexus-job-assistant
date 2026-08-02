@@ -17,6 +17,8 @@ const (
 	TemplateKendall   = "kendall"
 	TemplateMacchiato = "macchiato"
 	TemplateBanking   = "banking"
+	TemplateModern    = "modern"
+	TemplateAcademic  = "academic"
 )
 
 // SectionStyle tokens: how a template draws its section headings.
@@ -26,6 +28,8 @@ const (
 	SectionStyleMarker    = "marker"
 	SectionStyleRuleAbove = "ruleAbove"
 	SectionStyleSoft      = "soft"
+	SectionStyleRuleBelow = "ruleBelow"
+	SectionStyleNumbered  = "numbered"
 )
 
 // NameStyle tokens: how the header block presents the candidate's name.
@@ -64,6 +68,7 @@ type TemplateSection struct {
 // the web UI only needs the manifest fields above.
 type TemplateDesign struct {
 	AccentRGB    [3]int  // rgb triple for rules, section titles, header accents
+	TitleRGB     [3]int  // rgb triple for section titles + name; zero = accent
 	HeaderAlign  string  // "left" | "center"
 	ShowRule     bool    // draw an accent rule under the header block
 	LaTeXSize    int     // body font size (pt) for the LaTeX renderer
@@ -127,6 +132,7 @@ func TemplateIDs() []string {
 	return []string{
 		TemplateJake, TemplateAwesomeCV, TemplateDeedy, TemplateMcDowell,
 		TemplateBillRyan, TemplateKendall, TemplateMacchiato, TemplateBanking,
+		TemplateModern, TemplateAcademic,
 	}
 }
 
@@ -141,6 +147,8 @@ func Templates() []Template {
 		kendallTemplate(),
 		macchiatoTemplate(),
 		bankingTemplate(),
+		modernTemplate(),
+		academicTemplate(),
 	}
 	// Promote the design tokens the web preview needs (header alignment +
 	// rule) onto the served manifest so UI miniatures stay faithful to the
@@ -462,6 +470,78 @@ func bankingTemplate() Template {
 			NativeName:   24,
 			NativeLead:   5,
 			NativeMargin: 16,
+		},
+	}
+}
+
+// modernTemplate is the classic modern one-column design: centered header,
+// serif body, and accent-ruled section heads (rule drawn below the title).
+// Adapted from the widely-shared "Modern Software Engineer Resume" template.
+func modernTemplate() Template {
+	return Template{
+		ID:           TemplateModern,
+		Name:         "Modern",
+		Description:  "Centered name with a serif body and ruled section heads — the classic modern software-engineer look.",
+		Layout:       LayoutSingle,
+		BodyFont:     "serif",
+		NameStyle:    NameStyleColored,
+		ContactLine:  true,
+		SectionStyle: SectionStyleRuleBelow,
+		Sections: []TemplateSection{
+			{Key: SectionSummary, Label: "Professional Summary"},
+			{Key: SectionExperience, Label: "Professional Experience"},
+			{Key: SectionSkills, Label: "Technical Skills"},
+			{Key: SectionEducation, Label: "Education"},
+		},
+		AccentHex: "#3498DB",
+		ATSNote:   "ATS-safe — single column with standard section names.",
+		Source:    "Community modern LaTeX resume template",
+		Design: TemplateDesign{
+			AccentRGB:    [3]int{52, 152, 219}, // accent blue: rules + contact accents
+			TitleRGB:     [3]int{45, 62, 80},   // primary slate: name + section titles
+			HeaderAlign:  "center",
+			ShowRule:     false,
+			LaTeXSize:    11,
+			LaTeXMargin:  "0.6in",
+			NativeSize:   11,
+			NativeName:   26,
+			NativeLead:   5,
+			NativeMargin: 15,
+		},
+	}
+}
+
+// academicTemplate is the classic academic CV: centered header, numbered
+// small-caps section heads, and a formal serif body. Long-form academic
+// sections (publications, grants, teaching, service) exceed the built-in
+// content model, so only the representable sections are exposed.
+func academicTemplate() Template {
+	return Template{
+		ID:           TemplateAcademic,
+		Name:         "Academic",
+		Description:  "Centered header with numbered small-caps section heads and a formal serif body — the classic academic research CV.",
+		Layout:       LayoutSingle,
+		BodyFont:     "serif",
+		NameStyle:    NameStyleCentered,
+		SectionStyle: SectionStyleNumbered,
+		Sections: []TemplateSection{
+			{Key: SectionSummary, Label: "Research Interests"},
+			{Key: SectionExperience, Label: "Academic Appointments"},
+			{Key: SectionEducation, Label: "Education"},
+		},
+		AccentHex: "#111827",
+		ATSNote:   "Single column with standard section names — ATS-safe.",
+		Source:    "Community academic CV LaTeX template",
+		Design: TemplateDesign{
+			AccentRGB:    [3]int{17, 24, 39},
+			HeaderAlign:  "center",
+			ShowRule:     false,
+			LaTeXSize:    11,
+			LaTeXMargin:  "1in",
+			NativeSize:   11,
+			NativeName:   24,
+			NativeLead:   5,
+			NativeMargin: 25,
 		},
 	}
 }

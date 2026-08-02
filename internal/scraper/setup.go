@@ -139,7 +139,7 @@ func Install(ctx context.Context, onProgress ProgressFunc) error {
 		return fmt.Errorf("pip install: %w", err)
 	}
 
-	progress(onProgress, "Base install done. Pick a scraper backend to continue.")
+	progress(onProgress, "Base install done. Pick a discovery backend to continue.")
 	return nil
 }
 
@@ -219,12 +219,12 @@ func SetupOptions() []SetupOption {
 	opts := []SetupOption{
 		{
 			ID:    "install",
-			Label: "Install Career Scraper",
+			Label: "Install Job Discovery",
 			Hint:  "one-time setup · needs Python 3.10+",
 		},
 		{
 			ID:    "start",
-			Label: "Start Career Scraper",
+			Label: "Start Job Discovery",
 			Hint:  "already installed · just start the service",
 		},
 		{
@@ -242,7 +242,7 @@ func SetupOptions() []SetupOption {
 		opts = append(opts, SetupOption{
 			ID:    "scan",
 			Label: "Scan companies for jobs",
-			Hint:  "discover career pages · scrape jobs · save to store",
+			Hint:  "discover career pages · find jobs · save to store",
 		})
 	}
 	return opts

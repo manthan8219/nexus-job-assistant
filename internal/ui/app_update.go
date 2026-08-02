@@ -267,7 +267,7 @@ func (m AppModel) handleScraperScanProgressMsg(msg scraperScanProgressMsg) (tea.
 
 func (m AppModel) handleScraperScanDoneMsg(msg scraperScanDoneMsg) (tea.Model, tea.Cmd) {
 	if msg.err != nil {
-		m.eng.LogCh <- fmt.Sprintf("Scraper scan error: %v", msg.err)
+		m.eng.LogCh <- fmt.Sprintf("Discovery scan error: %v", msg.err)
 	}
 	return m, nil
 }
@@ -291,7 +291,7 @@ func (m AppModel) handleScraperScanMsg(msg ScraperScanMsg) (tea.Model, tea.Cmd) 
 	cfg := m.config.toConfig()
 	keywords := m.config.jobTitleTags
 	logCh := m.eng.LogCh
-	logCh <- "Career scraper: starting company scan…"
+	logCh <- "Job Discovery: starting company scan…"
 	m.activeTab = TabLogs
 	return m, func() tea.Msg {
 		return runScraperScanCmd(cfg, keywords, logCh)

@@ -45,7 +45,7 @@ func (m HistoryModel) View() string {
 	title := labelStyle.Render("JOBS")
 	count := mutedStyle.Render(fmt.Sprintf("(%d shown · %d total)", len(filtered), len(m.apps)))
 	b.WriteString("\n  " + title + "  " + count + "\n")
-	b.WriteString("  " + mutedStyle.Render("Scraped & applied roles — search, open a row for full JD + fit.") + "\n")
+	b.WriteString("  " + mutedStyle.Render("Discovered & applied roles — search, open a row for full JD + fit.") + "\n")
 	if funnel := m.funnelLine(); funnel != "" {
 		b.WriteString("  " + funnel + "\n")
 	}

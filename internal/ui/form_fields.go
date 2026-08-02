@@ -145,7 +145,7 @@ var formSections = []struct {
 	{"Outreach", fGmailPassword},
 	{"Integrations", fDiscordWebhook},
 	{"Apply Safety", fApplyConsent},
-	{"Career Scraper", fScraperTargets},
+	{"Job Discovery", fScraperTargets},
 }
 
 // providerStatus describes a job board provider shown in the Providers section.

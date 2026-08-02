@@ -185,6 +185,10 @@ func polishTemplateBlock(tpl Template) string {
 		b.WriteString("Section headings: a rule above each heading — classic banking style.\n")
 	case SectionStyleSoft:
 		b.WriteString("Section headings: soft gray, sentence case — keep a calm, airy tone.\n")
+	case SectionStyleRuleBelow:
+		b.WriteString("Section headings: title with a rule beneath it — clean modern look.\n")
+	case SectionStyleNumbered:
+		b.WriteString("Section headings: numbered small-caps — classic academic CV format.\n")
 	default:
 		b.WriteString("Section headings: uppercase with a thin rule.\n")
 	}
