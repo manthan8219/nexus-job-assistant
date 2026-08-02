@@ -130,7 +130,7 @@ func (m HistoryModel) detailContent(app store.Application, w int) string {
 		}
 	} else {
 		b.WriteString("\n  " + labelStyle.Render("DESCRIPTION") + "\n\n")
-		b.WriteString("  " + mutedStyle.Render("No job description was scraped for this posting.") + "\n")
+		b.WriteString("  " + mutedStyle.Render("No job description was found for this posting.") + "\n")
 		b.WriteString("  " + mutedStyle.Render("Fit score (if any) used title / company / location only.") + "\n")
 	}
 

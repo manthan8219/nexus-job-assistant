@@ -36,7 +36,7 @@ func CrawlCompanies(
 	onProgress func(CrawlResult),
 ) error {
 	if !Running() {
-		return fmt.Errorf("scraper service not running — install and start it first")
+		return fmt.Errorf("discovery service not running — install and start it first")
 	}
 
 	all, err := db.Search("", "", 5000)
@@ -97,7 +97,7 @@ func CrawlCompanies(
 				Role:      j.Title,
 				URL:       j.URL,
 				Status:    store.StatusSkipped, // queued for review, not yet applied
-				Reason:    "discovered via career page crawl",
+				Reason:    "found on company career page",
 				Location:  j.Location,
 				Remote:    j.Remote,
 				AppliedAt: time.Now(),
@@ -145,7 +145,7 @@ func scrapeViaService(ctx context.Context, company, careerURL string, keywords [
 
 	httpResp, err := (&http.Client{Timeout: 5 * time.Minute}).Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("scraper service: %w", err)
+		return nil, fmt.Errorf("discovery service: %w", err)
 	}
 	defer httpResp.Body.Close()
 
@@ -154,7 +154,7 @@ func scrapeViaService(ctx context.Context, company, careerURL string, keywords [
 		return nil, fmt.Errorf("decode response: %w", err)
 	}
 	if r.Error != "" {
-		return nil, fmt.Errorf("scraper: %s", r.Error)
+		return nil, fmt.Errorf("discovery: %s", r.Error)
 	}
 
 	jobs := make([]provider.Job, 0, len(r.Jobs))
