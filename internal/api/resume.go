@@ -96,7 +96,13 @@ func (s *Server) handlePostResumeAnalyze(w http.ResponseWriter, r *http.Request)
 // manifest declares the sections/layout/constraints the backend understands,
 // which is what lets the AI fit generated content into the chosen design.
 func (s *Server) handleGetResumeTemplates(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, resume.Templates())
+	tpls := resume.Templates()
+	// Attach the real LaTeX (rendered with the sample persona) so the web UI
+	// can show a faithful live preview of the document the PDF engine builds.
+	for i := range tpls {
+		tpls[i].LaTeX = resume.RenderLaTeXFor(resume.SampleResume(), tpls[i])
+	}
+	writeJSON(w, http.StatusOK, tpls)
 }
 
 // handleGetResumeTemplatePreviewPDF renders the sample persona into the named

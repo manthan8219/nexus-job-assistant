@@ -118,13 +118,18 @@ type Template struct {
 	// SectionStyle / NameStyle / ContactLine / ColumnRatio / RailBackground are
 	// the "real design" tokens the renderers (LaTeX + native PDF) honor so each
 	// curated template looks like the famous design it is adapted from.
-	SectionStyle   string         `json:"sectionStyle,omitempty"`   // plain | caps | marker | ruleAbove | soft
-	NameStyle      string         `json:"nameStyle,omitempty"`      // plain | centered | colored
-	ContactLine    bool           `json:"contactLine"`              // email · phone · location under the header
-	ColumnRatio    float64        `json:"columnRatio,omitempty"`    // main-column fraction for sidebar layouts
-	RailBackground string         `json:"railBackground,omitempty"` // dark | accent | tint sidebar rail
-	Source         string         `json:"source,omitempty"`         // the open-source design this adapts
-	Design         TemplateDesign `json:"-"`
+	SectionStyle   string  `json:"sectionStyle,omitempty"`   // plain | caps | marker | ruleAbove | soft
+	NameStyle      string  `json:"nameStyle,omitempty"`      // plain | centered | colored
+	ContactLine    bool    `json:"contactLine"`              // email · phone · location under the header
+	ColumnRatio    float64 `json:"columnRatio,omitempty"`    // main-column fraction for sidebar layouts
+	RailBackground string  `json:"railBackground,omitempty"` // dark | accent | tint sidebar rail
+	Source         string  `json:"source,omitempty"`         // the open-source design this adapts
+	// LaTeX is the template rendered with the sample persona (SampleResume).
+	// Populated at serve time so the web UI can render a faithful live
+	// preview with a client-side LaTeX engine — the source that the real
+	// PDF engine compiles.
+	LaTeX  string         `json:"latex,omitempty"`
+	Design TemplateDesign `json:"-"`
 }
 
 // TemplateIDs returns the ordered registry ids (used by the API docs/tests).
