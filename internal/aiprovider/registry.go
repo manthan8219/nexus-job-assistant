@@ -37,7 +37,7 @@ type Keys struct {
 // built-in OpenAI/Anthropic defaults use (gpt-4o-mini / claude-3-5-haiku).
 var providers = []Provider{
 	{Name: "openai", BaseURL: "https://api.openai.com/v1", Model: "gpt-4o-mini"},
-	{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.0-flash"},
+	{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.5-flash"},
 	{Name: "deepseek", BaseURL: "https://api.deepseek.com", Model: "deepseek-chat"},
 	{Name: "groq", BaseURL: "https://api.groq.com/openai/v1", Model: "llama-3.3-70b-versatile"},
 	{Name: "mistral", BaseURL: "https://api.mistral.ai/v1", Model: "mistral-small-latest"},

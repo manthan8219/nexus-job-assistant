@@ -24,7 +24,7 @@ func TestSelect(t *testing.T) {
 		{
 			"google selected when openai empty",
 			Keys{Google: "gem-key", Groq: "gq"},
-			Provider{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.0-flash", APIKey: "gem-key"},
+			Provider{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.5-flash", APIKey: "gem-key"},
 			true,
 		},
 		{
