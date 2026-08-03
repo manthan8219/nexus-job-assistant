@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/manthan8219/nexus-job-assistant/internal/aiprovider"
 )
 
 // reqSnapshot captures the observable parts of a request while the handler
@@ -131,23 +129,45 @@ func TestCompleteOpenAICompatible_SinglePrompt(t *testing.T) {
 
 func TestAIAPIKeys_MapsAllFields(t *testing.T) {
 	ai := AIOptions{
-		OpenAIKey:     "o",
-		GoogleKey:     "g",
-		DeepSeekKey:   "d",
-		GroqKey:       "gr",
-		MistralKey:    "m",
-		TogetherKey:   "t",
-		OpenRouterKey: "or",
-		XAIKey:        "x",
+		OpenAIKey:       "o",
+		GoogleKey:       "g",
+		DeepSeekKey:     "d",
+		GroqKey:         "gr",
+		MistralKey:      "m",
+		TogetherKey:     "t",
+		OpenRouterKey:   "or",
+		XAIKey:          "x",
+		OpenAIModel:     "gpt-4o",
+		GoogleModel:     "gemini-2.5-pro",
+		DeepSeekModel:   "deepseek-r1",
+		GroqModel:       "llama-3.3",
+		MistralModel:    "mistral-large",
+		TogetherModel:   "together-model",
+		OpenRouterModel: "or-model",
+		XAIModel:        "grok-2",
 	}
-	want := aiprovider.Keys{OpenAI: "o", Google: "g", DeepSeek: "d", Groq: "gr", Mistral: "m", Together: "t", OpenRouter: "or", XAI: "x"}
-	if got := aiAPIKeys(ai); got != want {
-		t.Errorf("aiAPIKeys = %+v; want %+v", got, want)
+	got := aiAPIKeys(ai)
+	if got.OpenAI != "o" || got.Google != "g" || got.XAI != "x" {
+		t.Errorf("aiAPIKeys keys = %+v; want o/g/.../x", got)
+	}
+	wantModels := map[string]string{
+		"openai": "gpt-4o", "google": "gemini-2.5-pro", "deepseek": "deepseek-r1",
+		"groq": "llama-3.3", "mistral": "mistral-large", "together": "together-model",
+		"openrouter": "or-model", "xai": "grok-2",
+	}
+	for k, want := range wantModels {
+		if got.Models[k] != want {
+			t.Errorf("Models[%q] = %q; want %q", k, got.Models[k], want)
+		}
 	}
 }
 
 func TestAIAPIKeys_EmptyWithZeroOptions(t *testing.T) {
-	if got := aiAPIKeys(AIOptions{}); got != (aiprovider.Keys{}) {
-		t.Errorf("aiAPIKeys(zero) = %+v; want zero Keys", got)
+	got := aiAPIKeys(AIOptions{})
+	if got.OpenAI != "" || got.Google != "" || got.XAI != "" {
+		t.Errorf("aiAPIKeys(zero) keys = %+v; want empty", got)
+	}
+	if len(got.Models) != 0 {
+		t.Errorf("aiAPIKeys(zero).Models = %v; want empty", got.Models)
 	}
 }

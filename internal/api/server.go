@@ -279,6 +279,9 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Job titles
 	mux.HandleFunc("POST /api/job-titles/suggest", s.handlePostJobTitlesSuggest)
 
+	// AI — list a provider's models by configured/typed API key
+	mux.HandleFunc("POST /api/ai/models", s.handleGetAIModels)
+
 	// Deliverability
 	mux.HandleFunc("GET /api/deliverability/audit", s.handleGetDeliverabilityAudit)
 

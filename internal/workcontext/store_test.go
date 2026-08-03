@@ -9,6 +9,8 @@ import (
 func TestUpsertLoadDelete(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("HOME", dir)
+	// NEXUS_HOME is required on Windows, where Go's os.UserHomeDir ignores $HOME.
+	t.Setenv("NEXUS_HOME", filepath.Join(dir, ".nexus"))
 
 	p := Project{
 		Name:    "Payments API",

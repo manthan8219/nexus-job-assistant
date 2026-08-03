@@ -8,8 +8,10 @@ import (
 
 func TestSaveLoadCache(t *testing.T) {
 	dir := t.TempDir()
-	// Point HOME at temp so we don't touch real ~/.nexus
+	// Point HOME and NEXUS_HOME at temp so we don't touch real ~/.nexus
+	// (NEXUS_HOME is required on Windows, where Go ignores $HOME).
 	t.Setenv("HOME", dir)
+	t.Setenv("NEXUS_HOME", filepath.Join(dir, ".nexus"))
 
 	resumeFile := filepath.Join(dir, "r.pdf")
 	if err := os.WriteFile(resumeFile, []byte("%PDF-1.4 fake"), 0600); err != nil {

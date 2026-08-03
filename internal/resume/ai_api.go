@@ -19,16 +19,19 @@ func completeOpenAICompatible(ctx context.Context, apiKey, baseURL, model, promp
 		"Return only a single valid JSON object. No markdown.", prompt)
 }
 
-func completeAnthropic(ctx context.Context, apiKey, prompt string) (string, error) {
-	return completeAnthropicTokens(ctx, apiKey, prompt, 1500)
+func completeAnthropic(ctx context.Context, apiKey, model, prompt string) (string, error) {
+	return completeAnthropicTokens(ctx, apiKey, model, prompt, 1500)
 }
 
-func completeAnthropicTokens(ctx context.Context, apiKey, prompt string, maxTokens int) (string, error) {
+func completeAnthropicTokens(ctx context.Context, apiKey, model, prompt string, maxTokens int) (string, error) {
 	if maxTokens < 1 {
 		maxTokens = 1500
 	}
+	if model == "" {
+		model = defaultClaudeModel
+	}
 	payload, _ := json.Marshal(map[string]any{
-		"model":      "claude-3-5-haiku-latest",
+		"model":      model,
 		"max_tokens": maxTokens,
 		"messages": []map[string]string{
 			{"role": "user", "content": prompt},
@@ -85,7 +88,7 @@ func completeFull(ctx context.Context, ai AIOptions, system, user string, maxTok
 	switch strings.ToLower(ai.Provider) {
 	case "api":
 		if ai.AnthropicKey != "" {
-			return completeSplitAnthropic(ctx, ai.AnthropicKey, system, user, maxTokens)
+			return completeSplitAnthropic(ctx, ai.AnthropicKey, ai.AnthropicModel, system, user, maxTokens)
 		}
 		if p, ok := aiprovider.Select(aiAPIKeys(ai)); ok {
 			return completeOpenAICompatibleSplit(ctx, p.APIKey, p.BaseURL, p.Model, system, user)
@@ -100,12 +103,19 @@ func completeFull(ctx context.Context, ai AIOptions, system, user string, maxTok
 	}
 }
 
-func completeSplitAnthropic(ctx context.Context, apiKey, system, user string, maxTokens int) (string, error) {
+// defaultClaudeModel is the fallback Anthropic model when no override is set —
+// the same "cheap, fast" budget the other providers use.
+const defaultClaudeModel = "claude-3-5-haiku-latest"
+
+func completeSplitAnthropic(ctx context.Context, apiKey, model, system, user string, maxTokens int) (string, error) {
 	if maxTokens < 1 {
 		maxTokens = 4096
 	}
+	if model == "" {
+		model = defaultClaudeModel
+	}
 	payload, _ := json.Marshal(map[string]any{
-		"model":      "claude-3-5-haiku-latest",
+		"model":      model,
 		"max_tokens": maxTokens,
 		"system":     system,
 		"messages": []map[string]string{
@@ -151,9 +161,10 @@ func completeSplitAnthropic(ctx context.Context, apiKey, system, user string, ma
 
 // aiAPIKeys maps the AIOptions credential fields onto the aiprovider.Keys
 // shape so the shared provider registry can select the active OpenAI-compatible
-// endpoint. Anthropic is handled separately (native message format).
+// endpoint. Anthropic is handled separately (native message format). Per-provider
+// model overrides are carried in Models so Select can apply them.
 func aiAPIKeys(ai AIOptions) aiprovider.Keys {
-	return aiprovider.Keys{
+	k := aiprovider.Keys{
 		OpenAI:     ai.OpenAIKey,
 		Google:     ai.GoogleKey,
 		DeepSeek:   ai.DeepSeekKey,
@@ -163,6 +174,20 @@ func aiAPIKeys(ai AIOptions) aiprovider.Keys {
 		OpenRouter: ai.OpenRouterKey,
 		XAI:        ai.XAIKey,
 	}
+	models := map[string]string{
+		"openai": ai.OpenAIModel, "google": ai.GoogleModel, "deepseek": ai.DeepSeekModel,
+		"groq": ai.GroqModel, "mistral": ai.MistralModel, "together": ai.TogetherModel,
+		"openrouter": ai.OpenRouterModel, "xai": ai.XAIModel,
+	}
+	for name, m := range models {
+		if m != "" {
+			if k.Models == nil {
+				k.Models = make(map[string]string)
+			}
+			k.Models[name] = m
+		}
+	}
+	return k
 }
 
 // completeOpenAICompatibleSplit posts a system+user chat-completions request to

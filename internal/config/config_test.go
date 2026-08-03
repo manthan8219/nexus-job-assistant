@@ -114,6 +114,7 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 		FirstName: "Grace", LastName: "Hopper", Email: "grace@navy.mil",
 		WorkType: "Remote", TargetLocations: "Remote",
 		AIAssist: true, AIProvider: "api", AnthropicKey: "sk-test", GoogleKey: "gem-test", GroqKey: "gq-test",
+		GoogleModel:  "gemini-2.5-pro",
 		ApplyConsent: true, MaxAppsPerRun: 7, MaxAppsPerDay: 20, ApplyDelaySec: 4,
 		DiscordWebhookURL: "https://discord.com/api/webhooks/z",
 	}
@@ -134,6 +135,9 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 	}
 	if got.GoogleKey != orig.GoogleKey || got.GroqKey != orig.GroqKey {
 		t.Errorf("new AI provider keys lost: %+v", got)
+	}
+	if got.GoogleModel != orig.GoogleModel {
+		t.Errorf("AI provider model overrides lost: %+v", got)
 	}
 	if got.ApplyConsent != orig.ApplyConsent || got.MaxAppsPerRun != orig.MaxAppsPerRun ||
 		got.MaxAppsPerDay != orig.MaxAppsPerDay || got.ApplyDelaySec != orig.ApplyDelaySec {

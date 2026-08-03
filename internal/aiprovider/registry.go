@@ -28,6 +28,10 @@ type Keys struct {
 	Together   string
 	OpenRouter string
 	XAI        string
+	// Models holds an optional per-provider model override keyed by provider
+	// name (e.g. "google" -> "gemini-2.5-flash"). An empty-or-missing entry
+	// keeps that provider's built-in default model.
+	Models map[string]string
 }
 
 // providers lists every OpenAI-compatible provider in precedence order: the
@@ -46,14 +50,29 @@ var providers = []Provider{
 	{Name: "xai", BaseURL: "https://api.x.ai/v1", Model: "grok-2-latest"},
 }
 
+// BaseURL returns the OpenAI-compatible base URL for the named provider, or ""
+// if the name is unknown. Used by the API to build /models requests.
+func BaseURL(name string) string {
+	for _, p := range providers {
+		if p.Name == name {
+			return p.BaseURL
+		}
+	}
+	return ""
+}
+
 // Select returns the first OpenAI-compatible provider (by precedence) whose
 // API key is set in k, with that key filled into the returned Provider. When
-// no key is set it returns ok=false.
+// no key is set it returns ok=false. A per-provider model override from
+// k.Models overrides the provider's built-in default model.
 func Select(k Keys) (Provider, bool) {
 	keys := []string{k.OpenAI, k.Google, k.DeepSeek, k.Groq, k.Mistral, k.Together, k.OpenRouter, k.XAI}
 	for i, p := range providers {
 		if keys[i] != "" {
 			p.APIKey = keys[i]
+			if m := k.Models[p.Name]; m != "" {
+				p.Model = m
+			}
 			return p, true
 		}
 	}

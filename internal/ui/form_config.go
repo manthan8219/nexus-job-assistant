@@ -134,6 +134,17 @@ func (m FormModel) saveCmd() tea.Cmd {
 			if len(cfg.Skills) == 0 {
 				cfg.Skills = cur.Skills
 			}
+			// Per-provider model overrides are chosen in the web UI / config.json,
+			// not the TUI form — carry them over so a TUI save never resets them.
+			cfg.AnthropicModel = cur.AnthropicModel
+			cfg.OpenAIModel = cur.OpenAIModel
+			cfg.GoogleModel = cur.GoogleModel
+			cfg.DeepSeekModel = cur.DeepSeekModel
+			cfg.GroqModel = cur.GroqModel
+			cfg.MistralModel = cur.MistralModel
+			cfg.TogetherModel = cur.TogetherModel
+			cfg.OpenRouterModel = cur.OpenRouterModel
+			cfg.XAIModel = cur.XAIModel
 		}
 		if err := config.Save(cfg); err != nil {
 			return ErrMsg{err}
