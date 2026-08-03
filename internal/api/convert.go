@@ -25,6 +25,13 @@ func configToNexusConfig(cfg *config.Config) *NexusConfig {
 		AIProvider:             cfg.AIProvider,
 		AnthropicKey:           cfg.AnthropicKey,
 		OpenAIKey:              cfg.OpenAIKey,
+		GoogleKey:              cfg.GoogleKey,
+		DeepSeekKey:            cfg.DeepSeekKey,
+		GroqKey:                cfg.GroqKey,
+		MistralKey:             cfg.MistralKey,
+		TogetherKey:            cfg.TogetherKey,
+		OpenRouterKey:          cfg.OpenRouterKey,
+		XAIKey:                 cfg.XAIKey,
 		LocalLLMURL:            cfg.LocalLLMURL,
 		LocalLLMModel:          cfg.LocalLLMModel,
 		ApplyConsent:           cfg.ApplyConsent,
@@ -87,6 +94,13 @@ func applyNexusConfig(cfg *config.Config, n *NexusConfig) {
 	cfg.AIProvider = n.AIProvider
 	cfg.AnthropicKey = n.AnthropicKey
 	cfg.OpenAIKey = n.OpenAIKey
+	cfg.GoogleKey = n.GoogleKey
+	cfg.DeepSeekKey = n.DeepSeekKey
+	cfg.GroqKey = n.GroqKey
+	cfg.MistralKey = n.MistralKey
+	cfg.TogetherKey = n.TogetherKey
+	cfg.OpenRouterKey = n.OpenRouterKey
+	cfg.XAIKey = n.XAIKey
 	cfg.LocalLLMURL = n.LocalLLMURL
 	cfg.LocalLLMModel = n.LocalLLMModel
 	cfg.ApplyConsent = n.ApplyConsent

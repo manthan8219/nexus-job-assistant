@@ -113,7 +113,7 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 	orig := &Config{
 		FirstName: "Grace", LastName: "Hopper", Email: "grace@navy.mil",
 		WorkType: "Remote", TargetLocations: "Remote",
-		AIAssist: true, AIProvider: "api", AnthropicKey: "sk-test",
+		AIAssist: true, AIProvider: "api", AnthropicKey: "sk-test", GoogleKey: "gem-test", GroqKey: "gq-test",
 		ApplyConsent: true, MaxAppsPerRun: 7, MaxAppsPerDay: 20, ApplyDelaySec: 4,
 		DiscordWebhookURL: "https://discord.com/api/webhooks/z",
 	}
@@ -131,6 +131,9 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 	}
 	if got.AIAssist != orig.AIAssist || got.AIProvider != orig.AIProvider || got.AnthropicKey != orig.AnthropicKey {
 		t.Errorf("AI fields lost: %+v", got)
+	}
+	if got.GoogleKey != orig.GoogleKey || got.GroqKey != orig.GroqKey {
+		t.Errorf("new AI provider keys lost: %+v", got)
 	}
 	if got.ApplyConsent != orig.ApplyConsent || got.MaxAppsPerRun != orig.MaxAppsPerRun ||
 		got.MaxAppsPerDay != orig.MaxAppsPerDay || got.ApplyDelaySec != orig.ApplyDelaySec {

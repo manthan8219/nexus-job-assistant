@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/aiprovider"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/localllm"
 )
@@ -38,12 +39,19 @@ type Profile struct {
 
 // AIOptions controls whether/how AI profile analysis runs.
 type AIOptions struct {
-	Enabled      bool
-	Provider     string // "local" | "api"
-	LocalURL     string
-	LocalModel   string
-	OpenAIKey    string
-	AnthropicKey string
+	Enabled       bool
+	Provider      string // "local" | "api"
+	LocalURL      string
+	LocalModel    string
+	AnthropicKey  string
+	OpenAIKey     string
+	GoogleKey     string
+	DeepSeekKey   string
+	GroqKey       string
+	MistralKey    string
+	TogetherKey   string
+	OpenRouterKey string
+	XAIKey        string
 }
 
 // AIOptionsFromConfig builds AIOptions from the persisted user config so
@@ -53,12 +61,19 @@ func AIOptionsFromConfig(cfg *config.Config) AIOptions {
 		return AIOptions{}
 	}
 	return AIOptions{
-		Enabled:      cfg.AIAssist,
-		Provider:     cfg.AIProvider,
-		LocalURL:     cfg.LocalLLMURL,
-		LocalModel:   cfg.LocalLLMModel,
-		OpenAIKey:    cfg.OpenAIKey,
-		AnthropicKey: cfg.AnthropicKey,
+		Enabled:       cfg.AIAssist,
+		Provider:      cfg.AIProvider,
+		LocalURL:      cfg.LocalLLMURL,
+		LocalModel:    cfg.LocalLLMModel,
+		AnthropicKey:  cfg.AnthropicKey,
+		OpenAIKey:     cfg.OpenAIKey,
+		GoogleKey:     cfg.GoogleKey,
+		DeepSeekKey:   cfg.DeepSeekKey,
+		GroqKey:       cfg.GroqKey,
+		MistralKey:    cfg.MistralKey,
+		TogetherKey:   cfg.TogetherKey,
+		OpenRouterKey: cfg.OpenRouterKey,
+		XAIKey:        cfg.XAIKey,
 	}
 }
 
@@ -164,10 +179,10 @@ func complete(ctx context.Context, ai AIOptions, prompt string) (string, error) 
 		if ai.AnthropicKey != "" {
 			return completeAnthropic(ctx, ai.AnthropicKey, prompt)
 		}
-		if ai.OpenAIKey != "" {
-			return completeOpenAI(ctx, ai.OpenAIKey, prompt)
+		if p, ok := aiprovider.Select(aiAPIKeys(ai)); ok {
+			return completeOpenAICompatible(ctx, p.APIKey, p.BaseURL, p.Model, prompt)
 		}
-		return "", fmt.Errorf("AI backend is API Keys but no Anthropic/OpenAI key is set")
+		return "", fmt.Errorf("AI backend is API Keys but no provider key is set")
 	default:
 		client := localllm.NewClient(ai.LocalURL)
 		if err := client.Ping(ctx); err != nil {

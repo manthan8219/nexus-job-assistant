@@ -318,7 +318,7 @@ func (m FormModel) renderAISectionHint() string {
 	if !m.aiAssist {
 		return "    " + mutedStyle.Render("Enable AI Assist to set up a local LLM or cloud API keys.") + "\n"
 	}
-	return "    " + mutedStyle.Render("Choose Local LLM (runs on this machine) or API Keys (Anthropic / OpenAI).") + "\n"
+	return "    " + mutedStyle.Render("Choose Local LLM (runs on this machine) or API Keys (Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, xAI).") + "\n"
 }
 
 // renderAIAssist renders the yes/no toggle for enabling AI improvements.

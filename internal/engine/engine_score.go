@@ -33,14 +33,7 @@ func (e *Engine) aiOptions() resume.AIOptions {
 	if e.cfg == nil {
 		return resume.AIOptions{}
 	}
-	return resume.AIOptions{
-		Enabled:      e.cfg.AIAssist,
-		Provider:     e.cfg.AIProvider,
-		LocalURL:     e.cfg.LocalLLMURL,
-		LocalModel:   e.cfg.LocalLLMModel,
-		OpenAIKey:    e.cfg.OpenAIKey,
-		AnthropicKey: e.cfg.AnthropicKey,
-	}
+	return resume.AIOptionsFromConfig(e.cfg)
 }
 
 // scoreJob runs one LLM fit call (caller must be sequential — processJob loop is).

@@ -75,7 +75,9 @@ func (m FormModel) renderField(i int, active bool) string {
 	case fMinSalary:
 		return m.renderSalary(active)
 
-	case fLinkedInKey, fIndeedKey, fAnthropicKey, fOpenAIKey:
+	case fLinkedInKey, fIndeedKey, fAnthropicKey, fOpenAIKey,
+		fGoogleKey, fDeepSeekKey, fGroqKey, fMistralKey,
+		fTogetherKey, fOpenRouterKey, fXAIKey:
 		return m.renderProviderKeyField(i, active)
 
 	case fDiscordWebhook:

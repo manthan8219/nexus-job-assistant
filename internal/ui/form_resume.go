@@ -290,12 +290,19 @@ func resumeAnalysisStartCmd(path string, gen int) tea.Cmd {
 // aiOptions builds the resume.AIOptions snapshot from current form state.
 func (m FormModel) aiOptions() resume.AIOptions {
 	return resume.AIOptions{
-		Enabled:      m.aiAssist,
-		Provider:     m.aiProviderValue(),
-		LocalURL:     m.inputs[fLocalLLMURL].Value(),
-		LocalModel:   m.inputs[fLocalLLMModel].Value(),
-		OpenAIKey:    m.inputs[fOpenAIKey].Value(),
-		AnthropicKey: m.inputs[fAnthropicKey].Value(),
+		Enabled:       m.aiAssist,
+		Provider:      m.aiProviderValue(),
+		LocalURL:      m.inputs[fLocalLLMURL].Value(),
+		LocalModel:    m.inputs[fLocalLLMModel].Value(),
+		AnthropicKey:  m.inputs[fAnthropicKey].Value(),
+		OpenAIKey:     m.inputs[fOpenAIKey].Value(),
+		GoogleKey:     m.inputs[fGoogleKey].Value(),
+		DeepSeekKey:   m.inputs[fDeepSeekKey].Value(),
+		GroqKey:       m.inputs[fGroqKey].Value(),
+		MistralKey:    m.inputs[fMistralKey].Value(),
+		TogetherKey:   m.inputs[fTogetherKey].Value(),
+		OpenRouterKey: m.inputs[fOpenRouterKey].Value(),
+		XAIKey:        m.inputs[fXAIKey].Value(),
 	}
 }
 

@@ -10,7 +10,7 @@ explicit consent and rate limits), and runs a full **recruiter outreach pipeline
 (find a contact → draft an email → send → follow up → detect replies) — all from
 one terminal dashboard.
 
-It works **fully offline-AI** (local Ollama) or with a remote LLM (OpenAI/Anthropic),
+It works **fully offline-AI** (local Ollama) or with a remote LLM (Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, or xAI),
 and keeps you safe: explicit apply consent, per-run/per-day caps, a delay between
 applications, idempotent "never apply twice" checks, and a hard CAPTCHA stop that
 hands control back to you.
@@ -60,8 +60,9 @@ hands control back to you.
   follow-up sequence, and detect replies from the inbox.
 - **Notifications** — Discord webhook and Telegram bot, fanned out in parallel;
   a single channel failure never blocks the others.
-- **Local or remote AI** — run everything on a local Ollama model, or use
-  OpenAI/Anthropic API keys. AI off or unreachable → core search/apply still works.
+- **Local or remote AI** — run everything on a local Ollama model, or use an
+  Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, or
+  xAI API key. AI off or unreachable → core search/apply still works.
 - **TUI dashboard** — one screen to configure everything, watch runs, browse
   history, manage companies, run outreach, and view diagnostics.
 
@@ -98,7 +99,8 @@ ui  →  engine  →  provider / store  →  textutil / geo
   ```
 - **Ollama** (optional) — to use a local LLM for fit-scoring, cover letters, and
   outreach drafting. Nexus detects your hardware and recommends a model.
-- **Remote LLM API key** (optional) — OpenAI or Anthropic, if you prefer API mode.
+- **Remote LLM API key** (optional) — Anthropic, OpenAI, Google Gemini, DeepSeek,
+  Groq, Mistral, Together AI, OpenRouter, or xAI, if you prefer API mode.
 
 ## Install / build
 
@@ -253,10 +255,12 @@ and merged per-region by the engine. Add a board by following
 |---|---|---|
 | **Off** | Nothing | Core search + apply still works (graceful degradation) |
 | **Local** | Ollama running locally | Fit-scoring, cover letters, answers, outreach drafts/reviews — fully private |
-| **API** | OpenAI **or** Anthropic key | Same features via a remote model |
+| **API** | One API key — Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, or xAI | Same features via a remote model (the first key set wins: Anthropic → OpenAI → Google → DeepSeek → Groq → Mistral → Together → OpenRouter → xAI) |
 
 Nexus uses the [`eino`](https://github.com/cloudwego/eino) agent framework. The
 local mode detects your hardware (CPU/RAM/GPU) and recommends a fitting model.
+Every remote provider (except Anthropic) is reached through its
+OpenAI-compatible chat-completions endpoint — no extra SDKs to install.
 
 ## Recruiter outreach
 
