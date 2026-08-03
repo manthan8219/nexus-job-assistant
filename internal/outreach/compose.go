@@ -81,14 +81,7 @@ func AIOptionsFromConfig(cfg *config.Config, modelOverride string) resume.AIOpti
 	if cfg == nil {
 		return resume.AIOptions{}
 	}
-	ai := resume.AIOptions{
-		Enabled:      cfg.AIAssist,
-		Provider:     cfg.AIProvider,
-		LocalURL:     cfg.LocalLLMURL,
-		LocalModel:   cfg.LocalLLMModel,
-		OpenAIKey:    cfg.OpenAIKey,
-		AnthropicKey: cfg.AnthropicKey,
-	}
+	ai := resume.AIOptionsFromConfig(cfg)
 	if strings.TrimSpace(modelOverride) != "" {
 		ai.LocalModel = strings.TrimSpace(modelOverride)
 	}

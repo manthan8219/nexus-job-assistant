@@ -155,7 +155,10 @@ func NewFormModel(cfg *config.Config, skipResumeCheck bool) FormModel {
 		linkedInKey, indeedKey,
 		"", // fAIAssist — custom widget
 		"", // fAIProvider — custom widget
-		cfg.AnthropicKey, cfg.OpenAIKey, cfg.LocalLLMURL, cfg.LocalLLMModel,
+		cfg.AnthropicKey, cfg.OpenAIKey,
+		cfg.GoogleKey, cfg.DeepSeekKey, cfg.GroqKey, cfg.MistralKey,
+		cfg.TogetherKey, cfg.OpenRouterKey, cfg.XAIKey,
+		cfg.LocalLLMURL, cfg.LocalLLMModel,
 		cfg.GmailAppPassword, cfg.HunterKey, cfg.ApolloKey, cfg.DiscordWebhookURL,
 		cfg.TelegramBotToken, cfg.TelegramChatID,
 	}
@@ -171,6 +174,8 @@ func NewFormModel(cfg *config.Config, skipResumeCheck bool) FormModel {
 			t.CharLimit = 100
 		}
 		if i == fLinkedInKey || i == fIndeedKey || i == fAnthropicKey || i == fOpenAIKey ||
+			i == fGoogleKey || i == fDeepSeekKey || i == fGroqKey || i == fMistralKey ||
+			i == fTogetherKey || i == fOpenRouterKey || i == fXAIKey ||
 			i == fGmailPassword || i == fHunterKey || i == fApolloKey || i == fDiscordWebhook ||
 			i == fTelegramBotToken {
 			t.EchoMode = textinput.EchoPassword

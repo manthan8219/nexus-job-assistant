@@ -118,14 +118,7 @@ func runHistoryEnrich(events chan<- historyEnrichDoneOrProgress, st *store.Store
 	ai := resume.AIOptions{}
 	resumeText := ""
 	if cfg != nil {
-		ai = resume.AIOptions{
-			Enabled:      cfg.AIAssist,
-			Provider:     cfg.AIProvider,
-			LocalURL:     cfg.LocalLLMURL,
-			LocalModel:   cfg.LocalLLMModel,
-			OpenAIKey:    cfg.OpenAIKey,
-			AnthropicKey: cfg.AnthropicKey,
-		}
+		ai = resume.AIOptionsFromConfig(cfg)
 		if ai.Enabled && strings.TrimSpace(cfg.ResumePath) != "" {
 			if text, err := resume.ExtractText(cfg.ResumePath); err == nil {
 				resumeText = text

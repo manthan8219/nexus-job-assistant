@@ -136,14 +136,7 @@ func main() {
 // answerQuestions answers the form's custom questions with the configured AI
 // when available, falling back to profile/heuristic auto-answers otherwise.
 func answerQuestions(ctx context.Context, cfg *config.Config, form *greenhouse.FormInfo) []greenhouse.Answer {
-	ai := resume.AIOptions{
-		Enabled:      cfg.AIAssist,
-		Provider:     cfg.AIProvider,
-		LocalURL:     cfg.LocalLLMURL,
-		LocalModel:   cfg.LocalLLMModel,
-		OpenAIKey:    cfg.OpenAIKey,
-		AnthropicKey: cfg.AnthropicKey,
-	}
+	ai := resume.AIOptionsFromConfig(cfg)
 	if !ai.Enabled {
 		fmt.Println("AI Assist is off — using profile/heuristic answers (enable AI Assist for full answers).")
 		profile := provider.Profile{
@@ -243,14 +236,7 @@ func needsCoverLetter(form *greenhouse.FormInfo) bool {
 // configured AI (sent as cover_letter_text, the form's "Enter manually" path).
 // Returns "" when AI is unavailable or extraction fails.
 func generateCoverLetter(ctx context.Context, cfg *config.Config, form *greenhouse.FormInfo) string {
-	ai := resume.AIOptions{
-		Enabled:      cfg.AIAssist,
-		Provider:     cfg.AIProvider,
-		LocalURL:     cfg.LocalLLMURL,
-		LocalModel:   cfg.LocalLLMModel,
-		OpenAIKey:    cfg.OpenAIKey,
-		AnthropicKey: cfg.AnthropicKey,
-	}
+	ai := resume.AIOptionsFromConfig(cfg)
 	if !ai.Enabled {
 		return ""
 	}

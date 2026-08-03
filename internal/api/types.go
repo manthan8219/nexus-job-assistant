@@ -24,6 +24,13 @@ type NexusConfig struct {
 	AIProvider             string            `json:"aiProvider"`
 	AnthropicKey           string            `json:"anthropicKey,omitempty"`
 	OpenAIKey              string            `json:"openAIKey,omitempty"`
+	GoogleKey              string            `json:"googleKey,omitempty"`
+	DeepSeekKey            string            `json:"deepSeekKey,omitempty"`
+	GroqKey                string            `json:"groqKey,omitempty"`
+	MistralKey             string            `json:"mistralKey,omitempty"`
+	TogetherKey            string            `json:"togetherKey,omitempty"`
+	OpenRouterKey          string            `json:"openRouterKey,omitempty"`
+	XAIKey                 string            `json:"xaiKey,omitempty"`
 	LocalLLMURL            string            `json:"localLLMURL,omitempty"`
 	LocalLLMModel          string            `json:"localLLMModel,omitempty"`
 	ApplyConsent           bool              `json:"applyConsent"`

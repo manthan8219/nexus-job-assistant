@@ -35,10 +35,24 @@ type Config struct {
 	// AI
 	// AIAssist enables AI-powered improvements (cover letters, answers, matching, etc.).
 	AIAssist bool `json:"ai_assist,omitempty"`
-	// AIProvider is "local" (Ollama etc.) or "api" (Anthropic/OpenAI). Empty when AIAssist is off.
-	AIProvider    string `json:"ai_provider,omitempty"`
-	AnthropicKey  string `json:"anthropic_key,omitempty"`
-	OpenAIKey     string `json:"openai_key,omitempty"`
+	// AIProvider is "local" (Ollama etc.) or "api" (cloud keys). Empty when AIAssist is off.
+	AIProvider   string `json:"ai_provider,omitempty"`
+	AnthropicKey string `json:"anthropic_key,omitempty"`
+	OpenAIKey    string `json:"openai_key,omitempty"`
+	// GoogleKey activates Google Gemini via its OpenAI-compatible endpoint.
+	GoogleKey string `json:"google_key,omitempty"`
+	// DeepSeekKey activates DeepSeek via its OpenAI-compatible API.
+	DeepSeekKey string `json:"deepseek_key,omitempty"`
+	// GroqKey activates Groq (fast open-model inference) via its OpenAI-compatible API.
+	GroqKey string `json:"groq_key,omitempty"`
+	// MistralKey activates Mistral AI via its OpenAI-compatible API.
+	MistralKey string `json:"mistral_key,omitempty"`
+	// TogetherKey activates Together AI via its OpenAI-compatible API.
+	TogetherKey string `json:"together_key,omitempty"`
+	// OpenRouterKey activates OpenRouter (a unified model gateway) via its OpenAI-compatible API.
+	OpenRouterKey string `json:"openrouter_key,omitempty"`
+	// XAIKey activates xAI (Grok) via its OpenAI-compatible API.
+	XAIKey        string `json:"xai_key,omitempty"`
 	LocalLLMURL   string `json:"local_llm_url,omitempty"`
 	LocalLLMModel string `json:"local_llm_model,omitempty"`
 

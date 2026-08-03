@@ -64,14 +64,7 @@ func main() {
 		return
 	}
 
-	ai := resume.AIOptions{
-		Enabled:      cfg.AIAssist,
-		Provider:     cfg.AIProvider,
-		LocalURL:     cfg.LocalLLMURL,
-		LocalModel:   cfg.LocalLLMModel,
-		OpenAIKey:    cfg.OpenAIKey,
-		AnthropicKey: cfg.AnthropicKey,
-	}
+	ai := resume.AIOptionsFromConfig(cfg)
 	if !ai.Enabled {
 		fail(fmt.Errorf("AI Assist is off in config — enable it to answer custom questions"))
 	}

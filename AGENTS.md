@@ -15,7 +15,7 @@
 - **Storage:** SQLite via `modernc.org/sqlite` (data in `~/.nexus/`)
 - **Browser automation:** `playwright-go` (form filling / applying)
 - **Docs:** `ledongthuc/pdf` (read), `phpdave11/gofpdf` (write) for resumes
-- **AI/LLM:** `cloudwego/eino` agent framework over a local model (Ollama, `internal/localllm`) or a remote API (OpenAI/Anthropic) — selected per-user via `AIMode` (`off | api | local`) in config
+- **AI/LLM:** `cloudwego/eino` agent framework over a local model (Ollama, `internal/localllm`) or a remote OpenAI-compatible API (Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, xAI) — selected per-user via `AIMode` (`off | api | local`) in config
 - **Entry point:** `main.go` at repo root (flags → TUI dashboard or headless `--run` engine)
 
 ### Repository layout

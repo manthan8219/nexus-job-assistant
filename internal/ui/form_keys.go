@@ -199,7 +199,8 @@ func (m FormModel) fieldVisible(f int) bool {
 	switch f {
 	case fAIProvider:
 		return m.aiAssist
-	case fAnthropicKey, fOpenAIKey:
+	case fAnthropicKey, fOpenAIKey, fGoogleKey, fDeepSeekKey, fGroqKey, fMistralKey,
+		fTogetherKey, fOpenRouterKey, fXAIKey:
 		return m.aiAssist && m.aiProvider == "api"
 	case fLocalLLMURL, fLocalLLMModel:
 		return m.aiAssist && m.aiProvider == "local"
@@ -245,6 +246,8 @@ func maskDots(n int) string {
 // isMaskedField reports whether f holds a secret that should be echoed as dots.
 func isMaskedField(f int) bool {
 	return f == fLinkedInKey || f == fIndeedKey || f == fAnthropicKey || f == fOpenAIKey ||
+		f == fGoogleKey || f == fDeepSeekKey || f == fGroqKey || f == fMistralKey ||
+		f == fTogetherKey || f == fOpenRouterKey || f == fXAIKey ||
 		f == fGmailPassword || f == fHunterKey || f == fApolloKey ||
 		f == fDiscordWebhook || f == fTelegramBotToken
 }

@@ -33,6 +33,13 @@ const (
 	fAIProvider       // AI — local LLM vs cloud API keys
 	fAnthropicKey     // AI — Claude
 	fOpenAIKey        // AI — OpenAI
+	fGoogleKey        // AI — Google Gemini (OpenAI-compatible)
+	fDeepSeekKey      // AI — DeepSeek (OpenAI-compatible)
+	fGroqKey          // AI — Groq (OpenAI-compatible)
+	fMistralKey       // AI — Mistral (OpenAI-compatible)
+	fTogetherKey      // AI — Together AI (OpenAI-compatible)
+	fOpenRouterKey    // AI — OpenRouter (OpenAI-compatible)
+	fXAIKey           // AI — xAI Grok (OpenAI-compatible)
 	fLocalLLMURL      // AI — local LLM endpoint
 	fLocalLLMModel    // AI — local LLM model name
 	fGmailPassword    // Outreach — Gmail app password (SMTP)
@@ -76,6 +83,13 @@ var fieldLabels = [fieldCount]string{
 	"AI Backend",
 	"Anthropic API Key",
 	"OpenAI API Key",
+	"Google API Key",
+	"DeepSeek API Key",
+	"Groq API Key",
+	"Mistral API Key",
+	"Together API Key",
+	"OpenRouter API Key",
+	"xAI API Key",
 	"Local LLM URL",
 	"Local Model",
 	"Gmail App Password",
@@ -112,6 +126,13 @@ var fieldPlaceholders = [fieldCount]string{
 	"",                           // AI Backend — custom local/api
 	"sk-ant-...",                 // Anthropic API key
 	"sk-...",                     // OpenAI API key
+	"AIza...",                    // Google API key (Gemini)
+	"sk-...",                     // DeepSeek API key
+	"gsk_...",                    // Groq API key
+	"...",                        // Mistral API key
+	"...",                        // Together API key
+	"sk-or-...",                  // OpenRouter API key
+	"xai-...",                    // xAI API key
 	"http://localhost:11434",     // Local LLM URL
 	"llama3",                     // Local LLM model name
 	"xxxx xxxx xxxx xxxx",        // Gmail app password (16-char)
