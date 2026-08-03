@@ -40,9 +40,13 @@ func NewChatModel(ctx context.Context, cfg *config.Config) (model.BaseChatModel,
 	switch strings.ToLower(cfg.AIProvider) {
 	case "api":
 		if cfg.AnthropicKey != "" {
+			claudeModel := defaultClaudeModel
+			if cfg.AnthropicModel != "" {
+				claudeModel = cfg.AnthropicModel
+			}
 			return claude.NewChatModel(ctx, &claude.Config{
 				APIKey:    cfg.AnthropicKey,
-				Model:     defaultClaudeModel,
+				Model:     claudeModel,
 				MaxTokens: defaultMaxTokens,
 			})
 		}
@@ -55,6 +59,16 @@ func NewChatModel(ctx context.Context, cfg *config.Config) (model.BaseChatModel,
 			Together:   cfg.TogetherKey,
 			OpenRouter: cfg.OpenRouterKey,
 			XAI:        cfg.XAIKey,
+			Models: map[string]string{
+				"openai":     cfg.OpenAIModel,
+				"google":     cfg.GoogleModel,
+				"deepseek":   cfg.DeepSeekModel,
+				"groq":       cfg.GroqModel,
+				"mistral":    cfg.MistralModel,
+				"together":   cfg.TogetherModel,
+				"openrouter": cfg.OpenRouterModel,
+				"xai":        cfg.XAIModel,
+			},
 		}); ok {
 			maxTokens := defaultMaxTokens
 			return openai.NewChatModel(ctx, &openai.ChatModelConfig{

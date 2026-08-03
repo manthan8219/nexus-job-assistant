@@ -24,7 +24,7 @@ func TestSelect(t *testing.T) {
 		{
 			"google selected when openai empty",
 			Keys{Google: "gem-key", Groq: "gq"},
-			Provider{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.0-flash", APIKey: "gem-key"},
+			Provider{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.5-flash", APIKey: "gem-key"},
 			true,
 		},
 		{
@@ -67,6 +67,18 @@ func TestSelect(t *testing.T) {
 			"first non-empty key in precedence wins",
 			Keys{OpenAI: "sk-openai", Google: "gem"},
 			Provider{Name: "openai", BaseURL: "https://api.openai.com/v1", Model: "gpt-4o-mini", APIKey: "sk-openai"},
+			true,
+		},
+		{
+			"per-provider model override wins over default",
+			Keys{Google: "gem-key", Models: map[string]string{"google": "gemini-2.5-pro"}},
+			Provider{Name: "google", BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", Model: "gemini-2.5-pro", APIKey: "gem-key"},
+			true,
+		},
+		{
+			"override for a non-selected provider is ignored",
+			Keys{OpenAI: "sk-o", Models: map[string]string{"google": "irrelevant"}},
+			Provider{Name: "openai", BaseURL: "https://api.openai.com/v1", Model: "gpt-4o-mini", APIKey: "sk-o"},
 			true,
 		},
 	}

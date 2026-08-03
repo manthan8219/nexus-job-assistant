@@ -41,10 +41,14 @@ func TestLoadFromInvalidJSONFails(t *testing.T) {
 	}
 }
 
-// Save writes into $HOME/.nexus/config.json — pointing HOME at a temp dir
-// keeps the test hermetic.
+// Save writes into $HOME/.nexus/config.json — pointing HOME (and NEXUS_HOME,
+// which nexusdir.Home() prefers and which is required on Windows where Go's
+// os.UserHomeDir reads USERPROFILE, not $HOME) at a temp dir keeps the test
+// hermetic and never touches the real ~/.nexus config.
 func TestSaveWritesConfigToHomeDir(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("NEXUS_HOME", filepath.Join(home, ".nexus"))
 	cfg := &Config{Email: "ada@example.com", ApplyConsent: true}
 	if err := Save(cfg); err != nil {
 		t.Fatalf("Save: %v", err)

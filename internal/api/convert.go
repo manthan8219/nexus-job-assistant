@@ -32,6 +32,15 @@ func configToNexusConfig(cfg *config.Config) *NexusConfig {
 		TogetherKey:            cfg.TogetherKey,
 		OpenRouterKey:          cfg.OpenRouterKey,
 		XAIKey:                 cfg.XAIKey,
+		AnthropicModel:         cfg.AnthropicModel,
+		OpenAIModel:            cfg.OpenAIModel,
+		GoogleModel:            cfg.GoogleModel,
+		DeepSeekModel:          cfg.DeepSeekModel,
+		GroqModel:              cfg.GroqModel,
+		MistralModel:           cfg.MistralModel,
+		TogetherModel:          cfg.TogetherModel,
+		OpenRouterModel:        cfg.OpenRouterModel,
+		XAIModel:               cfg.XAIModel,
 		LocalLLMURL:            cfg.LocalLLMURL,
 		LocalLLMModel:          cfg.LocalLLMModel,
 		ApplyConsent:           cfg.ApplyConsent,
@@ -101,6 +110,15 @@ func applyNexusConfig(cfg *config.Config, n *NexusConfig) {
 	cfg.TogetherKey = n.TogetherKey
 	cfg.OpenRouterKey = n.OpenRouterKey
 	cfg.XAIKey = n.XAIKey
+	cfg.AnthropicModel = n.AnthropicModel
+	cfg.OpenAIModel = n.OpenAIModel
+	cfg.GoogleModel = n.GoogleModel
+	cfg.DeepSeekModel = n.DeepSeekModel
+	cfg.GroqModel = n.GroqModel
+	cfg.MistralModel = n.MistralModel
+	cfg.TogetherModel = n.TogetherModel
+	cfg.OpenRouterModel = n.OpenRouterModel
+	cfg.XAIModel = n.XAIModel
 	cfg.LocalLLMURL = n.LocalLLMURL
 	cfg.LocalLLMModel = n.LocalLLMModel
 	cfg.ApplyConsent = n.ApplyConsent

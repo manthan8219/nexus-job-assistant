@@ -52,6 +52,16 @@ type AIOptions struct {
 	TogetherKey   string
 	OpenRouterKey string
 	XAIKey        string
+	// Per-provider model overrides; empty = provider default (internal/aiprovider).
+	AnthropicModel  string
+	OpenAIModel     string
+	GoogleModel     string
+	DeepSeekModel   string
+	GroqModel       string
+	MistralModel    string
+	TogetherModel   string
+	OpenRouterModel string
+	XAIModel        string
 }
 
 // AIOptionsFromConfig builds AIOptions from the persisted user config so
@@ -61,19 +71,28 @@ func AIOptionsFromConfig(cfg *config.Config) AIOptions {
 		return AIOptions{}
 	}
 	return AIOptions{
-		Enabled:       cfg.AIAssist,
-		Provider:      cfg.AIProvider,
-		LocalURL:      cfg.LocalLLMURL,
-		LocalModel:    cfg.LocalLLMModel,
-		AnthropicKey:  cfg.AnthropicKey,
-		OpenAIKey:     cfg.OpenAIKey,
-		GoogleKey:     cfg.GoogleKey,
-		DeepSeekKey:   cfg.DeepSeekKey,
-		GroqKey:       cfg.GroqKey,
-		MistralKey:    cfg.MistralKey,
-		TogetherKey:   cfg.TogetherKey,
-		OpenRouterKey: cfg.OpenRouterKey,
-		XAIKey:        cfg.XAIKey,
+		Enabled:         cfg.AIAssist,
+		Provider:        cfg.AIProvider,
+		LocalURL:        cfg.LocalLLMURL,
+		LocalModel:      cfg.LocalLLMModel,
+		AnthropicKey:    cfg.AnthropicKey,
+		OpenAIKey:       cfg.OpenAIKey,
+		GoogleKey:       cfg.GoogleKey,
+		DeepSeekKey:     cfg.DeepSeekKey,
+		GroqKey:         cfg.GroqKey,
+		MistralKey:      cfg.MistralKey,
+		TogetherKey:     cfg.TogetherKey,
+		OpenRouterKey:   cfg.OpenRouterKey,
+		XAIKey:          cfg.XAIKey,
+		AnthropicModel:  cfg.AnthropicModel,
+		OpenAIModel:     cfg.OpenAIModel,
+		GoogleModel:     cfg.GoogleModel,
+		DeepSeekModel:   cfg.DeepSeekModel,
+		GroqModel:       cfg.GroqModel,
+		MistralModel:    cfg.MistralModel,
+		TogetherModel:   cfg.TogetherModel,
+		OpenRouterModel: cfg.OpenRouterModel,
+		XAIModel:        cfg.XAIModel,
 	}
 }
 
@@ -177,7 +196,7 @@ func complete(ctx context.Context, ai AIOptions, prompt string) (string, error) 
 	switch strings.ToLower(ai.Provider) {
 	case "api":
 		if ai.AnthropicKey != "" {
-			return completeAnthropic(ctx, ai.AnthropicKey, prompt)
+			return completeAnthropic(ctx, ai.AnthropicKey, ai.AnthropicModel, prompt)
 		}
 		if p, ok := aiprovider.Select(aiAPIKeys(ai)); ok {
 			return completeOpenAICompatible(ctx, p.APIKey, p.BaseURL, p.Model, prompt)

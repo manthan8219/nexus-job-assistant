@@ -4,16 +4,27 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
+// isolateNexusHome points both HOME and NEXUS_HOME at a temp dir. NEXUS_HOME is
+// required on Windows, where Go's os.UserHomeDir reads USERPROFILE and ignores
+// $HOME — without it these tests would write the REAL ~/.nexus config.json.
+func isolateNexusHome(t *testing.T) {
+	t.Helper()
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("NEXUS_HOME", filepath.Join(home, ".nexus"))
+}
+
 // handleGetOutreachSetup/handlePutOutreachSetup round-trip the referral-ask
 // variant knobs (KAN-28) alongside the existing outreach settings.
 func TestOutreachSetupReferralRoundTrip(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	isolateNexusHome(t)
 	srv := &Server{cfg: &config.Config{}}
 
 	// PUT enables the referral-ask variant with custom templates.
@@ -71,7 +82,7 @@ func TestOutreachSetupReferralRoundTrip(t *testing.T) {
 }
 
 func TestOutreachSetupReferralDefaultsOff(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	isolateNexusHome(t)
 	srv := &Server{cfg: &config.Config{}}
 
 	get := httptest.NewRequest(http.MethodGet, "/api/outreach/setup", nil)

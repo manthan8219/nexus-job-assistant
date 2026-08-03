@@ -56,6 +56,19 @@ type Config struct {
 	LocalLLMURL   string `json:"local_llm_url,omitempty"`
 	LocalLLMModel string `json:"local_llm_model,omitempty"`
 
+	// Per-provider model overrides. When empty the provider's default model
+	// (internal/aiprovider) is used, e.g. gemini-2.5-flash for Google. Set via
+	// the TUI / web UI to pick a specific model from the provider's catalog.
+	AnthropicModel  string `json:"anthropic_model,omitempty"`
+	OpenAIModel     string `json:"openai_model,omitempty"`
+	GoogleModel     string `json:"google_model,omitempty"`
+	DeepSeekModel   string `json:"deepseek_model,omitempty"`
+	GroqModel       string `json:"groq_model,omitempty"`
+	MistralModel    string `json:"mistral_model,omitempty"`
+	TogetherModel   string `json:"together_model,omitempty"`
+	OpenRouterModel string `json:"openrouter_model,omitempty"`
+	XAIModel        string `json:"xai_model,omitempty"`
+
 	// Notifications
 	// NotifyChannels lists which channels receive job-apply notifications.
 	// Channel IDs from notifier.Available(). Empty = all configured channels fire.
