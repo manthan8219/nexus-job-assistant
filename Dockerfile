@@ -1,4 +1,4 @@
-# Nexus API backend — image for Render (or any Docker host).
+# Nexus API backend — image for Render, Koyeb, or any Docker host.
 #
 # Notes:
 #  - All data files (companies.json, cities index, …) are go:embedded, so
@@ -6,8 +6,9 @@
 #  - Playwright browsers for real auto-apply are NOT installed; search,
 #    queue, dry-run, and the full API work without them. To enable real
 #    applies later, run `cmd/pwinstall` in a browser-capable base image.
-#  - Runs `nexus --api` and honors the PORT env var Render injects.
-#  - Runs as root so a Render persistent disk mounted at NEXUS_HOME is
+#  - Runs `nexus --api` and honors the PORT env var injected by the
+#    platform (Render, Koyeb, …).
+#  - Runs as root so a platform persistent disk mounted at NEXUS_HOME is
 #    always writable.
 
 FROM golang:1.26-alpine AS build
@@ -29,5 +30,3 @@ COPY --from=build /out/nexus /usr/local/bin/nexus
 ENV NEXUS_HOME=/var/lib/nexus
 EXPOSE 8080
 CMD ["nexus", "--api"]
-
-CMD ["--api", "--api-port", "8080"]
