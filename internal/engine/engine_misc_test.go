@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
@@ -89,6 +90,34 @@ func TestNotifierFromConfig(t *testing.T) {
 	if len(withDiscord) == 0 {
 		t.Error("discord webhook config must produce a channel")
 	}
+
+	// Email must be wired through the engine notifier so a run-complete /
+	// daily digest reaches the inbox (not just Discord/Telegram).
+	withEmail := notifierFromCfg(&config.Config{
+		Email:              "me@gmail.com",
+		GmailAppPassword:   "app-pass",
+		EmailNotifications: true,
+	})
+	if !notifierChannelPresent(withEmail, "email") {
+		t.Errorf("email config must produce the email channel; got %v", notifierNames(withEmail))
+	}
+}
+
+func notifierChannelPresent(mn notifier.MultiNotifier, name string) bool {
+	for _, n := range mn {
+		if n.Name() == name {
+			return true
+		}
+	}
+	return false
+}
+
+func notifierNames(mn notifier.MultiNotifier) []string {
+	var out []string
+	for _, n := range mn {
+		out = append(out, n.Name())
+	}
+	return out
 }
 
 func TestRebuildNotifier(t *testing.T) {

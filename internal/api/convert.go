@@ -78,6 +78,7 @@ func configToNexusConfig(cfg *config.Config) *NexusConfig {
 		DailyRunEnabled:        cfg.DailyRunEnabled,
 		DailyRunAt:             cfg.DailyRunAt,
 		EmailNotifications:     cfg.EmailNotifications,
+		EmailPerJob:            cfg.EmailPerJob,
 		InboxScanDays:          cfg.InboxScanDays,
 		InboxScanMax:           cfg.InboxScanMax,
 		InboxScanMinutes:       cfg.InboxScanMinutes,
@@ -159,6 +160,7 @@ func applyNexusConfig(cfg *config.Config, n *NexusConfig) {
 	cfg.DailyRunEnabled = n.DailyRunEnabled
 	cfg.DailyRunAt = n.DailyRunAt
 	cfg.EmailNotifications = n.EmailNotifications
+	cfg.EmailPerJob = n.EmailPerJob
 	cfg.InboxScanDays = n.InboxScanDays
 	cfg.InboxScanMax = n.InboxScanMax
 	cfg.InboxScanMinutes = n.InboxScanMinutes

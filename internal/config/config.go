@@ -213,6 +213,9 @@ type Config struct {
 	// EmailNotifications opts into email run summaries (needs Email +
 	// GmailAppPassword; delivered by the email notifier channel).
 	EmailNotifications bool `json:"email_notifications,omitempty"`
+	// EmailPerJob opts into one email per applied/failed job in addition to
+	// the consolidated run digest. Off by default.
+	EmailPerJob bool `json:"email_per_job,omitempty"`
 }
 
 func Dir() (string, error) {

@@ -41,6 +41,12 @@ type Event struct {
 	Company  string
 	Location string
 	Provider string
+	// Board is the job board / ATS slug (e.g. "greenhouse", "reed").
+	Board string
+	// JobURL is the canonical apply URL for the posting.
+	JobURL string
+	// PostedAt is the posting date, when the provider reports one.
+	PostedAt time.Time
 	Status   string // "applied", "failed", "skipped"
 	Reason   string // failure / skip reason
 
@@ -48,8 +54,19 @@ type Event struct {
 	TotalApplied int
 	TotalFailed  int
 	TotalSkipped int
-	RunDuration  time.Duration
-	Errors       []string
+	// Found is the number of unique jobs the search surfaced this run
+	// ("jobs scraped today" in the daily digest).
+	Found       int
+	RunDuration time.Duration
+	Errors      []string
+	// DryRun is true when the run was a safe dry run (nothing was submitted).
+	// Scanned is the number of jobs the dry run processed.
+	DryRun  bool
+	Scanned int
+	// Jobs lists individual job outcomes for a run digest (run_complete /
+	// daily summary). Populated by the engine; the email channel renders
+	// them as one consolidated list instead of one email per job.
+	Jobs []JobEvent
 
 	// ── CAPTCHA ──
 	CAPTCHAURL string
@@ -62,6 +79,15 @@ type Event struct {
 	Title   string
 	Message string
 	Fields  map[string]string
+}
+
+// JobEvent is one job outcome inside a run digest.
+type JobEvent struct {
+	Title   string
+	Company string
+	URL     string
+	Status  string // "found" | "applied" | "failed" | "skipped" | "queued" | "dry-run"
+	Reason  string
 }
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
@@ -104,6 +130,10 @@ type NotifyConfig struct {
 	Email              string
 	GmailAppPassword   string
 	EmailNotifications bool
+	// EmailPerJob opts into one email per applied/failed job in addition to
+	// the consolidated run digest. Off by default (a run produces one digest
+	// email instead of one per job).
+	EmailPerJob bool
 	// EnabledChannels is the user-selected list of channels to use.
 	// Empty means all channels with valid credentials are active.
 	EnabledChannels []string
