@@ -151,9 +151,7 @@ def _scrape_crawl4ai(req: ScrapeRequest) -> list[JobResult]:
 # ── Backend: Playwright (rule-based, no LLM) ──────────────────────────────────
 
 def _scrape_playwright(req: ScrapeRequest) -> list[JobResult]:
-    import re
     from playwright.sync_api import sync_playwright
-    from bs4 import BeautifulSoup
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -161,6 +159,15 @@ def _scrape_playwright(req: ScrapeRequest) -> list[JobResult]:
         page.goto(req.url, wait_until="networkidle", timeout=30000)
         html = page.content()
         browser.close()
+
+    return _extract_jobs_from_html(html, req.company, req.url)
+
+# _extract_jobs_from_html parses rendered HTML for job-like anchor links.
+# Reused by the headless Playwright backend and the CDP (logged-in) board
+# scraper so both share one extraction implementation.
+def _extract_jobs_from_html(html: str, company: str, base_url: str) -> list[JobResult]:
+    import re
+    from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(html, "html.parser")
     seen, jobs = set(), []
@@ -179,7 +186,7 @@ def _scrape_playwright(req: ScrapeRequest) -> list[JobResult]:
         if text.lower() in {"careers", "jobs", "open positions", "apply", "learn more"}:
             continue
         seen.add(href)
-        full_url = href if href.startswith("http") else req.url.rstrip("/") + "/" + href.lstrip("/")
+        full_url = href if href.startswith("http") else base_url.rstrip("/") + "/" + href.lstrip("/")
         # Extract location: last word-group after known location signals
         location = ""
         loc_match = re.search(r"(North America|Europe|Remote|Worldwide|London|New York|San Francisco|Global)", text, re.IGNORECASE)
@@ -188,7 +195,7 @@ def _scrape_playwright(req: ScrapeRequest) -> list[JobResult]:
             # Remove location from title
             text = text[:loc_match.start()].strip().rstrip(",").strip()
         remote = "remote" in text.lower() or "remote" in location.lower()
-        jobs.append(JobResult(title=text, company=req.company,
+        jobs.append(JobResult(title=text, company=company,
                               location=location, department="",
                               apply_url=full_url, remote=remote))
     return jobs
@@ -235,6 +242,70 @@ def scrape_batch(req: BatchScrapeRequest):
     if len(req.targets) > 20:
         raise HTTPException(status_code=400, detail="Max 20 targets per batch")
     return BatchScrapeResponse(results=[_scrape_one(t) for t in req.targets])
+
+# ── Board scraper (job boards: headless or logged-in via CDP) ──────────────────
+
+class BoardScrapeRequest(BaseModel):
+    url: str
+    company: str = ""
+    title_keywords: list[str] = []
+    # use_session=True connects to the user's already-running Chrome over CDP
+    # (launched with --remote-debugging-port=9222) so login-gated boards
+    # (Instahyre, Foundit, etc.) are scraped with the user's live session.
+    use_session: bool = False
+
+@app.post("/scrape/board", response_model=ScrapeResponse)
+def scrape_board(req: BoardScrapeRequest):
+    log.info(f"[board] {'session' if req.use_session else 'headless'} → {req.url}")
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        return ScrapeResponse(company=req.company, url=req.url, jobs=[],
+                              backend="playwright",
+                              error="playwright not installed — install via Settings › Career Scraper")
+    try:
+        with sync_playwright() as p:
+            if req.use_session:
+                # Connect to the user's live Chrome (must be started with
+                # --remote-debugging-port=9222). Reuses the logged-in context.
+                try:
+                    browser = p.chromium.connect_over_cdp("http://localhost:9222")
+                except Exception as e:
+                    return ScrapeResponse(company=req.company, url=req.url, jobs=[],
+                                          backend="playwright",
+                                          error="CDP connect failed — launch Chrome with "
+                                                "--remote-debugging-port=9222: " + str(e))
+                ctx = browser.contexts[0] if browser.contexts else browser.new_context()
+            else:
+                browser = p.chromium.launch(headless=True)
+                ctx = browser.new_context(
+                    user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                               "AppleWebKit/537.36 (KHTML, like Gecko) "
+                               "Chrome/126.0.0.0 Safari/537.36",
+                    viewport={"width": 1280, "height": 800},
+                )
+            page = ctx.new_page()
+            try:
+                page.goto(req.url, wait_until="networkidle", timeout=20000)
+            except Exception:
+                # Some SPAs (Angular/React boards) keep the network busy so
+                # networkidle never fires; fall back to DOM load + render delay.
+                page.goto(req.url, wait_until="domcontentloaded", timeout=20000)
+                page.wait_for_timeout(4000)
+            html = page.content()
+            if not req.use_session:
+                browser.close()
+
+        company = req.company or req.url.split("//")[-1].split("/")[0].replace("www.", "")
+        jobs = _extract_jobs_from_html(html, company, req.url)
+        jobs = [j for j in jobs if j.title and _matches(j.title, req.title_keywords)]
+        log.info(f"  → {len(jobs)} jobs")
+        return ScrapeResponse(company=company, url=req.url, jobs=jobs, backend="playwright")
+    except Exception as e:
+        log.error(f"board scrape error: {e}")
+        return ScrapeResponse(company=req.company, url=req.url, jobs=[],
+                              backend="playwright", error=str(e))
+
 
 # ── LinkedIn scraper ───────────────────────────────────────────────────────────
 
