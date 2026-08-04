@@ -141,7 +141,7 @@ func main() {
 
 	if *apiMode {
 		// API server mode — create store + engine, then start the HTTP API
-		st, err := store.Open()
+		st, err := store.OpenFromConfig(cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "store: %v\n", err)
 			os.Exit(1)
@@ -175,7 +175,7 @@ func main() {
 
 	if !*runMode && !*dryRun {
 		// TUI mode — create store + engine so UI can control the engine directly
-		st, err := store.Open()
+		st, err := store.OpenFromConfig(cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "store: %v\n", err)
 			os.Exit(1)
@@ -242,7 +242,7 @@ func runEngine(cfg *config.Config, opts engineOpts) {
 		os.Exit(1)
 	}
 
-	st, err := store.Open()
+	st, err := store.OpenFromConfig(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "store: %v\n", err)
 		os.Exit(1)
@@ -336,7 +336,7 @@ func runInboxScan(cfg *config.Config) {
 		fmt.Fprintln(os.Stderr, "error: inbox scan needs your Email + Gmail app password (Config -> Outreach)")
 		os.Exit(1)
 	}
-	st, err := store.Open()
+	st, err := store.OpenFromConfig(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "store: %v\n", err)
 		os.Exit(1)
@@ -412,7 +412,7 @@ func runReplyCheck(cfg *config.Config) {
 		fmt.Fprintln(os.Stderr, "error: reply check needs your Email + Gmail app password (Config → Outreach)")
 		os.Exit(1)
 	}
-	st, err := store.Open()
+	st, err := store.OpenFromConfig(cfg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "store: %v\n", err)
 		os.Exit(1)

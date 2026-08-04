@@ -2,6 +2,8 @@ package store
 
 import (
 	"os"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"testing"
 	"time"
 )
@@ -353,4 +355,27 @@ func TestOutcomeStats(t *testing.T) {
 	if got := counts[OutcomeOffer]; got != 0 {
 		t.Errorf("offer = %d; want 0", got)
 	}
+}
+
+func TestOpenFromConfig_PicksSQLiteWithoutDBURL(t *testing.T) {
+	// NEXUS_HOME to temp so we never touch ~/.nexus; DatabaseURL empty => SQLite.
+	t.Setenv("NEXUS_HOME", t.TempDir())
+	st, err := OpenFromConfig(&config.Config{})
+	if err != nil {
+		t.Fatalf("OpenFromConfig: %v", err)
+	}
+	defer st.Close()
+	// Sanity: SQLite backend works.
+	if err := st.Insert(Application{Company: "Acme", Role: "SRE", URL: "https://x.com/1", Status: StatusApplied, AppliedAt: time.Now()}); err != nil {
+		t.Fatalf("insert on sqlite backend: %v", err)
+	}
+}
+
+func TestOpenFromConfig_NilConfigDefaultsSQLite(t *testing.T) {
+	t.Setenv("NEXUS_HOME", t.TempDir())
+	st, err := OpenFromConfig(nil)
+	if err != nil {
+		t.Fatalf("OpenFromConfig(nil): %v", err)
+	}
+	st.Close()
 }

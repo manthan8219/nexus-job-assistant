@@ -63,7 +63,7 @@ func (s *Store) SaveOutreachLog(e OutreachLogEntry) error {
 		`INSERT INTO outreach_log
 		 (channel, job_url, company, role, contact_name, contact_email, contact_source,
 		  subject, body, status, error, review_score, attempts, created_at, sent_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
 		e.Channel, e.JobURL, e.Company, e.Role, e.ContactName, e.ContactEmail, e.ContactSource,
 		e.Subject, e.Body, e.Status, e.Error, e.ReviewScore, e.Attempts,
 		e.CreatedAt.UTC().Format(time.RFC3339), sentAt.UTC().Format(time.RFC3339),
@@ -88,7 +88,7 @@ func (s *Store) ListOutreachLog(limit int) ([]OutreachLogEntry, error) {
 	var out []OutreachLogEntry
 	for rows.Next() {
 		var e OutreachLogEntry
-		var createdAt, sentAt string
+		var createdAt, sentAt time.Time
 		if err := rows.Scan(
 			&e.ID, &e.Channel, &e.JobURL, &e.Company, &e.Role,
 			&e.ContactName, &e.ContactEmail, &e.ContactSource,
@@ -97,8 +97,8 @@ func (s *Store) ListOutreachLog(limit int) ([]OutreachLogEntry, error) {
 		); err != nil {
 			return nil, err
 		}
-		e.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
-		e.SentAt, _ = time.Parse(time.RFC3339, sentAt)
+		e.CreatedAt = createdAt
+		e.SentAt = sentAt
 		out = append(out, e)
 	}
 	return out, rows.Err()

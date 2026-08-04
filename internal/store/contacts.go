@@ -12,9 +12,10 @@ func (s *Store) SaveContact(c osint.Contact) error {
 		c.FoundAt = time.Now()
 	}
 	_, err := s.db.Exec(
-		`INSERT OR IGNORE INTO contacts
+		`INSERT INTO contacts
 		 (company, domain, name, title, email, email_type, linkedin, source, confidence, found_at, notes)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+		 ON CONFLICT (email, company) DO NOTHING`,
 		c.Company, c.Domain, c.Name, c.Title,
 		c.Email, c.EmailType, c.LinkedIn, c.Source, c.Confidence,
 		c.FoundAt.UTC().Format(time.RFC3339), c.Notes,
@@ -36,7 +37,7 @@ func (s *Store) ListContacts() ([]osint.Contact, error) {
 	var out []osint.Contact
 	for rows.Next() {
 		var c osint.Contact
-		var foundAt string
+		var foundAt time.Time
 		if err := rows.Scan(
 			&c.ID, &c.Company, &c.Domain, &c.Name, &c.Title,
 			&c.Email, &c.EmailType, &c.LinkedIn, &c.Source, &c.Confidence,
@@ -44,7 +45,7 @@ func (s *Store) ListContacts() ([]osint.Contact, error) {
 		); err != nil {
 			return nil, err
 		}
-		c.FoundAt, _ = time.Parse(time.RFC3339, foundAt)
+		c.FoundAt = foundAt
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -52,7 +53,7 @@ func (s *Store) ListContacts() ([]osint.Contact, error) {
 
 // DeleteContact removes a contact by ID.
 func (s *Store) DeleteContact(id int64) error {
-	_, err := s.db.Exec(`DELETE FROM contacts WHERE id = ?`, id)
+	_, err := s.db.Exec(`DELETE FROM contacts WHERE id = $1`, id)
 	return err
 }
 
@@ -63,7 +64,7 @@ func (s *Store) DomainForCompany(company string) (string, error) {
 	var domain string
 	err := s.db.QueryRow(
 		`SELECT domain FROM contacts
-		 WHERE LOWER(company) = LOWER(?) AND domain != ''
+		 WHERE LOWER(company) = LOWER($1) AND domain != ''
 		 ORDER BY confidence DESC, found_at DESC LIMIT 1`,
 		company,
 	).Scan(&domain)
