@@ -185,7 +185,21 @@ func (c *imapConn) fetchMessageWithBody(num string) (*Reply, error) {
 	if len(blocks) == 0 {
 		return nil, nil
 	}
-	msg, err := mail.ReadMessage(bytes.NewReader(blocks[0]))
+	// Gmail may return the literal blocks in either order (observed: body
+	// before header). Identify the header block by content - a valid message
+	// whose From header is present - and treat the other as the body.
+	var hdrBlock, bodyBlock []byte
+	for _, b := range blocks {
+		if msg, err := mail.ReadMessage(bytes.NewReader(b)); err == nil && msg.Header.Get("From") != "" {
+			hdrBlock = b
+		} else {
+			bodyBlock = b
+		}
+	}
+	if hdrBlock == nil {
+		return nil, nil
+	}
+	msg, err := mail.ReadMessage(bytes.NewReader(hdrBlock))
 	if err != nil {
 		return nil, nil
 	}
@@ -194,17 +208,13 @@ func (c *imapConn) fetchMessageWithBody(num string) (*Reply, error) {
 		return nil, nil
 	}
 	date, _ := mail.ParseDate(msg.Header.Get("Date"))
-	body := ""
-	if len(blocks) > 1 {
-		body = trimBody(blocks[1])
-	}
 	return &Reply{
 		From:      strings.ToLower(addr.Address),
 		FromName:  addr.Name,
 		Subject:   decodeHeaderText(msg.Header.Get("Subject")),
 		Date:      date,
 		MessageID: msg.Header.Get("Message-Id"),
-		Body:      body,
+		Body:      trimBody(bodyBlock),
 	}, nil
 }
 
