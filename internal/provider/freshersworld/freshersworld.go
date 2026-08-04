@@ -1,0 +1,119 @@
+// Package freshersworld implements provider.Provider for Freshersworld.com,
+// one of India's largest job portals (33,000+ listings, entry-level to
+// experienced, with a remote-jobs section).
+//
+// Freshersworld renders job cards in server-side HTML but the exact DOM is not
+// stable, so Search routes through the local scraper service (Playwright
+// renders the page, generic extraction pulls job links). It is a search-only
+// board: Apply always returns "skipped" with the posting URL.
+//
+// Requires the scraper service to be installed and running (Settings › Career
+// Scraper). No login is needed to browse jobs.
+package freshersworld
+
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/provider"
+	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
+)
+
+const searchURL = "https://www.freshersworld.com/jobs"
+
+// scrapeFn is the injected board-scrape dependency (scraper.ScrapeBoard in
+// production; a fake in tests).
+type scrapeFn func(ctx context.Context, url, company string, kws []string, useSession bool) ([]scraper.BoardJob, error)
+
+// Client implements provider.Provider for Freshersworld.
+type Client struct {
+	scrape scrapeFn
+}
+
+// New creates a Freshersworld client.
+func New() *Client {
+	return &Client{scrape: scraper.ScrapeBoard}
+}
+
+func (c *Client) Name() string { return "freshersworld" }
+
+// Search scrapes the Freshersworld jobs page via the scraper service and
+// filters results by the search criteria.
+func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) ([]provider.Job, error) {
+	keywords := criteria.Titles
+	if len(keywords) == 0 {
+		keywords = []string{""}
+	}
+
+	// Build a search URL per title keyword. Freshersworld's param names are not
+	// officially documented; the keyword param filters server-side when
+	// supported, and the Go-side MatchesTitle filter guarantees correctness
+	// regardless.
+	var jobs []provider.Job
+	seen := make(map[string]bool)
+	for _, kw := range keywords {
+		select {
+		case <-ctx.Done():
+			return jobs, ctx.Err()
+		default:
+		}
+		u := searchURL
+		if strings.TrimSpace(kw) != "" {
+			u = fmt.Sprintf("%s?keyword=%s", searchURL, strings.ReplaceAll(strings.TrimSpace(kw), " ", "+"))
+		}
+		boardJobs, err := c.scrape(ctx, u, "", criteria.Titles, false)
+		if err != nil {
+			// One query failing must never abort the run (§10).
+			continue
+		}
+		for _, j := range boardJobs {
+			pj := toProviderJob(j, c.Name())
+			if pj == nil {
+				continue
+			}
+			if len(criteria.Titles) > 0 && !provider.MatchesTitle(pj.Title, criteria.Titles) {
+				continue
+			}
+			if !provider.MatchesLocation(pj.Location, pj.Remote, criteria) {
+				continue
+			}
+			if seen[pj.URL] {
+				continue
+			}
+			seen[pj.URL] = true
+			jobs = append(jobs, *pj)
+		}
+	}
+	return jobs, nil
+}
+
+// toProviderJob converts a scraper board job to the shared Job type.
+// Returns nil for entries without a title or URL.
+func toProviderJob(j scraper.BoardJob, providerName string) *provider.Job {
+	title := strings.TrimSpace(j.Title)
+	url := strings.TrimSpace(j.ApplyURL)
+	if title == "" || url == "" {
+		return nil
+	}
+	company := strings.TrimSpace(j.Company)
+	if company == "" {
+		company = "Freshersworld"
+	}
+	return &provider.Job{
+		ID:       url,
+		Title:    title,
+		Company:  company,
+		Location: strings.TrimSpace(j.Location),
+		Remote:   j.Remote,
+		URL:      url,
+		Provider: providerName,
+		Board:    "freshersworld",
+	}
+}
+
+// Apply marks as skipped — Freshersworld postings link to the posting page for
+// manual application.
+func (c *Client) Apply(_ context.Context, job provider.Job, _ provider.Profile) (provider.ApplyResult, error) {
+	return provider.ApplyResult{Status: "skipped", Reason: "apply manually at " + job.URL}, nil
+}
