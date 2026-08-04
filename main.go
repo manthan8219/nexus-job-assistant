@@ -249,6 +249,11 @@ func runEngine(cfg *config.Config, opts engineOpts) {
 	}
 	eng.MinDelay = opts.minDelay
 	eng.DryRun = opts.dryRun
+	// Mirror the web/API wiring (internal/api/run.go): allow real applies from
+	// the CLI only when the user turned on Apply Consent AND did not pass
+	// --dry-run. Without consent the engine takes the "queued — awaiting your
+	// approval" path, so this can never bypass the consent gate.
+	eng.AutoApply = !opts.dryRun && cfg.ApplyConsent
 	eng.Verbose = opts.verbose
 	eng.OnlyProvider = opts.providerName
 
