@@ -176,6 +176,13 @@ type Config struct {
 	InboxScanMax int `json:"inbox_scan_max,omitempty"`
 	// InboxScanMinutes is the auto-scan interval in minutes (0 = off; manual via --scan-inbox).
 	InboxScanMinutes int `json:"inbox_scan_minutes,omitempty"`
+
+	// Supabase - managed Postgres + object storage (optional; replaces local
+	// SQLite/JSON stores when configured). Values come from the Supabase
+	// dashboard; never logged.
+	SupabaseURL        string `json:"supabase_url,omitempty"`
+	SupabaseServiceKey string `json:"supabase_service_key,omitempty"`
+	DatabaseURL        string `json:"database_url,omitempty"`
 	// OutreachBatchSize caps how many emails the auto-send loop fires in one
 	// batch before pausing (0 = default 5). Batching never exceeds the daily cap.
 	OutreachBatchSize int `json:"outreach_batch_size,omitempty"`
