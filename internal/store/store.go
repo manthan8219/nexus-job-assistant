@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/jackc/pgx/v5/stdlib" // register the pgx driver
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	_ "modernc.org/sqlite"
 )
@@ -122,10 +124,97 @@ func (s *Store) Close() error { return s.db.Close() }
 // t.TempDir() file so the store is hermetic (no ~/.nexus writes, no network).
 func OpenPath(path string) (*Store, error) { return openPath(path) }
 
+// pgDDL ensures the store's tables exist on a Postgres backend (idempotent).
+// Mirrors the SQLite ddl/contactsDDL/outreachLogDDL but with Postgres types.
+const pgDDL = `
+CREATE TABLE IF NOT EXISTS applications (
+	id         BIGSERIAL PRIMARY KEY,
+	provider   TEXT NOT NULL,
+	company    TEXT NOT NULL,
+	role       TEXT NOT NULL,
+	url        TEXT NOT NULL UNIQUE,
+	status     TEXT NOT NULL DEFAULT 'applied',
+	reason     TEXT NOT NULL DEFAULT '',
+	applied_at TIMESTAMPTZ NOT NULL,
+	location   TEXT NOT NULL DEFAULT '',
+	remote     BOOLEAN NOT NULL DEFAULT FALSE,
+	posted_at  TIMESTAMPTZ NOT NULL DEFAULT '0001-01-01T00:00:00Z',
+	description TEXT NOT NULL DEFAULT '',
+	fit_score  INTEGER NOT NULL DEFAULT 0,
+	fit_summary TEXT NOT NULL DEFAULT '',
+	outcome    TEXT NOT NULL DEFAULT '',
+	outcome_at TIMESTAMPTZ NOT NULL DEFAULT '0001-01-01T00:00:00Z',
+	approved   BOOLEAN NOT NULL DEFAULT FALSE,
+	submitted_payload TEXT NOT NULL DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_applications_applied_at ON applications(applied_at);
+CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
+CREATE TABLE IF NOT EXISTS contacts (
+	id         BIGSERIAL PRIMARY KEY,
+	company    TEXT NOT NULL DEFAULT '',
+	domain     TEXT NOT NULL DEFAULT '',
+	name       TEXT NOT NULL DEFAULT '',
+	title      TEXT NOT NULL DEFAULT '',
+	email      TEXT NOT NULL DEFAULT '',
+	email_type TEXT NOT NULL DEFAULT '',
+	linkedin   TEXT NOT NULL DEFAULT '',
+	source     TEXT NOT NULL DEFAULT '',
+	confidence INTEGER NOT NULL DEFAULT 0,
+	found_at   TIMESTAMPTZ NOT NULL,
+	notes      TEXT NOT NULL DEFAULT '',
+	UNIQUE (email, company)
+);
+CREATE INDEX IF NOT EXISTS idx_contacts_company ON contacts(company);
+CREATE TABLE IF NOT EXISTS outreach_log (
+	id             BIGSERIAL PRIMARY KEY,
+	channel        TEXT NOT NULL DEFAULT '',
+	job_url        TEXT NOT NULL DEFAULT '',
+	company        TEXT NOT NULL DEFAULT '',
+	role           TEXT NOT NULL DEFAULT '',
+	contact_name   TEXT NOT NULL DEFAULT '',
+	contact_email  TEXT NOT NULL DEFAULT '',
+	contact_source TEXT NOT NULL DEFAULT '',
+	subject        TEXT NOT NULL DEFAULT '',
+	body           TEXT NOT NULL DEFAULT '',
+	status         TEXT NOT NULL DEFAULT '',
+	error          TEXT NOT NULL DEFAULT '',
+	review_score   INTEGER NOT NULL DEFAULT 0,
+	attempts       INTEGER NOT NULL DEFAULT 0,
+	created_at     TIMESTAMPTZ NOT NULL,
+	sent_at        TIMESTAMPTZ NOT NULL DEFAULT '0001-01-01T00:00:00Z'
+);
+CREATE INDEX IF NOT EXISTS idx_outreach_log_sent_at ON outreach_log(sent_at);
+CREATE INDEX IF NOT EXISTS idx_outreach_log_company ON outreach_log(company);
+`
+
+// OpenPG opens (or creates) the store against a Postgres database - the
+// Supabase managed backend. The schema is ensured idempotently at open.
+func OpenPG(dsn string) (*Store, error) {
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		return nil, err
+	}
+	db.SetMaxOpenConns(5)
+	if _, err := db.Exec(pgDDL); err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &Store{db: db}, nil
+}
+
+// OpenFromConfig picks the storage backend from config: managed Postgres
+// (Supabase) when DatabaseURL is set, otherwise the local SQLite store.
+func OpenFromConfig(cfg *config.Config) (*Store, error) {
+	if cfg != nil && strings.TrimSpace(cfg.DatabaseURL) != "" {
+		return OpenPG(cfg.DatabaseURL)
+	}
+	return Open()
+}
+
 // Exists returns true if this URL has already been applied to.
 func (s *Store) Exists(url string) (bool, error) {
 	var count int
-	err := s.db.QueryRow(`SELECT COUNT(1) FROM applications WHERE url = ?`, url).Scan(&count)
+	err := s.db.QueryRow(`SELECT COUNT(1) FROM applications WHERE url = $1`, url).Scan(&count)
 	return count > 0, err
 }
 
@@ -135,17 +224,14 @@ func (s *Store) Insert(app Application) error {
 	if postedAt.IsZero() {
 		postedAt = app.AppliedAt
 	}
-	remote := 0
-	if app.Remote {
-		remote = 1
-	}
 	_, err := s.db.Exec(
-		`INSERT OR IGNORE INTO applications
+		`INSERT INTO applications
 		 (provider, company, role, url, status, reason, applied_at, location, remote, posted_at, description, fit_score, fit_summary, outcome, outcome_at, approved, submitted_payload)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+		 ON CONFLICT (url) DO NOTHING`,
 		app.Provider, app.Company, app.Role, app.URL,
 		string(app.Status), app.Reason, app.AppliedAt.UTC(),
-		app.Location, remote, postedAt.UTC(), app.Description,
+		app.Location, app.Remote, postedAt.UTC(), app.Description,
 		app.FitScore, app.FitSummary,
 		string(app.Outcome), app.OutcomeAt.UTC(),
 		app.Approved, app.SubmittedPayload,
@@ -157,7 +243,7 @@ func (s *Store) Insert(app Application) error {
 // application (KAN-33). Fails open at the caller — never blocks an apply.
 func (s *Store) SetSubmittedPayload(id int64, payloadJSON string) error {
 	res, err := s.db.Exec(
-		`UPDATE applications SET submitted_payload = ? WHERE id = ?`,
+		`UPDATE applications SET submitted_payload = $1 WHERE id = $2`,
 		payloadJSON, id,
 	)
 	if err != nil {
@@ -177,7 +263,7 @@ func (s *Store) SetSubmittedPayload(id int64, payloadJSON string) error {
 // with the given URL (used by the run loop, which inserts before scoring).
 func (s *Store) SetSubmittedPayloadByURL(url, payloadJSON string) error {
 	var id int64
-	err := s.db.QueryRow(`SELECT id FROM applications WHERE url = ?`, url).Scan(&id)
+	err := s.db.QueryRow(`SELECT id FROM applications WHERE url = $1`, url).Scan(&id)
 	if err != nil {
 		return err
 	}
@@ -195,7 +281,7 @@ func (s *Store) SetOutcome(id int64, outcome Outcome) error {
 		at = time.Now()
 	}
 	res, err := s.db.Exec(
-		`UPDATE applications SET outcome = ?, outcome_at = ? WHERE id = ?`,
+		`UPDATE applications SET outcome = $1, outcome_at = $2 WHERE id = $3`,
 		string(outcome), at.UTC(), id,
 	)
 	if err != nil {
@@ -214,7 +300,7 @@ func (s *Store) SetOutcome(id int64, outcome Outcome) error {
 // SetApproved marks (or unmarks) an application for a real apply.
 func (s *Store) SetApproved(id int64, approved bool) error {
 	res, err := s.db.Exec(
-		`UPDATE applications SET approved = ? WHERE id = ?`,
+		`UPDATE applications SET approved = $1 WHERE id = $2`,
 		approved, id,
 	)
 	if err != nil {
@@ -234,7 +320,7 @@ func (s *Store) SetApproved(id int64, approved bool) error {
 // applied_at (used by the apply-selected flow after a real submission).
 func (s *Store) SetStatus(id int64, status Status, reason string) error {
 	res, err := s.db.Exec(
-		`UPDATE applications SET status = ?, reason = ?, applied_at = ? WHERE id = ?`,
+		`UPDATE applications SET status = $1, reason = $2, applied_at = $3 WHERE id = $4`,
 		string(status), reason, time.Now().UTC(), id,
 	)
 	if err != nil {
@@ -255,7 +341,11 @@ func (s *Store) GetByIDs(ids []int64) ([]Application, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}
-	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(ids)), ",")
+	ph := make([]string, len(ids))
+	for i := range ph {
+		ph[i] = fmt.Sprintf("$%d", i+1)
+	}
+	placeholders := strings.Join(ph, ",")
 	args := make([]any, len(ids))
 	for i, id := range ids {
 		args[i] = id
@@ -281,7 +371,7 @@ func (s *Store) SetOutcomeByURL(url string, outcome Outcome) (bool, error) {
 		return false, fmt.Errorf("store: invalid outcome %q", outcome)
 	}
 	var id int64
-	err := s.db.QueryRow(`SELECT id FROM applications WHERE url = ?`, url).Scan(&id)
+	err := s.db.QueryRow(`SELECT id FROM applications WHERE url = $1`, url).Scan(&id)
 	if err != nil {
 		return false, nil // no rows → not our application; treat as no-op
 	}
@@ -313,7 +403,7 @@ func (s *Store) OutcomeStats() (map[Outcome]int, error) {
 // UpdateDescriptionFit patches description + optional fit fields for an existing URL.
 func (s *Store) UpdateDescriptionFit(jobURL, description string, fitScore int, fitSummary string) error {
 	_, err := s.db.Exec(
-		`UPDATE applications SET description = ?, fit_score = ?, fit_summary = ? WHERE url = ?`,
+		`UPDATE applications SET description = $1, fit_score = $2, fit_summary = $3 WHERE url = $4`,
 		description, fitScore, fitSummary, jobURL,
 	)
 	return err
@@ -387,7 +477,7 @@ func (s *Store) ListByCompany(company string) ([]Application, error) {
 		        location, remote, posted_at, description, fit_score, fit_summary,
 		        outcome, outcome_at, approved, submitted_payload
 		 FROM applications
-		 WHERE lower(trim(company)) = lower(trim(?))
+		 WHERE lower(trim(company)) = lower(trim($1))
 		 ORDER BY applied_at DESC`,
 		company,
 	)
@@ -402,8 +492,8 @@ func scanApplications(rows *sql.Rows) ([]Application, error) {
 	var apps []Application
 	for rows.Next() {
 		var a Application
-		var appliedAt, postedAt, outcomeAt string
-		var remote, approved int
+		var appliedAt, postedAt, outcomeAt time.Time
+		var remote, approved scanBool
 		var outcome string
 		if err := rows.Scan(
 			&a.ID, &a.Provider, &a.Company, &a.Role,
@@ -414,12 +504,12 @@ func scanApplications(rows *sql.Rows) ([]Application, error) {
 		); err != nil {
 			return nil, err
 		}
-		a.AppliedAt, _ = time.Parse(time.RFC3339, appliedAt)
-		a.PostedAt, _ = time.Parse(time.RFC3339, postedAt)
-		a.OutcomeAt, _ = time.Parse(time.RFC3339, outcomeAt)
+		a.AppliedAt = appliedAt
+		a.PostedAt = postedAt
+		a.OutcomeAt = outcomeAt
 		a.Outcome = Outcome(outcome)
-		a.Remote = remote == 1
-		a.Approved = approved == 1
+		a.Remote = remote.v
+		a.Approved = approved.v
 		apps = append(apps, a)
 	}
 	return apps, rows.Err()

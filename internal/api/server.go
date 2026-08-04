@@ -19,6 +19,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
+	"github.com/manthan8219/nexus-job-assistant/internal/supabase"
 )
 
 // RunStatus mirrors the engine lifecycle.
@@ -179,6 +180,18 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	// Inbox hiring-email scan scheduler (configurable interval; 0 = off).
 	go s.scheduleInboxScan(ctx)
 
+	// Supabase connection check - log once at startup so storage/DB wiring
+	// problems surface immediately instead of failing later mid-run.
+	if sc := supabase.FromConfig(s.cfg); sc != nil {
+		res := sc.Check(ctx)
+		s.logLine("supabase check: database=" + supabaseBool(res.DatabaseSkip, res.DatabaseOK) + " storage=" + supabaseBool(res.StorageSkip, res.StorageOK) + " resumes=" + supabaseBool(res.ResumeBucket, res.ResumeBucket))
+		if !res.OK() {
+			s.logLine("supabase NOT OK - run cmd/supabase-check for details")
+		}
+	} else {
+		s.logLine("supabase not configured - using local storage (SQLite/JSON)")
+	}
+
 	// Start the always-on outreach worker for API mode (KAN-15): find contact,
 	// AI-draft, review, and mark items ready for every recorded application.
 	if s.worker != nil {
@@ -298,6 +311,18 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/notify/channels", s.handleGetNotifyChannels)
 	mux.HandleFunc("POST /api/notify/test", s.handlePostNotifyTest)
 	mux.HandleFunc("POST /api/notify/summary", s.handlePostNotifySummary)
+}
+
+// supabaseBool renders a health state as ok/FAIL for a status line.
+func supabaseBool(skipped, ok bool) string {
+	switch {
+	case skipped:
+		return "skipped"
+	case ok:
+		return "ok"
+	default:
+		return "FAIL"
+	}
 }
 
 // logLine adds a line to the in-memory log buffer (capped at 1000).
