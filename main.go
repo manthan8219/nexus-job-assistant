@@ -288,6 +288,7 @@ func runTestNotify(cfg *config.Config) {
 		Email:              cfg.Email,
 		GmailAppPassword:   cfg.GmailAppPassword,
 		EmailNotifications: cfg.EmailNotifications,
+		EmailPerJob:        cfg.EmailPerJob,
 	})
 	if len(mn) == 0 {
 		fmt.Fprintln(os.Stderr, "error: no notification channels configured")

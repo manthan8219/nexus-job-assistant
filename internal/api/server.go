@@ -98,6 +98,7 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		Email:              cfg.Email,
 		GmailAppPassword:   cfg.GmailAppPassword,
 		EmailNotifications: cfg.EmailNotifications,
+		EmailPerJob:        cfg.EmailPerJob,
 	})
 	// Open the companies store best-effort (embedded catalogs only — no
 	// network); handlers degrade gracefully if nil.

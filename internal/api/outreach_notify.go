@@ -361,6 +361,7 @@ func (s *Server) handlePostNotifySummary(w http.ResponseWriter, r *http.Request)
 	ev := notifier.Event{
 		Kind:         notifier.EventDailySummary,
 		Timestamp:    time.Now(),
+		Found:        s.foundCount,
 		TotalApplied: s.applied,
 		TotalFailed:  s.failed,
 		TotalSkipped: s.skipped,
