@@ -1,14 +1,17 @@
-// Package hirist implements provider.Provider for Hirist.com, an India-focused
-// tech job board. Its internal listing endpoint is reached by the browser
-// during normal use; Search routes through the local scraper service
-// (Playwright renders the page, generic extraction pulls job links).
+// Package landingjobs implements provider.Provider for Landing.Jobs
+// (landing.jobs), a European tech job board with remote, hybrid, and on-site
+// roles across Portugal, the EU, and beyond.
 //
-// Hirist is a search-only board: Apply always returns "skipped" with the
-// posting URL. No login is required to browse jobs.
+// Landing.Jobs loads jobs via an internal JSON endpoint after page render, so
+// Search routes through the local scraper service (Playwright renders the
+// page, generic extraction pulls job links). No login is required to browse.
+//
+// Landing.Jobs is a search-only board: Apply always returns "skipped" with
+// the posting URL.
 //
 // Requires the scraper service to be installed and running (Settings › Career
 // Scraper).
-package hirist
+package landingjobs
 
 import (
 	"context"
@@ -19,25 +22,25 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/scraper"
 )
 
-const searchURL = "https://www.hirist.com/jobs"
+const searchURL = "https://landing.jobs/jobs"
 
 // scrapeFn is the injected board-scrape dependency.
 type scrapeFn func(ctx context.Context, url, company string, kws []string, useSession bool) ([]scraper.BoardJob, error)
 
-// Client implements provider.Provider for Hirist.
+// Client implements provider.Provider for Landing.Jobs.
 type Client struct {
 	scrape scrapeFn
 }
 
-// New creates a Hirist client.
+// New creates a Landing.Jobs client.
 func New() *Client {
 	return &Client{scrape: scraper.ScrapeBoard}
 }
 
-func (c *Client) Name() string { return "hirist" }
+func (c *Client) Name() string { return "landingjobs" }
 
-// Search scrapes the Hirist jobs page via the scraper service and filters
-// results by the search criteria.
+// Search scrapes the Landing.Jobs jobs page via the scraper service and
+// filters results by the search criteria.
 func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) ([]provider.Job, error) {
 	keywords := criteria.Titles
 	if len(keywords) == 0 {
@@ -54,7 +57,7 @@ func (c *Client) Search(ctx context.Context, criteria provider.SearchCriteria) (
 		}
 		u := searchURL
 		if strings.TrimSpace(kw) != "" {
-			u = fmt.Sprintf("%s?keyword=%s", searchURL, strings.ReplaceAll(strings.TrimSpace(kw), " ", "+"))
+			u = fmt.Sprintf("%s?search=%s", searchURL, strings.ReplaceAll(strings.TrimSpace(kw), " ", "+"))
 		}
 		boardJobs, err := c.scrape(ctx, u, "", criteria.Titles, false)
 		if err != nil {
@@ -90,7 +93,7 @@ func toProviderJob(j scraper.BoardJob, providerName string) *provider.Job {
 	}
 	company := strings.TrimSpace(j.Company)
 	if company == "" {
-		company = "Hirist"
+		company = "Landing.Jobs"
 	}
 	return &provider.Job{
 		ID:       url,
@@ -100,11 +103,11 @@ func toProviderJob(j scraper.BoardJob, providerName string) *provider.Job {
 		Remote:   j.Remote,
 		URL:      url,
 		Provider: providerName,
-		Board:    "hirist",
+		Board:    "landingjobs",
 	}
 }
 
-// Apply marks as skipped — Hirist postings link to the posting page.
+// Apply marks as skipped — Landing.Jobs postings link to the posting page.
 func (c *Client) Apply(_ context.Context, job provider.Job, _ provider.Profile) (provider.ApplyResult, error) {
 	return provider.ApplyResult{Status: "skipped", Reason: "apply manually at " + job.URL}, nil
 }

@@ -1,4 +1,4 @@
-package workatastartup
+package builtin
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 func TestName(t *testing.T) {
 	c := New()
-	if c.Name() != "workatastartup" {
-		t.Errorf("Name() = %q; want \"workatastartup\"", c.Name())
+	if c.Name() != "builtin" {
+		t.Errorf("Name() = %q, want \"builtin\"", c.Name())
 	}
 }
 
@@ -25,11 +25,11 @@ func TestSearch(t *testing.T) {
 	}{
 		{
 			name:     "happy path returns matching remote jobs",
-			criteria: provider.SearchCriteria{Titles: []string{"Engineer"}, WorkType: "Remote"},
+			criteria: provider.SearchCriteria{Titles: []string{"Software Engineer"}, WorkType: "Remote"},
 			scrape: func(_ context.Context, _, _ string, _ []string, _ bool) ([]scraper.BoardJob, error) {
 				return []scraper.BoardJob{
-					{Title: "Founding Engineer", Company: "YC Startup", Location: "Remote", ApplyURL: "https://example.com/jobs/1", Remote: true},
-					{Title: "Engineer", Company: "AnotherCo", Location: "Remote", ApplyURL: "https://example.com/jobs/2", Remote: true},
+					{Title: "Software Engineer", Company: "Stripe", Location: "Remote", ApplyURL: "https://builtin.com/job/1", Remote: true},
+					{Title: "Software Engineer II", Company: "Square", Location: "Remote", ApplyURL: "https://builtin.com/job/2", Remote: true},
 				}, nil
 			},
 			wantJobs: 2,
@@ -39,8 +39,8 @@ func TestSearch(t *testing.T) {
 			criteria: provider.SearchCriteria{Titles: []string{"Backend"}, WorkType: "Remote"},
 			scrape: func(_ context.Context, _, _ string, _ []string, _ bool) ([]scraper.BoardJob, error) {
 				return []scraper.BoardJob{
-					{Title: "Backend Engineer", Company: "A", Location: "Remote", ApplyURL: "https://example.com/jobs/1"},
-					{Title: "Designer", Company: "B", Location: "Remote", ApplyURL: "https://example.com/jobs/2"},
+					{Title: "Backend Engineer", Company: "A", Location: "Remote", ApplyURL: "https://builtin.com/job/1"},
+					{Title: "Recruiter", Company: "B", Location: "Remote", ApplyURL: "https://builtin.com/job/2"},
 				}, nil
 			},
 			wantJobs: 1,
@@ -49,7 +49,7 @@ func TestSearch(t *testing.T) {
 			name:     "scrape error does not abort run",
 			criteria: provider.SearchCriteria{Titles: []string{"Engineer"}, WorkType: "Remote"},
 			scrape: func(_ context.Context, _, _ string, _ []string, _ bool) ([]scraper.BoardJob, error) {
-				return nil, errors.New("CDP not available")
+				return nil, errors.New("scraper unavailable")
 			},
 			wantJobs: 0,
 		},
@@ -83,11 +83,11 @@ func TestSearchContextCancel(t *testing.T) {
 
 func TestApply(t *testing.T) {
 	c := New()
-	res, err := c.Apply(context.Background(), provider.Job{URL: "https://example.com/job/1"}, provider.Profile{})
+	res, err := c.Apply(context.Background(), provider.Job{URL: "https://builtin.com/job/1"}, provider.Profile{})
 	if err != nil {
 		t.Fatalf("Apply returned error: %v", err)
 	}
 	if res.Status != "skipped" {
-		t.Errorf("Apply status = %q; want \"skipped\"", res.Status)
+		t.Errorf("Apply status = %q, want \"skipped\"", res.Status)
 	}
 }
