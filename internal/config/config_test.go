@@ -117,6 +117,7 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 		GoogleModel:  "gemini-2.5-pro",
 		ApplyConsent: true, MaxAppsPerRun: 7, MaxAppsPerDay: 20, ApplyDelaySec: 4,
 		DiscordWebhookURL: "https://discord.com/api/webhooks/z",
+		InboxScanMinutes:  60,
 	}
 	data, err := json.MarshalIndent(orig, "", "  ")
 	if err != nil {
@@ -145,6 +146,9 @@ func TestConfig_JSONRoundTrip(t *testing.T) {
 	}
 	if got.DiscordWebhookURL != orig.DiscordWebhookURL {
 		t.Errorf("notifier fields lost: %+v", got)
+	}
+	if got.InboxScanMinutes != orig.InboxScanMinutes {
+		t.Errorf("inbox scan interval lost: %+v", got)
 	}
 }
 
