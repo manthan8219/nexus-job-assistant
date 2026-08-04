@@ -281,10 +281,13 @@ func loadConfig(path string) (*config.Config, error) {
 func runTestNotify(cfg *config.Config) {
 	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
 	mn := notifier.FromConfig(&notifier.NotifyConfig{
-		DiscordWebhookURL: discordURL,
-		TelegramBotToken:  tgToken,
-		TelegramChatID:    tgChatID,
-		EnabledChannels:   channels,
+		DiscordWebhookURL:  discordURL,
+		TelegramBotToken:   tgToken,
+		TelegramChatID:     tgChatID,
+		EnabledChannels:    channels,
+		Email:              cfg.Email,
+		GmailAppPassword:   cfg.GmailAppPassword,
+		EmailNotifications: cfg.EmailNotifications,
 	})
 	if len(mn) == 0 {
 		fmt.Fprintln(os.Stderr, "error: no notification channels configured")
