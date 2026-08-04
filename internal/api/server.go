@@ -175,6 +175,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	// Daily safe dry-run scheduler (runs even when no browser is open).
 	go s.scheduleDailyRuns(ctx)
 
+	// Inbox hiring-email scan scheduler (configurable interval; 0 = off).
+	go s.scheduleInboxScan(ctx)
+
 	// Start the always-on outreach worker for API mode (KAN-15): find contact,
 	// AI-draft, review, and mark items ready for every recorded application.
 	if s.worker != nil {

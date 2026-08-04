@@ -78,4 +78,7 @@ type NexusConfig struct {
 	DailyRunEnabled        bool              `json:"dailyRunEnabled,omitempty"`
 	DailyRunAt             string            `json:"dailyRunAt,omitempty"`
 	EmailNotifications     bool              `json:"emailNotifications,omitempty"`
+	InboxScanDays          int               `json:"inboxScanDays,omitempty"`
+	InboxScanMax           int               `json:"inboxScanMax,omitempty"`
+	InboxScanMinutes       int               `json:"inboxScanMinutes,omitempty"`
 }
