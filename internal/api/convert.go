@@ -79,6 +79,9 @@ func configToNexusConfig(cfg *config.Config) *NexusConfig {
 		DailyRunAt:             cfg.DailyRunAt,
 		EmailNotifications:     cfg.EmailNotifications,
 		EmailPerJob:            cfg.EmailPerJob,
+		InboxScanDays:          cfg.InboxScanDays,
+		InboxScanMax:           cfg.InboxScanMax,
+		InboxScanMinutes:       cfg.InboxScanMinutes,
 	}
 }
 
@@ -158,6 +161,9 @@ func applyNexusConfig(cfg *config.Config, n *NexusConfig) {
 	cfg.DailyRunAt = n.DailyRunAt
 	cfg.EmailNotifications = n.EmailNotifications
 	cfg.EmailPerJob = n.EmailPerJob
+	cfg.InboxScanDays = n.InboxScanDays
+	cfg.InboxScanMax = n.InboxScanMax
+	cfg.InboxScanMinutes = n.InboxScanMinutes
 }
 
 // parseInt converts a string to int, returning 0 on error.

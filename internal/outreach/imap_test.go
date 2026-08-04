@@ -55,6 +55,60 @@ func fakeIMAPServer(srv net.Conn, headers map[string]string) {
 	}
 }
 
+// fakeIMAPServerBodyFirst plays a server that returns the BODY literal before
+// the HEADER literal (the ordering Gmail actually uses), to exercise the
+// content-based header detection in fetchMessageWithBody.
+func fakeIMAPServerBodyFirst(srv net.Conn, hdr, body string) {
+	defer srv.Close()
+	r := bufio.NewReader(srv)
+	for {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return
+		}
+		fields := strings.SplitN(strings.TrimRight(line, "\r\n"), " ", 3)
+		if len(fields) < 2 {
+			return
+		}
+		tag, cmd := fields[0], strings.ToUpper(fields[1])
+		if cmd == "FETCH" {
+			fmt.Fprintf(srv, "* 5 FETCH (BODY[TEXT] {%d}\r\n%s\r\n BODY[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)] {%d}\r\n%s\r\n)\r\n%s OK FETCH completed\r\n",
+				len(body), body, len(hdr), hdr, tag)
+			continue
+		}
+		fmt.Fprintf(srv, "%s OK ok\r\n", tag)
+	}
+}
+
+func TestFetchMessageWithBodyHandlesBodyFirstOrder(t *testing.T) {
+	hdr := "From: Jane <jane@acme.com>\r\nSubject: Interview invitation\r\nDate: Wed, 29 Jul 2026 09:12:00 +0000\r\nMessage-ID: <abc123>\r\n\r\n"
+	body := "We would love to schedule an interview with you.\r\n"
+	client, server := net.Pipe()
+	defer client.Close()
+	go fakeIMAPServerBodyFirst(server, hdr, body)
+
+	c := newIMAPConn(client)
+	rep, err := c.fetchMessageWithBody("5")
+	if err != nil {
+		t.Fatalf("fetchMessageWithBody: %v", err)
+	}
+	if rep == nil {
+		t.Fatal("expected a reply, got nil")
+	}
+	if rep.From != "jane@acme.com" {
+		t.Errorf("From = %q; want jane@acme.com", rep.From)
+	}
+	if rep.Subject != "Interview invitation" {
+		t.Errorf("Subject = %q; want Interview invitation", rep.Subject)
+	}
+	if rep.MessageID != "<abc123>" {
+		t.Errorf("MessageID = %q; want <abc123>", rep.MessageID)
+	}
+	if !strings.Contains(rep.Body, "schedule an interview") {
+		t.Errorf("Body = %q; want to contain the body text", rep.Body)
+	}
+}
+
 func TestCollectRepliesOverPipe(t *testing.T) {
 	client, server := net.Pipe()
 	defer client.Close()

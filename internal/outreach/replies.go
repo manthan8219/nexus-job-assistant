@@ -15,6 +15,10 @@ type Reply struct {
 	FromName string
 	Subject  string
 	Date     time.Time
+	// MessageID is the RFC 5322 Message-ID header (stable dedup key).
+	MessageID string
+	// Body is the decoded plain-text body when fetched (empty otherwise).
+	Body string
 }
 
 // MessageFetcher abstracts the inbox source (Gmail IMAP in production,

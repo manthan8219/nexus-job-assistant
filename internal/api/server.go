@@ -176,6 +176,9 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	// Daily safe dry-run scheduler (runs even when no browser is open).
 	go s.scheduleDailyRuns(ctx)
 
+	// Inbox hiring-email scan scheduler (configurable interval; 0 = off).
+	go s.scheduleInboxScan(ctx)
+
 	// Start the always-on outreach worker for API mode (KAN-15): find contact,
 	// AI-draft, review, and mark items ready for every recorded application.
 	if s.worker != nil {
@@ -286,6 +289,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Deliverability
 	mux.HandleFunc("GET /api/deliverability/audit", s.handleGetDeliverabilityAudit)
 
+	// Inbox highlights
+	mux.HandleFunc("GET /api/highlights", s.handleGetHighlights)
 	// Analytics
 	mux.HandleFunc("GET /api/analytics", s.handleGetAnalytics)
 

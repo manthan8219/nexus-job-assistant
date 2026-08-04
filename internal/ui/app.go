@@ -27,12 +27,13 @@ const (
 	TabHistory
 	TabCompanies
 	TabOutreach
+	TabHighlights
 	TabContacts
 	TabLogs
 	tabCount
 )
 
-var tabLabels = [tabCount]string{"Dashboard", "Config", "Resume", "Jobs", "Companies", "Outreach", "Contacts", "Logs"}
+var tabLabels = [tabCount]string{"Dashboard", "Config", "Resume", "Jobs", "Companies", "Outreach", "Inbox", "Contacts", "Logs"}
 
 // ── Engine messages ──────────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ type AppModel struct {
 	history         HistoryModel
 	companiesTab    CompaniesTabModel
 	outreach        OutreachHubModel
+	highlights      HighlightsTabModel
 	contacts        ContactsTabModel
 	logs            LogsModel
 	width           int
@@ -109,6 +111,8 @@ type AppModel struct {
 func NewAppModel(cfg *config.Config, st *store.Store, eng *engine.Engine, opts AppOptions) AppModel {
 	outreachHub := NewOutreachHubModel()
 	outreachHub.st = st // wire store so Sent tab can load the audit log
+	highlights := NewHighlightsTabModel()
+	highlights.SetStore(st)
 	hub := NewResumeHubModel()
 	if cfg != nil {
 		hub.SetSkills(cfg.Skills)
@@ -120,6 +124,7 @@ func NewAppModel(cfg *config.Config, st *store.Store, eng *engine.Engine, opts A
 		history:      NewHistoryModel(),
 		companiesTab: NewCompaniesTabModel(),
 		outreach:     outreachHub,
+		highlights:   highlights,
 		contacts:     NewContactsTabModel(),
 		logs:         NewLogsModel(),
 		eng:          eng,
@@ -149,6 +154,7 @@ func (m AppModel) Init() tea.Cmd {
 	cmds = append(cmds, m.resumeHub.Init())
 	cmds = append(cmds, m.companiesTab.Init())
 	cmds = append(cmds, m.outreach.Init())
+	cmds = append(cmds, m.highlights.Init())
 	cmds = append(cmds, m.contacts.Init())
 	cmds = append(cmds, m.logs.Init())
 	cmds = append(cmds, scheduleReplyCheckTick())
@@ -167,6 +173,8 @@ func (m AppModel) consumesEscapeInternally() bool {
 		return m.outreach.CapturesKeys()
 	case TabContacts:
 		return m.contacts.CapturesKeys()
+	case TabHighlights:
+		return m.highlights.CapturesKeys()
 	default:
 		return false
 	}
@@ -251,6 +259,10 @@ func (m AppModel) switchTab(next int) (AppModel, tea.Cmd) {
 		m.contacts = m.contacts.Focus()
 		cmds = append(cmds, m.contacts.Init())
 	}
+	if next == TabHighlights {
+		m.highlights.SetConfig(m.config.toConfig())
+		cmds = append(cmds, m.highlights.Init())
+	}
 	if next == TabLogs {
 		cmds = append(cmds, m.loadUsage(), usageTickCmd())
 	}
@@ -290,6 +302,10 @@ func (m AppModel) delegateUpdate(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var sub tea.Model
 		sub, cmd = m.contacts.Update(msg)
 		m.contacts = sub.(ContactsTabModel)
+	case TabHighlights:
+		var sub tea.Model
+		sub, cmd = m.highlights.Update(msg)
+		m.highlights = sub.(HighlightsTabModel)
 	case TabLogs:
 		var sub tea.Model
 		sub, cmd = m.logs.Update(msg)
@@ -370,6 +386,9 @@ func (m AppModel) renderChromeFooter() string {
 	if m.activeTab == TabContacts {
 		footer = m.contacts.FooterHint()
 	}
+	if m.activeTab == TabHighlights {
+		footer = m.highlights.FooterHint()
+	}
 	return "\n" + footerStyle.Render(footer)
 }
 
@@ -389,6 +408,8 @@ func (m AppModel) renderChromeBody() string {
 		return m.outreach.View()
 	case TabContacts:
 		return m.contacts.View()
+	case TabHighlights:
+		return m.highlights.View()
 	case TabLogs:
 		return m.logs.View()
 	}
