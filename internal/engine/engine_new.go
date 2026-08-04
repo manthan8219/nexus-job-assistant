@@ -17,20 +17,26 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/ashby"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/bamboohr"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/breezy"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/builtin"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerjet"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/careerscraper"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/cutshort"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/dynamitejobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/euroremotejobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/fourday"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/freshersworld"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/getonbrd"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/greenhouse"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/hackernews"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/himalayas"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/hirist"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/instahyre"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobicy"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobspresso"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jobvite"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/jooble"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/justjoin"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/landingjobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/lever"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/linkedin"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/nodesk"
@@ -38,16 +44,19 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/personio"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/pinpoint"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/recruitee"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/reed"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteco"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remoteok"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/remotive"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/smartrecruiters"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/talent"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/teamtailor"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/thehub"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/themuse"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/usajobs"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/weworkremotely"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workable"
+	"github.com/manthan8219/nexus-job-assistant/internal/provider/workatastartup"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workday"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/workingnomads"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider/wttj"
@@ -144,6 +153,12 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	if affid, key := cfg.ProviderKeys["careerjet_affid"], cfg.ProviderKeys["careerjet_key"]; affid != "" && key != "" {
 		providers = append(providers, careerjet.New(affid, key))
 	}
+	if reedKey := cfg.ProviderKeys["reed"]; reedKey != "" {
+		providers = append(providers, reed.New(reedKey))
+	}
+	if talentKey := cfg.ProviderKeys["talent"]; talentKey != "" {
+		providers = append(providers, talent.New(talentKey))
+	}
 
 	// Per-company ATSes (Group C)
 	bhr, err := bamboohr.New(data.BambooHRCompaniesJSON)
@@ -169,15 +184,6 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 	} else {
 		providers = append(providers, ppt)
 	}
-
-	// TODO(india-providers): scaffolded but not yet implemented — see
-	// internal/provider/{instahyre,hirist,cutshort}/provider.go
-	// for status notes. Wire in with providers = append(providers, X.New())
-	// once each Search() is implemented against a confirmed endpoint.
-
-	// TODO(workatastartup): scaffolded but not yet implemented — see
-	// internal/provider/workatastartup/provider.go. Requires a logged-in
-	// session; unofficial endpoint, keep request volume low once built.
 
 	jv, err := jobvite.New(data.JobviteCompaniesJSON)
 	if err != nil {
@@ -211,6 +217,18 @@ func New(cfg *config.Config, st *store.Store, companiesPath string) (*Engine, er
 		if scr.Running() {
 			providers = append(providers, careerscraper.New(nil, cfg.LocalLLMModel, cfg.LocalLLMURL))
 			providers = append(providers, linkedin.New(3))
+
+			// Board-wide job-board scrapers (Playwright backend). No-login boards
+			// render headless; session boards (Instahyre, Work at a Startup)
+			// connect to the user's Chrome via CDP and fail gracefully if it
+			// isn't running with --remote-debugging-port=9222.
+			providers = append(providers, freshersworld.New())
+			providers = append(providers, hirist.New())
+			providers = append(providers, cutshort.New())
+			providers = append(providers, builtin.New())
+			providers = append(providers, landingjobs.New())
+			providers = append(providers, instahyre.New())
+			providers = append(providers, workatastartup.New())
 		}
 	}
 
