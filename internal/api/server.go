@@ -285,6 +285,8 @@ func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Deliverability
 	mux.HandleFunc("GET /api/deliverability/audit", s.handleGetDeliverabilityAudit)
 
+	// Inbox highlights
+	mux.HandleFunc("GET /api/highlights", s.handleGetHighlights)
 	// Analytics
 	mux.HandleFunc("GET /api/analytics", s.handleGetAnalytics)
 
