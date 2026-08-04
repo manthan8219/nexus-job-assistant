@@ -1,22 +1,52 @@
-# Render Blueprint — deploy the Nexus API backend with a persistent disk.
-# Docs: https://render.com/docs/blueprint-spec
+# Render Blueprint — Nexus API backend.
 #
-# Plan note: Persistent Disks require a paid instance (starter or pro).
-# On the free plan, drop the `disk:` block and set NEXUS_HOME to /tmp/nexus
-# (data resets on restart), then pin https://<service>.onrender.com/health
-# with a free uptime pinger (UptimeRobot, cron-job.org) so the service does
-# not spin down after 15 minutes of inactivity.
+# Two supported paths:
+#
+# 1) FREE plan (no persistent disk, no credit card):
+#    - Data lives in Supabase (managed Postgres + Storage) - already migrated.
+#    - Secrets come from NEXUS_* env vars below (set in the Render dashboard,
+#      sync: false = not auto-generated, fill manually). No config file needed.
+#    - NEXUS_HOME is ephemeral (/tmp) - fine because application state is in
+#      Supabase; only local scratch resets on restart.
+#    - Render free spins the service down after ~15 min idle. Pin
+#      https://<service>.onrender.com/health with a free uptime pinger
+#      (UptimeRobot, cron-job.org - every 5 min, no card) so the schedulers
+#      (inbox scan, daily dry-run) keep running. NOTE: this is a ToS gray
+#      area for free plans - if it becomes an issue, switch to starter.
+#
+# 2) STARTER plan (~$7/mo, card): no sleeping, persistent disk, config file
+#    can live on disk. Set plan: starter and add the disk block at the bottom.
 services:
   - type: web
     name: nexus-api
     runtime: docker
-    plan: starter # or: free (see note above)
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
       - key: NEXUS_HOME
-        value: /var/lib/nexus
-    disk:
-      name: nexus-data
-      mountPath: /var/lib/nexus
-      sizeGB: 1
+        value: /tmp/nexus
+      - key: NEXUS_SUPABASE_URL
+        sync: false
+      - key: NEXUS_DATABASE_URL
+        sync: false
+      - key: NEXUS_SUPABASE_SERVICE_KEY
+        sync: false
+      - key: NEXUS_GMAIL_APP_PASSWORD
+        sync: false
+      - key: NEXUS_EMAIL
+        sync: false
+      - key: NEXUS_FIRST_NAME
+        sync: false
+      - key: NEXUS_LAST_NAME
+        sync: false
+      - key: NEXUS_OUTREACH_CONSENT
+        value: "false"
+      - key: NEXUS_INBOX_SCAN_MINUTES
+        value: "60"
+
+# Note for the starter plan - enable a persistent disk and remove /tmp:
+#    disk:
+#      name: nexus-data
+#      mountPath: /var/lib/nexus
+#      sizeGB: 1

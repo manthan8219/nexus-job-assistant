@@ -246,18 +246,19 @@ func Load() (*Config, error) {
 }
 
 func LoadFrom(path string) (*Config, error) {
+	cfg := &Config{}
 	data, err := os.ReadFile(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return &Config{}, nil
+	if err == nil {
+		if err := json.Unmarshal(data, cfg); err != nil {
+			return nil, err
 		}
+	} else if !os.IsNotExist(err) {
 		return nil, err
 	}
-	var cfg Config
-	if err := json.Unmarshal(data, &cfg); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	// Deployment platforms with no persistent disk (e.g. Render free) supply
+	// secrets via NEXUS_* env vars; env takes precedence over the file.
+	applyEnv(cfg)
+	return cfg, nil
 }
 
 func Save(cfg *Config) error {
