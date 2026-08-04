@@ -169,6 +169,11 @@ type Config struct {
 	// ReplyLookbackDays caps how far back reply detection scans the inbox
 	// (0 = default 45 days).
 	ReplyLookbackDays int `json:"reply_lookback_days,omitempty"`
+	// Inbox scan - hiring-email highlights (--scan-inbox).
+	// InboxScanDays is the lookback window in days (0 = default 45).
+	InboxScanDays int `json:"inbox_scan_days,omitempty"`
+	// InboxScanMax caps how many inbox messages one scan classifies (0 = default 200).
+	InboxScanMax int `json:"inbox_scan_max,omitempty"`
 	// OutreachBatchSize caps how many emails the auto-send loop fires in one
 	// batch before pausing (0 = default 5). Batching never exceeds the daily cap.
 	OutreachBatchSize int `json:"outreach_batch_size,omitempty"`

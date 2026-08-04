@@ -6,18 +6,20 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/manthan8219/nexus-job-assistant/internal/api"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
+	"github.com/manthan8219/nexus-job-assistant/internal/inbox"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 	"github.com/manthan8219/nexus-job-assistant/internal/ui"
 )
 
-const version = "0.1.0"
+const version = "0.1.1"
 
 const helpText = `
 ⚡ Nexus — Automated Job Applier
@@ -29,9 +31,9 @@ MODES:
   (no flags)        Launch the interactive TUI dashboard
   --run             Run the apply engine once and exit
   --api             Start the HTTP API server (for the web frontend)
-  --check-replies   Check Gmail for replies to outreach, update the pipeline
-                    (stops follow-ups on reply, records rejections), send any
-                    due follow-ups, and notify Discord/Telegram
+  --scan-inbox      Scan the inbox for hiring-related emails and print
+                    highlights (interviews, offers, rejections, recruiter)
+
 
 ENGINE FLAGS:
   --limit N         Max applications per run (default: 10)
@@ -82,6 +84,8 @@ func main() {
 	skipResume := flag.Bool("skip-resume-check", false, "skip resume file validation in the TUI")
 	testNotify := flag.Bool("test-notify", false, "send a test notification to all configured channels and exit")
 	checkReplies := flag.Bool("check-replies", false, "check Gmail for outreach replies, update pipeline, send due follow-ups")
+	inboxScan := flag.Bool("scan-inbox", false, "scan the inbox for hiring-related emails and print highlights")
+
 	limit := flag.Int("limit", 10, "max applications per run")
 	delay := flag.Int("delay", 8, "min seconds between applications")
 	providerName := flag.String("provider", "", "run only this provider (e.g. greenhouse)")
@@ -115,6 +119,16 @@ func main() {
 			os.Exit(1)
 		}
 		runReplyCheck(cfg)
+		return
+	}
+
+	if *inboxScan {
+		cfg, err := loadConfig(*configPath)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "config: %v\n", err)
+			os.Exit(1)
+		}
+		runInboxScan(cfg)
 		return
 	}
 
@@ -310,6 +324,82 @@ func runTestNotify(cfg *config.Config) {
 		os.Exit(1)
 	}
 	fmt.Println("✓ Test notification sent successfully")
+}
+
+// runInboxScan scans the inbox for hiring-related emails and prints the
+// resulting highlights, then notifies on high-value signals (interview,
+// offer, rejection).
+func runInboxScan(cfg *config.Config) {
+	fetcher := outreach.NewGmailIMAPFetcher(cfg)
+	if fetcher == nil {
+		fmt.Fprintln(os.Stderr, "error: inbox scan needs your Email + Gmail app password (Config -> Outreach)")
+		os.Exit(1)
+	}
+	st, err := store.Open()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "store: %v\n", err)
+		os.Exit(1)
+	}
+	defer st.Close()
+
+	days, max := inbox.DefaultScanDays, inbox.DefaultScanMax
+	if cfg.InboxScanDays > 0 {
+		days = cfg.InboxScanDays
+	}
+	if cfg.InboxScanMax > 0 {
+		max = cfg.InboxScanMax
+	}
+
+	fmt.Println("Nexus - scanning inbox for hiring-related emails...")
+	ctx := context.Background()
+	hs, err := inbox.Scan(ctx, days, max, fetcher, st)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "inbox scan: %v\n", err)
+		os.Exit(1)
+	}
+	if len(hs) == 0 {
+		fmt.Println("No new hiring-related emails found in the window.")
+		return
+	}
+
+	hp, err := inbox.HighlightsPath()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "highlights path: %v\n", err)
+		os.Exit(1)
+	}
+	for _, h := range hs {
+		if err := inbox.Upsert(hp, h); err != nil {
+			fmt.Fprintf(os.Stderr, "  warn save highlight: %v\n", err)
+		}
+		fmt.Printf("  [%s] %-12s %-20s %s  (%s)\n", h.Date.Format("2006-01-02"), h.Signal, h.Company, h.Subject, h.From)
+	}
+	fmt.Printf("New hiring highlight(s): %d -> %s\n", len(hs), hp)
+
+	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
+	mn := notifier.FromConfig(&notifier.NotifyConfig{
+		DiscordWebhookURL:  discordURL,
+		TelegramBotToken:   tgToken,
+		TelegramChatID:     tgChatID,
+		EnabledChannels:    channels,
+		Email:              cfg.Email,
+		GmailAppPassword:   cfg.GmailAppPassword,
+		EmailNotifications: cfg.EmailNotifications,
+	})
+	ctx2, cancel := context.WithTimeout(ctx, 20*time.Second)
+	defer cancel()
+	for _, h := range hs {
+		switch h.Signal {
+		case inbox.SignalInterview, inbox.SignalOffer, inbox.SignalRejection:
+			mn.Send(ctx2, notifier.Event{
+				Kind:         notifier.EventInboxHighlight,
+				Company:      h.Company,
+				JobTitle:     h.Subject,
+				ReplyFrom:    h.From,
+				ReplySubject: h.Subject,
+				Message:      fmt.Sprintf("%s: %s @ %s", h.Signal.Label(), h.Subject, h.Company),
+			})
+		}
+	}
 }
 
 // runReplyCheck is the one-shot response-loop pass: scan the inbox for

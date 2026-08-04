@@ -18,16 +18,17 @@ import (
 type EventKind string
 
 const (
-	EventJobApplied    EventKind = "job_applied"
-	EventJobFailed     EventKind = "job_failed"
-	EventCAPTCHA       EventKind = "captcha"
-	EventError         EventKind = "error"
-	EventDailySummary  EventKind = "daily_summary"
-	EventWeeklySummary EventKind = "weekly_summary"
-	EventCustom        EventKind = "custom"
-	EventRunStarted    EventKind = "run_started"
-	EventRunComplete   EventKind = "run_complete"
-	EventReplyReceived EventKind = "reply_received"
+	EventJobApplied     EventKind = "job_applied"
+	EventJobFailed      EventKind = "job_failed"
+	EventCAPTCHA        EventKind = "captcha"
+	EventError          EventKind = "error"
+	EventDailySummary   EventKind = "daily_summary"
+	EventWeeklySummary  EventKind = "weekly_summary"
+	EventCustom         EventKind = "custom"
+	EventRunStarted     EventKind = "run_started"
+	EventRunComplete    EventKind = "run_complete"
+	EventReplyReceived  EventKind = "reply_received"
+	EventInboxHighlight EventKind = "inbox_highlight"
 )
 
 // Event carries all data a notifier might need to build a message.
