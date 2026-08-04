@@ -19,14 +19,20 @@ func (e *Engine) RebuildNotifier(cfg *config.Config) {
 }
 
 // notifierFromCfg is the single wiring point between config and notifier.
-// All channels are built here via notifier.FromConfig.
+// All channels are built here via notifier.FromConfig — including email, so
+// engine-emitted events (run complete, daily digest, CAPTCHA, reply) reach
+// the user's inbox, not just Discord/Telegram.
 func notifierFromCfg(cfg *config.Config) notifier.MultiNotifier {
 	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
 	return notifier.FromConfig(&notifier.NotifyConfig{
-		DiscordWebhookURL: discordURL,
-		TelegramBotToken:  tgToken,
-		TelegramChatID:    tgChatID,
-		EnabledChannels:   channels,
+		DiscordWebhookURL:  discordURL,
+		TelegramBotToken:   tgToken,
+		TelegramChatID:     tgChatID,
+		EnabledChannels:    channels,
+		Email:              cfg.Email,
+		GmailAppPassword:   cfg.GmailAppPassword,
+		EmailNotifications: cfg.EmailNotifications,
+		EmailPerJob:        cfg.EmailPerJob,
 	})
 }
 

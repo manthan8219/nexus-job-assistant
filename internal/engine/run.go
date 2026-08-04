@@ -21,6 +21,7 @@ import (
 // Searches run in parallel across providers; applications are sequential.
 func (e *Engine) RunOnce(ctx context.Context) error {
 	var scoreWg sync.WaitGroup
+	runStart := time.Now() // for the run-complete notification duration
 	defer func() {
 		scoreWg.Wait() // wait for all background fit-scoring goroutines
 		close(e.LogCh)
@@ -93,12 +94,14 @@ func (e *Engine) RunOnce(ctx context.Context) error {
 
 	// Fan-in: emit "found" live + enqueue for apply (dedup by URL).
 	var enqueueWg sync.WaitGroup
+	// totalFound counts unique jobs surfaced by the search; written by the
+	// fan-in goroutine, read after enqueueWg.Wait() (happens-before via WaitGroup).
+	var totalFound int
 	enqueueWg.Add(1)
 	go func() {
 		defer enqueueWg.Done()
 		defer close(jobCh)
 		seen := make(map[string]bool)
-		totalFound := 0
 		for batch := range foundCh {
 			if batch.err != nil {
 				continue
@@ -127,6 +130,10 @@ func (e *Engine) RunOnce(ctx context.Context) error {
 
 	// Apply worker: processes jobs as they arrive (overlaps with remaining searches).
 	applied := 0
+	failed := 0
+	skipped := 0
+	var runErrs []string
+	var runJobs []notifier.JobEvent
 	hitCap := false
 	for job := range jobCh {
 		if hitCap {
@@ -143,7 +150,7 @@ func (e *Engine) RunOnce(ctx context.Context) error {
 			hitCap = true
 			continue
 		}
-		n, stop := e.processJob(ctx, job, profile, &applied, &scoreWg)
+		n, stop := e.processJob(ctx, job, profile, &applied, &failed, &skipped, &runErrs, &runJobs, &scoreWg)
 		_ = n
 		if stop {
 			hitCap = true
@@ -152,16 +159,31 @@ func (e *Engine) RunOnce(ctx context.Context) error {
 	enqueueWg.Wait()
 
 	e.log("Run complete — applied to %d job(s)", applied)
-	e.Notifier.Send(ctx, notifier.Event{
-		Kind:         notifier.EventRunComplete,
-		TotalApplied: applied,
-	})
+	ev := notifier.Event{
+		Kind:        notifier.EventRunComplete,
+		Timestamp:   time.Now(),
+		RunDuration: time.Since(runStart),
+		Errors:      runErrs,
+		Jobs:        runJobs,
+		Found:       totalFound,
+	}
+	if e.DryRun {
+		ev.DryRun = true
+		ev.Scanned = applied
+	} else {
+		ev.TotalApplied = applied
+		ev.TotalFailed = failed
+		ev.TotalSkipped = skipped
+	}
+	e.Notifier.Send(ctx, ev)
 	return nil
 }
 
 // processJob handles one job (skip / dry-run / queue / apply).
-// Returns (countedTowardLimit, stopRun).
-func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provider.Profile, applied *int, scoreWg *sync.WaitGroup) (bool, bool) {
+// Returns (countedTowardLimit, stopRun). applied/failed/skipped accumulate the
+// run's outcome counts for the run-complete notification; runErrs collects
+// failure reasons; jobs collects per-job rows for the digest.
+func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provider.Profile, applied, failed, skipped *int, runErrs *[]string, jobs *[]notifier.JobEvent, scoreWg *sync.WaitGroup) (bool, bool) {
 	exists, err := e.store.Exists(job.URL)
 	if err != nil {
 		e.log("Store error: %v", err)
@@ -278,6 +300,9 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 		e.log("  [dry-run] %s @ %s (%s)", job.Title, job.Company, job.Location)
 		e.sendResult(Result{Job: job, Status: "dry-run", Reason: reason, FitScore: preScore, FitSummary: preSummary})
 		*applied++
+		*jobs = append(*jobs, notifier.JobEvent{
+			Title: job.Title, Company: job.Company, URL: job.URL, Status: "found",
+		})
 	} else if !e.AutoApply {
 		e.sendResult(Result{Job: job, Status: "queued", Reason: reason, FitScore: preScore, FitSummary: preSummary})
 	} else if applyErr != nil {
@@ -317,12 +342,18 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 	case store.StatusApplied:
 		e.log("  ✓ Applied: %s @ %s", job.Title, job.Company)
 		*applied++
+		*jobs = append(*jobs, notifier.JobEvent{
+			Title: job.Title, Company: job.Company, URL: job.URL, Status: "applied",
+		})
 		e.Notifier.Send(ctx, notifier.Event{
 			Kind:     notifier.EventJobApplied,
 			JobTitle: job.Title,
 			Company:  job.Company,
 			Location: job.Location,
 			Provider: job.Provider,
+			Board:    job.Board,
+			JobURL:   job.URL,
+			PostedAt: job.PostedAt,
 		})
 		d := humanDelay(e.MinDelay)
 		e.log("  Waiting %s before next application...", d.Round(time.Second))
@@ -333,18 +364,33 @@ func (e *Engine) processJob(ctx context.Context, job provider.Job, profile provi
 		}
 		return true, false
 	case store.StatusSkipped:
+		*skipped++
 		if e.Verbose {
 			e.log("  ~ Skipped: %s @ %s — %s", job.Title, job.Company, reason)
 		}
 	case store.StatusFailed:
+		*failed++
+		*runErrs = append(*runErrs, reason)
+		*jobs = append(*jobs, notifier.JobEvent{
+			Title: job.Title, Company: job.Company, URL: job.URL, Status: "failed", Reason: reason,
+		})
 		e.log("  ✗ Failed:  %s @ %s — %s", job.Title, job.Company, reason)
 		e.Notifier.Send(ctx, notifier.Event{
 			Kind:     notifier.EventJobFailed,
 			JobTitle: job.Title,
 			Company:  job.Company,
+			Location: job.Location,
 			Provider: job.Provider,
+			Board:    job.Board,
+			JobURL:   job.URL,
 			Reason:   reason,
 		})
+	case store.StatusQueued:
+		// Dry-run jobs are counted as scanned in the dry-run branch above;
+		// queue-mode jobs (no auto-apply) count as skipped.
+		if !e.DryRun {
+			*skipped++
+		}
 	}
 	return false, false
 }

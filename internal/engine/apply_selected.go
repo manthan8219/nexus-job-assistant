@@ -46,7 +46,11 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 		return fmt.Errorf("engine: count today: %w", err)
 	}
 
+	runStart := time.Now()
 	runApplied := 0
+	runFailed := 0
+	runSkipped := 0
+	var runJobs []notifier.JobEvent
 	e.log("Applying %d approved job(s) · %d/run · %d/day", len(apps), e.MaxPerRun, e.maxAppsPerDay())
 	for _, app := range apps {
 		select {
@@ -122,6 +126,9 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 		switch status {
 		case store.StatusApplied:
 			runApplied++
+			runJobs = append(runJobs, notifier.JobEvent{
+				Title: job.Title, Company: job.Company, URL: job.URL, Status: "applied",
+			})
 			e.log("  ✓ Applied: %s @ %s", job.Title, job.Company)
 			e.Notifier.Send(ctx, notifier.Event{
 				Kind:     notifier.EventJobApplied,
@@ -129,6 +136,9 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 				Company:  job.Company,
 				Location: job.Location,
 				Provider: job.Provider,
+				Board:    job.Board,
+				JobURL:   job.URL,
+				PostedAt: job.PostedAt,
 			})
 			if e.OnApplied != nil {
 				app.Status = store.StatusApplied
@@ -146,20 +156,36 @@ func (e *Engine) ApplySelected(ctx context.Context, ids []int64) error {
 				return ctx.Err()
 			}
 		case store.StatusFailed:
+			runFailed++
+			runJobs = append(runJobs, notifier.JobEvent{
+				Title: job.Title, Company: job.Company, URL: job.URL, Status: "failed", Reason: reason,
+			})
 			e.log("  ✗ Failed: %s @ %s — %s", job.Title, job.Company, reason)
 			e.Notifier.Send(ctx, notifier.Event{
 				Kind:     notifier.EventJobFailed,
 				JobTitle: job.Title,
 				Company:  job.Company,
+				Location: job.Location,
 				Provider: job.Provider,
+				Board:    job.Board,
+				JobURL:   job.URL,
 				Reason:   reason,
 			})
 		case store.StatusSkipped:
+			runSkipped++
 			e.log("  ~ Skipped: %s @ %s — %s", job.Title, job.Company, reason)
 		}
 	}
 	e.log("Apply-selected complete — applied to %d job(s)", runApplied)
-	e.Notifier.Send(ctx, notifier.Event{Kind: notifier.EventRunComplete, TotalApplied: runApplied})
+	e.Notifier.Send(ctx, notifier.Event{
+		Kind:         notifier.EventRunComplete,
+		Timestamp:    time.Now(),
+		TotalApplied: runApplied,
+		TotalFailed:  runFailed,
+		TotalSkipped: runSkipped,
+		RunDuration:  time.Since(runStart),
+		Jobs:         runJobs,
+	})
 	return nil
 }
 

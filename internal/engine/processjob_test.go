@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/provider"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 )
@@ -15,9 +16,11 @@ import (
 // scoring goroutine it spawns (so -race sees no late writes), then drains channels.
 func runProcessJob(t *testing.T, ctx context.Context, e *Engine, job provider.Job) (counted, stop bool) {
 	t.Helper()
-	var applied int
+	var applied, failed, skipped int
+	var runErrs []string
+	var jobs []notifier.JobEvent
 	var wg sync.WaitGroup
-	c, s := e.processJob(ctx, job, provider.Profile{}, &applied, &wg)
+	c, s := e.processJob(ctx, job, provider.Profile{}, &applied, &failed, &skipped, &runErrs, &jobs, &wg)
 	wg.Wait()
 	_ = drainResults(e.ResultCh)
 	return c, s
