@@ -21,15 +21,15 @@ services:
       retries: 3
       start_period: 10s
 
-  # ── React Frontend ─────────────────────────────────────────────────────
+  # ── React Frontend (self-contained image: static bundle + nginx proxy) ──
   ui:
-    image: nginx:alpine
+    build:
+      context: ./terminal-job-ui
+      dockerfile: Dockerfile
+    image: nexus-ui
     container_name: nexus-ui
     ports:
       - "80:80"
-    volumes:
-      - ./terminal-job-ui/dist:/usr/share/nginx/html:ro
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - api
     restart: unless-stopped
