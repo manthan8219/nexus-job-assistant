@@ -4,8 +4,12 @@
 #
 # 1) FREE plan (no persistent disk, no credit card):
 #    - Data lives in Supabase (managed Postgres + Storage) - already migrated.
-#    - Secrets come from NEXUS_* env vars below (set in the Render dashboard,
-#      sync: false = not auto-generated, fill manually). No config file needed.
+#    - Profile + Gmail app password are stored per-user in the Supabase
+#      user_settings table from cmd/set-settings (password AES-encrypted at
+#      rest; the in-DB key is wrapped by NEXUS_SETTINGS_MASTER_KEY). Only the
+#      3 connect secrets live in env: DB URL, service key, master key.
+#    - Remaining NEXUS_* env vars below are optional overrides (set sync: false
+#      in the Render dashboard, fill manually). No config file needed.
 #    - NEXUS_HOME is ephemeral (/tmp) - fine because application state is in
 #      Supabase; only local scratch resets on restart.
 #    - Render free spins the service down after ~15 min idle. Pin
@@ -31,6 +35,8 @@ services:
       - key: NEXUS_DATABASE_URL
         sync: false
       - key: NEXUS_SUPABASE_SERVICE_KEY
+        sync: false
+      - key: NEXUS_SETTINGS_MASTER_KEY
         sync: false
       - key: NEXUS_GMAIL_APP_PASSWORD
         sync: false
