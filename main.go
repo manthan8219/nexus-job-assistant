@@ -20,7 +20,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/ui"
 )
 
-const version = "0.1.1"
+const version = "0.2.0"
 
 const helpText = `
 ⚡ Nexus — Automated Job Applier

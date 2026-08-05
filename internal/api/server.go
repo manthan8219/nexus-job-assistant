@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/manthan8219/nexus-job-assistant/internal/auth"
 	"github.com/manthan8219/nexus-job-assistant/internal/companies"
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/contacts"
@@ -75,6 +76,10 @@ type Server struct {
 	companies        *companies.DB // company footprint store (~/.nexus/companies.db)
 	contacts         *contacts.DB  // saved OSINT contacts store (~/.nexus/contacts.db)
 
+	// auth verifies identity tokens from the configured provider. Nil means
+	// auth is disabled and the API runs in legacy unauthenticated mode.
+	auth *auth.Verifier
+
 	notifyMu     sync.Mutex
 	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
 	sseHeartbeat time.Duration              // interval between periodic snapshot pushes
@@ -128,6 +133,7 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		notifier:         mn,
 		companies:        cdb,
 		contacts:         ktdb,
+		auth:             auth.NewFromEnv(),
 		worker:           wireOutreachWorker(cfg, st, eng),
 		subscribers:      make(map[chan struct{}]struct{}),
 		sseHeartbeat:     15 * time.Second,
@@ -154,7 +160,7 @@ func wireOutreachWorker(cfg *config.Config, st *store.Store, eng *engine.Engine)
 func (s *Server) ListenAndServe(ctx context.Context) error {
 	mux := http.NewServeMux()
 	s.registerRoutes(mux)
-	handler := s.withMiddleware(mux)
+	handler := s.withMiddleware(s.withAuth(mux))
 
 	httpServer := &http.Server{
 		Addr:         s.addr,
@@ -210,6 +216,10 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 func (s *Server) registerRoutes(mux *http.ServeMux) {
 	// Health
 	mux.HandleFunc("GET /health", s.handleHealth)
+
+	// Auth
+	mux.HandleFunc("GET /api/auth/status", s.handleGetAuthStatus)
+	mux.HandleFunc("GET /api/auth/me", s.handleGetAuthMe)
 
 	// Config
 	mux.HandleFunc("GET /api/config", s.handleGetConfig)
