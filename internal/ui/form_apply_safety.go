@@ -135,7 +135,7 @@ func (m FormModel) updateApplySafetyKeys(key string) (FormModel, tea.Cmd, bool) 
 }
 
 func (m FormModel) renderApplyConsent(active bool) string {
-	yes := "Yes — I allow Nexus to submit applications"
+	yes := "Yes — I allow JobPilot to submit applications"
 	no := "No — queue only / manual"
 	if m.applyConsentCursor == 0 {
 		yes = "▶ " + yes

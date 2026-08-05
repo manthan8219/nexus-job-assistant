@@ -57,7 +57,7 @@ func EnsurePDFFor(doc ImprovedDoc, tpl Template, mdPath, texPath, destPDF string
 	return ConvertResult{
 		PDFPath: destPDF,
 		Method:  "native",
-		Note:    "PDF built by Nexus (install tectonic/pdflatex for LaTeX typesetting)",
+		Note:    "PDF built by JobPilot (install tectonic/pdflatex for LaTeX typesetting)",
 	}, nil
 }
 
@@ -85,7 +85,7 @@ func EnsureCoverPDF(cl CoverLetter, texPath, destPDF string) (ConvertResult, err
 	return ConvertResult{
 		PDFPath: destPDF,
 		Method:  "native",
-		Note:    "PDF built by Nexus (install tectonic/pdflatex for LaTeX typesetting)",
+		Note:    "PDF built by JobPilot (install tectonic/pdflatex for LaTeX typesetting)",
 	}, nil
 }
 
@@ -117,7 +117,7 @@ func ConvertFileToPDF(src, destPDF string) (ConvertResult, error) {
 				return EnsurePDF(doc, src, tex, destPDF)
 			}
 		}
-		return ConvertResult{}, fmt.Errorf("Markdown→PDF needs pandoc+PDF engine, or a Nexus .json sidecar")
+		return ConvertResult{}, fmt.Errorf("Markdown→PDF needs pandoc+PDF engine, or a JobPilot .json sidecar")
 	default:
 		return ConvertResult{}, fmt.Errorf("unsupported source %s — use .md, .tex, or .pdf", ext)
 	}

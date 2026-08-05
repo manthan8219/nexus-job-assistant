@@ -481,7 +481,7 @@ func FormatHint(f Format) string {
 	case FormatLaTeX:
 		return "Editable professional typesetting"
 	case FormatPDF:
-		return "Always saved — LaTeX/pandoc if available, else Nexus PDF"
+		return "Always saved — LaTeX/pandoc if available, else JobPilot PDF"
 	default:
 		return ""
 	}

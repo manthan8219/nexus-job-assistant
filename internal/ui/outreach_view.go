@@ -98,7 +98,7 @@ func (m OutreachHubModel) renderNextAction() string {
 		if m.building {
 			line = "Finding contacts + drafting emails…"
 		} else if len(outreach.Pending(m.items, outreach.ChannelEmail)) == 0 {
-			line = "Press g — Nexus builds an email queue from Jobs (Hunter finds To: addresses)."
+			line = "Press g — JobPilot builds an email queue from Jobs (Hunter finds To: addresses)."
 		} else if mode == outreach.ModeAuto {
 			line = "Queue ready · press a to send all remaining (or enter for one)."
 		} else if mode == outreach.ModeQueue {
@@ -110,7 +110,7 @@ func (m OutreachHubModel) renderNextAction() string {
 		if m.building {
 			line = "Building LinkedIn queue…"
 		} else if len(outreach.Pending(m.items, outreach.ChannelLinkedIn)) == 0 {
-			line = "Press g — Nexus queues companies, then opens LinkedIn in your browser."
+			line = "Press g — JobPilot queues companies, then opens LinkedIn in your browser."
 		} else if mode == outreach.ModeAuto {
 			line = "Queue ready · press a to open browser for each company automatically."
 		} else if mode == outreach.ModeQueue {
@@ -132,7 +132,7 @@ func (m OutreachHubModel) viewSetup(w int) string {
 	var b strings.Builder
 	b.WriteString(labelStyle.Render("Automated outreach"))
 	b.WriteString("\n")
-	b.WriteString(primaryStyle.Render("Nexus prepares follow-ups from jobs you already applied to, then runs them."))
+	b.WriteString(primaryStyle.Render("JobPilot prepares follow-ups from jobs you already applied to, then runs them."))
 	b.WriteString("\n")
 	b.WriteString(mutedStyle.Render("Email: finds recruiter addresses + sends via Gmail.  LinkedIn: opens browser searches for you to message."))
 	b.WriteString("\n\n")
@@ -322,7 +322,7 @@ func (m OutreachHubModel) viewSent(w int) string {
 	var b strings.Builder
 	b.WriteString(labelStyle.Render("Sent outreach"))
 	b.WriteString("\n")
-	b.WriteString(mutedStyle.Render("Audit log of every email sent and LinkedIn action taken by Nexus."))
+	b.WriteString(mutedStyle.Render("Audit log of every email sent and LinkedIn action taken by JobPilot."))
 	b.WriteString("\n\n")
 	if m.logLoading {
 		b.WriteString(mutedStyle.Render("Loading…"))

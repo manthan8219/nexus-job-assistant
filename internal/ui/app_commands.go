@@ -263,7 +263,7 @@ func sendTestNotifyCmd(cfg *config.Config) tea.Cmd {
 		}
 		var parts []string
 		for _, n := range mn {
-			if err := n.Send(context.Background(), notifier.Event{Kind: notifier.EventCustom, Message: "Test notification from Nexus"}); err != nil {
+			if err := n.Send(context.Background(), notifier.Event{Kind: notifier.EventCustom, Message: "Test notification from JobPilot"}); err != nil {
 				parts = append(parts, err.Error())
 			}
 		}

@@ -5,7 +5,7 @@ import (
 )
 
 // CoverLetter is a generated application cover letter: structured content the
-// model returns; Nexus renders Markdown / LaTeX / PDF locally.
+// model returns; JobPilot renders Markdown / LaTeX / PDF locally.
 type CoverLetter struct {
 	Subject    string   `json:"subject,omitempty"`
 	Greeting   string   `json:"greeting"`

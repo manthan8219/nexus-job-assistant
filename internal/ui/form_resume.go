@@ -1,7 +1,7 @@
 package ui
 
 // Package ui — form_resume.go
-// Resume Path field support: the Nexus-generated resume library picker, path
+// Resume Path field support: the JobPilot-generated resume library picker, path
 // autocomplete, async analysis commands, and handleResumePathKey. The handler
 // returns ok=false for unhandled keys so they fall through to shared navigation.
 
@@ -19,14 +19,14 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 )
 
-// handleResumePathKey handles the Resume Path field: the Nexus-generated resume
+// handleResumePathKey handles the Resume Path field: the JobPilot-generated resume
 // library picker (ctrl+j/k), path autocomplete, and the blur/analyse behaviour
 // on navigation. Returns ok=false for unhandled keys so they fall through to
 // the shared field navigation + textinput forwarding.
 func (m FormModel) handleResumePathKey(key string) (FormModel, tea.Cmd, bool) {
 	m.loadResumeLibrary()
 
-	// Nexus-generated resume library (ctrl+j/k · enter to use)
+	// JobPilot-generated resume library (ctrl+j/k · enter to use)
 	if len(m.resumeLib) > 0 {
 		switch key {
 		case "ctrl+j":
@@ -134,7 +134,7 @@ func (m FormModel) handleResumePathKey(key string) (FormModel, tea.Cmd, bool) {
 	return m, nil, false
 }
 
-// loadResumeLibrary refreshes the list of Nexus-generated resume PDFs from disk.
+// loadResumeLibrary refreshes the list of JobPilot-generated resume PDFs from disk.
 func (m *FormModel) loadResumeLibrary() {
 	vers, err := resume.ListVersions()
 	if err != nil {
@@ -147,7 +147,7 @@ func (m *FormModel) loadResumeLibrary() {
 	}
 }
 
-// applyResumeLibrarySelection sets the resume path to the picked Nexus PDF,
+// applyResumeLibrarySelection sets the resume path to the picked JobPilot PDF,
 // blurs the field, moves on, and kicks off analysis when the path changed.
 func (m FormModel) applyResumeLibrarySelection() (FormModel, tea.Cmd) {
 	if m.resumeLibIdx < 0 || m.resumeLibIdx >= len(m.resumeLib) {
@@ -172,12 +172,12 @@ func (m FormModel) applyResumeLibrarySelection() (FormModel, tea.Cmd) {
 	return m, tea.Batch(cmds...)
 }
 
-// renderResumeLibrary renders the Nexus-generated resume picker below the path
+// renderResumeLibrary renders the JobPilot-generated resume picker below the path
 // input. Always reads disk so Config stays in sync after Resume → New resume.
 func (m FormModel) renderResumeLibrary() string {
 	vers, err := resume.ListVersions()
 	if err != nil || len(vers) == 0 {
-		return "\n    " + mutedStyle.Render("No Nexus PDFs yet — generate one under Resume → New resume")
+		return "\n    " + mutedStyle.Render("No JobPilot PDFs yet — generate one under Resume → New resume")
 	}
 	idx := m.resumeLibIdx
 	if idx < 0 || idx >= len(vers) {
@@ -185,7 +185,7 @@ func (m FormModel) renderResumeLibrary() string {
 	}
 	var b strings.Builder
 	b.WriteString("\n    " + lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render(
-		fmt.Sprintf("Nexus generated (%d)  ·  ctrl+j/k pick  ·  enter use  ·  or type your own path", len(vers)),
+		fmt.Sprintf("JobPilot generated (%d)  ·  ctrl+j/k pick  ·  enter use  ·  or type your own path", len(vers)),
 	))
 	limit := len(vers)
 	if limit > 5 {

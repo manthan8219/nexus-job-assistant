@@ -23,7 +23,7 @@ import (
 const version = "0.2.0"
 
 const helpText = `
-⚡ Nexus — Automated Job Applier
+⚡ JobPilot — Automated Job Applier
 
 USAGE:
   nexus [flags]
@@ -268,10 +268,10 @@ func runEngine(cfg *config.Config, opts engineOpts) {
 	eng.OnlyProvider = opts.providerName
 
 	if opts.dryRun {
-		fmt.Println("⚡ Nexus — DRY RUN (no applications will be submitted)")
+		fmt.Println("⚡ JobPilot — DRY RUN (no applications will be submitted)")
 		fmt.Println()
 	} else {
-		fmt.Printf("⚡ Nexus — Running (limit: %d, delay: %ds+)\n\n", eng.MaxPerRun, opts.minDelay)
+		fmt.Printf("⚡ JobPilot — Running (limit: %d, delay: %ds+)\n\n", eng.MaxPerRun, opts.minDelay)
 	}
 
 	// Drain result channel in background
@@ -331,7 +331,7 @@ func runTestNotify(cfg *config.Config) {
 	fmt.Println("Sending test notification...")
 	ev := notifier.Event{
 		Kind:    notifier.EventCustom,
-		Title:   "⚡ Nexus — Test Notification",
+		Title:   "⚡ JobPilot — Test Notification",
 		Message: "Your notification integration is working correctly.",
 	}
 	errs := mn.Send(context.Background(), ev)
@@ -368,7 +368,7 @@ func runInboxScan(cfg *config.Config) {
 		max = cfg.InboxScanMax
 	}
 
-	fmt.Println("Nexus - scanning inbox for hiring-related emails...")
+	fmt.Println("JobPilot - scanning inbox for hiring-related emails...")
 	ctx := context.Background()
 	hs, err := inbox.Scan(ctx, days, max, fetcher, st)
 	if err != nil {
@@ -444,7 +444,7 @@ func runReplyCheck(cfg *config.Config) {
 		EnabledChannels:   channels,
 	})
 
-	fmt.Println("⚡ Nexus — checking inbox for replies…")
+	fmt.Println("⚡ JobPilot — checking inbox for replies…")
 	rep, err := outreach.RunReplyCheck(context.Background(), cfg, st, mn, fetcher,
 		func(line string) { fmt.Println("  " + line) })
 	if err != nil {

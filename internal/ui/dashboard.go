@@ -322,7 +322,7 @@ func (m DashboardModel) nextAction(allRequired bool) string {
 		return "Running… watch Providers below, or press enter to stop"
 	}
 	if !m.resumeReady {
-		return "Next: set a valid Resume Path in Config (or pick a Nexus PDF)"
+		return "Next: set a valid Resume Path in Config (or pick a JobPilot PDF)"
 	}
 	if !m.hasTitles {
 		return "Next: in Config, describe the job you want — AI fills titles"

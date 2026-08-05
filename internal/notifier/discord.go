@@ -163,7 +163,7 @@ func (d *DiscordNotifier) embed(color int, title, desc string) discordEmbed {
 		Description: desc,
 		Color:       color,
 		Timestamp:   time.Now().UTC().Format(time.RFC3339),
-		Footer:      &discordFooter{Text: "Nexus Job Bot"},
+		Footer:      &discordFooter{Text: "JobPilot Bot"},
 	}
 }
 

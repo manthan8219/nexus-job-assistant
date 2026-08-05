@@ -84,7 +84,7 @@ type FormModel struct {
 	acSuggestions []string
 	acIdx         int // -1 = nothing highlighted
 
-	// Nexus-generated resume library (PDFs under ~/.nexus/resumes)
+	// JobPilot-generated resume library (PDFs under ~/.nexus/resumes)
 	resumeLib      []resume.Version
 	resumeLibIdx   int  // highlighted generated resume
 	resumeLibFocus bool // true when navigating the generated list
