@@ -321,12 +321,18 @@ data island — **no user can see another user's config, applications, contacts,
 outreach, or runs**.
 
 - **Backend env vars**
-  - `NEXUS_SUPABASE_JWT_SECRET` — the Supabase project's JWT secret. Setting it
-    enables auth: every `/api/*` route returns 401 without a valid token, and
-    each signed-in user gets their own data under
+  - `NEXUS_SUPABASE_JWT_SECRET` — the Supabase project's classic JWT secret
+    (HS256). Setting it enables auth: every `/api/*` route returns 401 without
+    a valid token, and each signed-in user gets their own data under
     `NEXUS_HOME/users/<userID>/` (config, applications, contacts, companies,
     plus per-user engine runs and mission streams). Unset → legacy
     single-user mode, unchanged.
+  - `NEXUS_SUPABASE_JWKS_URL` — **alternative to the JWT secret** for newer
+    Supabase projects that sign access tokens with asymmetric keys (ES256
+    P-256). Set it to the project's Discovery URL, e.g.
+    `https://<project>.supabase.co/auth/v1/.well-known/jwks.json`. The key set
+    is fetched lazily and cached (auto-refreshes on key rotation). If both are
+    set, the JWT secret wins.
   - `NEXUS_SUPABASE_URL` *(optional)* — enables the issuer-claim check.
   - `NEXUS_SUPABASE_JWT_AUD` *(optional)* — audience; defaults to
     `authenticated`.

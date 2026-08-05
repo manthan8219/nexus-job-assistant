@@ -37,6 +37,10 @@ services:
         # NEXUS_ALLOWED_ORIGINS is the CORS allow-list for the dashboard.
       - key: NEXUS_SUPABASE_JWT_SECRET
         sync: false
+        # Alternative for newer projects that sign with asymmetric ES256 keys:
+        # set the JWKS discovery URL instead of the JWT secret.
+      - key: NEXUS_SUPABASE_JWKS_URL
+        sync: false
       - key: NEXUS_ADMIN_EMAILS
         sync: false
       - key: NEXUS_ALLOWED_ORIGINS
