@@ -6,6 +6,9 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/engine"
 )
 
 // MissionSnapshot mirrors the frontend's MissionSnapshot type.
@@ -47,56 +50,76 @@ type ReadyCheck struct {
 	Optional bool   `json:"optional,omitempty"`
 }
 
-// handleGetMission returns the full dashboard snapshot.
+// handleGetMission returns the full dashboard snapshot for the requesting
+// user (or the legacy state when auth is off).
 func (s *Server) handleGetMission(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, s.missionSnapshot())
+	rs := s.runFor(r)
+	writeJSON(w, http.StatusOK, s.missionSnapshotFor(rs))
 }
 
-// missionSnapshot builds the full dashboard snapshot the frontend renders.
+// missionSnapshot is the legacy single-user snapshot (tests + non-auth mode).
 func (s *Server) missionSnapshot() MissionSnapshot {
+	return s.missionSnapshotFor(&s.runState)
+}
+
+// missionSnapshotFor builds the full dashboard snapshot the frontend renders
+// for one run state (per-user in multi-tenant mode, legacy otherwise).
+func (s *Server) missionSnapshotFor(rs *runState) MissionSnapshot {
 	s.mu.RLock()
-	status := s.status
-	errMsg := s.errMsg
-	dryRun := s.dryRun
-	autoApply := s.autoApply
-	applied := s.applied
-	skipped := s.skipped
-	failed := s.failed
-	appliedToday := s.appliedToday
-	lastJob := s.lastJob
-	providers := s.providerList()
-	progress := copyMap(s.providerProgress)
-	foundCount := s.foundCount
-	liveFeed := s.liveFeed
-	recent := s.recent
+	cfg := rs.cfg
+	if cfg == nil {
+		cfg = s.cfg
+	}
+	s.mu.RUnlock()
+
+	rs.mu.RLock()
+	status := rs.status
+	errMsg := rs.errMsg
+	dryRun := rs.dryRun
+	autoApply := rs.autoApply
+	applied := rs.applied
+	skipped := rs.skipped
+	failed := rs.failed
+	appliedToday := 0
+	lastJob := rs.lastJob
+	providers := s.providerList(rs)
+	progress := copyMap(rs.providerProgress)
+	foundCount := rs.foundCount
+	liveFeed := rs.liveFeed
+	recent := rs.recent
+	rs.mu.RUnlock()
+
 	resumePath := ""
 	aiOn := false
 	hasTitles := false
 	hasConsent := false
-	if s.cfg != nil {
-		resumePath = s.cfg.ResumePath
-		aiOn = s.cfg.AIAssist
-		hasTitles = s.cfg.TargetJobTitles != ""
-		hasConsent = s.cfg.ApplyConsent
+	if cfg != nil {
+		resumePath = cfg.ResumePath
+		aiOn = cfg.AIAssist
+		hasTitles = cfg.TargetJobTitles != ""
+		hasConsent = cfg.ApplyConsent
 	}
-	s.mu.RUnlock()
 
-	// If idle, pull stats from the store
-	if status == StatusIdle && s.store != nil {
-		a, sk, f, _ := s.store.Stats()
+	// If idle, pull stats from the store.
+	apps := rs.apps
+	if apps == nil {
+		apps = s.store
+	}
+	if status == StatusIdle && apps != nil {
+		a, sk, f, _ := apps.Stats()
 		applied = a
 		skipped = sk
 		failed = f
-		today, _ := s.store.CountAppliedSince(time.Now().Truncate(24 * time.Hour))
+		today, _ := apps.CountAppliedSince(time.Now().Truncate(24 * time.Hour))
 		appliedToday = today
 	}
 
 	maxPerDay := 25
-	if s.cfg != nil && s.cfg.MaxAppsPerDay > 0 {
-		maxPerDay = s.cfg.MaxAppsPerDay
+	if cfg != nil && cfg.MaxAppsPerDay > 0 {
+		maxPerDay = cfg.MaxAppsPerDay
 	}
 
-	checks := s.buildChecks()
+	checks := s.buildChecks(cfg)
 	onboardingComplete := true
 	for _, c := range checks {
 		if c.Optional {
@@ -111,14 +134,14 @@ func (s *Server) missionSnapshot() MissionSnapshot {
 	modeName := "Search & Apply"
 	modeHint := "Search all boards, score, and apply"
 	nextAction := "Configure your profile first"
-	if s.cfg != nil && s.cfg.FirstName != "" && s.cfg.Email != "" && hasTitles {
+	if cfg != nil && cfg.FirstName != "" && cfg.Email != "" && hasTitles {
 		switch status {
 		case StatusIdle:
 			nextAction = "Start a run to search and apply"
 			// AI Assist is recommended, not required: once the profile
 			// basics are done, nudge users who never turned it on so they
 			// don't miss fit-scoring and tailored answers.
-			if !s.cfg.AIAssist {
+			if !cfg.AIAssist {
 				nextAction = "Next: turn on AI Assist to unlock fit-scoring and tailored answers"
 			}
 		case StatusRunning:
@@ -174,10 +197,12 @@ func (s *Server) handleStreamMission(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Connection", "keep-alive")
 	w.Header().Set("X-Accel-Buffering", "no")
 
-	sub := s.subscribe()
-	defer s.unsubscribe(sub)
+	rs := s.runFor(r)
 
-	if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+	sub := rs.subscribe()
+	defer rs.unsubscribe(sub)
+
+	if err := writeMissionEvent(w, s.missionSnapshotFor(rs)); err != nil {
 		return
 	}
 	flusher.Flush()
@@ -194,12 +219,12 @@ func (s *Server) handleStreamMission(w http.ResponseWriter, r *http.Request) {
 		case <-r.Context().Done():
 			return
 		case <-sub:
-			if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+			if err := writeMissionEvent(w, s.missionSnapshotFor(rs)); err != nil {
 				return
 			}
 			flusher.Flush()
 		case <-heartbeatCh:
-			if err := writeMissionEvent(w, s.missionSnapshot()); err != nil {
+			if err := writeMissionEvent(w, s.missionSnapshotFor(rs)); err != nil {
 				return
 			}
 			flusher.Flush()
@@ -219,63 +244,39 @@ func writeMissionEvent(w io.Writer, snap MissionSnapshot) error {
 	return err
 }
 
-// subscribe registers a wake-up channel for mission-stream changes.
-func (s *Server) subscribe() chan struct{} {
-	ch := make(chan struct{}, 1)
-	s.notifyMu.Lock()
-	s.subscribers[ch] = struct{}{}
-	s.notifyMu.Unlock()
-	return ch
-}
-
-// unsubscribe removes a mission-stream subscriber.
-func (s *Server) unsubscribe(ch chan struct{}) {
-	s.notifyMu.Lock()
-	delete(s.subscribers, ch)
-	s.notifyMu.Unlock()
-}
-
-// changed wakes every mission-stream subscriber so it pushes a fresh snapshot.
-// Wake-ups are best-effort: snapshots are full-state, so a dropped wake-up is
-// safe, and the heartbeat re-syncs any subscriber that fell behind.
-func (s *Server) changed() {
-	s.notifyMu.Lock()
-	for ch := range s.subscribers {
-		select {
-		case ch <- struct{}{}:
-		default:
-		}
+// providerList returns the list of provider names from the run state's engine.
+func (s *Server) providerList(rs *runState) []string {
+	var eng *engine.Engine
+	if rs.perUser {
+		eng = rs.eng
+	} else {
+		eng = s.eng
 	}
-	s.notifyMu.Unlock()
-}
-
-// providerList returns the list of provider names from the engine.
-func (s *Server) providerList() []string {
-	if s.eng == nil {
+	if eng == nil {
 		return []string{}
 	}
-	return s.eng.ProviderNames()
+	return eng.ProviderNames()
 }
 
 // buildChecks returns readiness checks for the onboarding card.
-func (s *Server) buildChecks() []ReadyCheck {
-	if s.cfg == nil {
+func (s *Server) buildChecks(cfg *config.Config) []ReadyCheck {
+	if cfg == nil {
 		return []ReadyCheck{}
 	}
 	return []ReadyCheck{
-		{Key: "name", OK: s.cfg.FirstName != "" && s.cfg.LastName != "",
+		{Key: "name", OK: cfg.FirstName != "" && cfg.LastName != "",
 			Label: "Full name", Hint: "Fill your name in Config"},
-		{Key: "email", OK: s.cfg.Email != "",
+		{Key: "email", OK: cfg.Email != "",
 			Label: "Email address", Hint: "Fill your email in Config"},
-		{Key: "resume", OK: s.cfg.ResumePath != "",
+		{Key: "resume", OK: cfg.ResumePath != "",
 			Label: "Resume path", Hint: "Set resume path in Config"},
-		{Key: "titles", OK: s.cfg.TargetJobTitles != "",
+		{Key: "titles", OK: cfg.TargetJobTitles != "",
 			Label: "Job titles", Hint: "Set target job titles in Config"},
-		{Key: "locations", OK: s.cfg.TargetLocations != "",
+		{Key: "locations", OK: cfg.TargetLocations != "",
 			Label: "Locations", Hint: "Set target locations in Config"},
-		{Key: "consent", OK: s.cfg.ApplyConsent,
+		{Key: "consent", OK: cfg.ApplyConsent,
 			Label: "Apply consent", Hint: "Grant consent in Config"},
-		{Key: "ai-assist", OK: s.cfg.AIAssist, Optional: true,
+		{Key: "ai-assist", OK: cfg.AIAssist, Optional: true,
 			Label: "AI Assist on",
 			Hint:  "AI Assist off — optional: fit-scoring & tailored answers"},
 	}

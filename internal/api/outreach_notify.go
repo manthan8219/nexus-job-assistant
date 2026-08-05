@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
@@ -68,7 +67,7 @@ func toOutreachItemDTO(it outreach.Item) outreachItemDTO {
 
 // handleGetOutreachSetup returns the real outreach configuration.
 func (s *Server) handleGetOutreachSetup(w http.ResponseWriter, r *http.Request) {
-	cfg := s.cfg
+	cfg := s.cfgFor(r)
 	mode := cfg.OutreachMode
 	if mode == "" {
 		mode = "confirm"
@@ -117,21 +116,22 @@ func (s *Server) handlePutOutreachSetup(w http.ResponseWriter, r *http.Request) 
 		body.Mode = "confirm"
 	}
 
+	cfg := s.cfgFor(r)
 	s.mu.Lock()
-	s.cfg.OutreachConsent = body.Consent
-	s.cfg.OutreachMode = body.Mode
+	cfg.OutreachConsent = body.Consent
+	cfg.OutreachMode = body.Mode
 	if body.MaxEmailsPerDay > 0 {
-		s.cfg.MaxEmailsPerDay = body.MaxEmailsPerDay
+		cfg.MaxEmailsPerDay = body.MaxEmailsPerDay
 	}
 	if body.MaxLinkedInPerDay > 0 {
-		s.cfg.MaxLinkedInPerDay = body.MaxLinkedInPerDay
+		cfg.MaxLinkedInPerDay = body.MaxLinkedInPerDay
 	}
-	s.cfg.OutreachAICompose = body.AIConpose
-	s.cfg.OutreachAIReview = body.AIReview
-	s.cfg.OutreachReferralAsk = body.ReferralAsk
-	s.cfg.ReferralSubjectTpl = body.ReferralSubjectTpl
-	s.cfg.ReferralBodyTpl = body.ReferralBodyTpl
-	err := config.Save(s.cfg)
+	cfg.OutreachAICompose = body.AIConpose
+	cfg.OutreachAIReview = body.AIReview
+	cfg.OutreachReferralAsk = body.ReferralAsk
+	cfg.ReferralSubjectTpl = body.ReferralSubjectTpl
+	cfg.ReferralBodyTpl = body.ReferralBodyTpl
+	err := s.saveConfigFor(r, cfg)
 	s.mu.Unlock()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "save config: "+err.Error())
@@ -158,7 +158,8 @@ func (s *Server) handleGetOutreachItems(w http.ResponseWriter, r *http.Request) 
 // handlePostOutreachBuild creates email + linkedin drafts for every applied or
 // skipped application that doesn't already have a queue item (idempotent).
 func (s *Server) handlePostOutreachBuild(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store unavailable")
 		return
 	}
@@ -166,6 +167,8 @@ func (s *Server) handlePostOutreachBuild(w http.ResponseWriter, r *http.Request)
 		Channel string `json:"channel,omitempty"`
 	}
 	_ = readJSON(r, &body)
+
+	cfg := s.cfgFor(r)
 
 	existing, err := outreach.Load()
 	if err != nil {
@@ -177,7 +180,7 @@ func (s *Server) handlePostOutreachBuild(w http.ResponseWriter, r *http.Request)
 		seen[string(it.Channel)+"|"+it.JobURL] = true
 	}
 
-	apps, err := s.store.List()
+	apps, err := st.List()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list applications: "+err.Error())
 		return
@@ -199,7 +202,7 @@ func (s *Server) handlePostOutreachBuild(w http.ResponseWriter, r *http.Request)
 		}
 		if body.Channel == "" || body.Channel == "email" {
 			if !seen["email|"+app.URL] {
-				it := outreach.NewEmailDraft(s.cfg, ref, "", "")
+				it := outreach.NewEmailDraft(cfg, ref, "", "")
 				if err := outreach.Upsert(it); err != nil {
 					writeError(w, http.StatusInternalServerError, "save outreach item: "+err.Error())
 					return
@@ -210,7 +213,7 @@ func (s *Server) handlePostOutreachBuild(w http.ResponseWriter, r *http.Request)
 		}
 		if body.Channel == "" || body.Channel == "linkedin" {
 			if !seen["linkedin|"+app.URL] {
-				it := outreach.NewLinkedInDraft(s.cfg, ref, "", "")
+				it := outreach.NewLinkedInDraft(cfg, ref, "", "")
 				if err := outreach.Upsert(it); err != nil {
 					writeError(w, http.StatusInternalServerError, "save outreach item: "+err.Error())
 					return
@@ -248,11 +251,12 @@ func (s *Server) handlePostOutreachSend(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var sendErr error
+	cfg := s.cfgFor(r)
 	switch it.Channel {
 	case outreach.ChannelLinkedIn:
-		sendErr = outreach.MarkLinkedInSent(s.cfg, it)
+		sendErr = outreach.MarkLinkedInSent(cfg, it)
 	default:
-		sendErr = outreach.SendEmail(s.cfg, it)
+		sendErr = outreach.SendEmail(cfg, it)
 	}
 
 	// Reload to pick up the post-attempt status (sent / failed / follow-up).
@@ -324,11 +328,12 @@ func (s *Server) handlePutOutreachItemVariant(w http.ResponseWriter, r *http.Req
 
 // handleGetOutreachLog returns the outreach audit log (newest first).
 func (s *Server) handleGetOutreachLog(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeJSON(w, http.StatusOK, []any{})
 		return
 	}
-	entries, err := s.store.ListOutreachLog(100)
+	entries, err := st.ListOutreachLog(100)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list outreach log: "+err.Error())
 		return
@@ -341,39 +346,48 @@ func (s *Server) handleGetOutreachLog(w http.ResponseWriter, r *http.Request) {
 
 // handlePostNotifyTest sends a test notification to all configured channels.
 func (s *Server) handlePostNotifyTest(w http.ResponseWriter, r *http.Request) {
-	if s.notifier == nil || len(s.notifier) == 0 {
+	mn := s.notifier
+	if s.userState(r) != nil {
+		mn = notifiersFromConfig(s.cfgFor(r))
+	}
+	if len(mn) == 0 {
 		writeError(w, http.StatusBadRequest, "no notification channels configured")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"sent": len(s.notifier)})
+	writeJSON(w, http.StatusOK, map[string]any{"sent": len(mn)})
 }
 
 // handlePostNotifySummary sends a run summary / daily digest through every
-// configured channel, built from the live mission counters. This is the
-// web-side trigger for the same digest the TUI scheduler emits.
+// configured channel, built from the requesting user's live run counters. This
+// is the web-side trigger for the same digest the TUI scheduler emits.
 func (s *Server) handlePostNotifySummary(w http.ResponseWriter, r *http.Request) {
-	if s.notifier == nil || len(s.notifier) == 0 {
+	mn := s.notifier
+	if s.userState(r) != nil {
+		mn = notifiersFromConfig(s.cfgFor(r))
+	}
+	if len(mn) == 0 {
 		writeError(w, http.StatusBadRequest, "no notification channels configured")
 		return
 	}
 
-	s.mu.RLock()
+	rs := s.runFor(r)
+	rs.mu.RLock()
 	ev := notifier.Event{
 		Kind:         notifier.EventDailySummary,
 		Timestamp:    time.Now(),
-		Found:        s.foundCount,
-		TotalApplied: s.applied,
-		TotalFailed:  s.failed,
-		TotalSkipped: s.skipped,
-		RunDuration:  time.Since(s.lastJobAt),
+		Found:        rs.foundCount,
+		TotalApplied: rs.applied,
+		TotalFailed:  rs.failed,
+		TotalSkipped: rs.skipped,
+		RunDuration:  time.Since(rs.lastJobAt),
 	}
-	s.mu.RUnlock()
+	rs.mu.RUnlock()
 	if ev.RunDuration < 0 {
 		ev.RunDuration = 0
 	}
 
-	errs := s.notifier.Send(r.Context(), ev)
-	sent := len(s.notifier) - len(errs)
+	errs := mn.Send(r.Context(), ev)
+	sent := len(mn) - len(errs)
 	if sent <= 0 && len(errs) > 0 {
 		writeError(w, http.StatusInternalServerError, "send summary: "+errs[0].Error())
 		return

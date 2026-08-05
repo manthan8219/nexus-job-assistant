@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/resume"
 	"github.com/manthan8219/nexus-job-assistant/internal/workcontext"
 )
@@ -17,9 +16,9 @@ import (
 func (s *Server) handleGetResumeAnalyze(w http.ResponseWriter, r *http.Request) {
 	path := ""
 	aiEnabled := false
-	if s.cfg != nil {
-		path = s.cfg.ResumePath
-		aiEnabled = s.cfg.AIAssist
+	if cfg := s.cfgFor(r); cfg != nil {
+		path = cfg.ResumePath
+		aiEnabled = cfg.AIAssist
 	}
 	if path != "" {
 		if cached, ok := resume.LoadFreshCache(path, aiEnabled); ok {
@@ -65,15 +64,15 @@ func (s *Server) handlePostResumeAnalyze(w http.ResponseWriter, r *http.Request)
 	}
 
 	path := body.Path
-	if path == "" && s.cfg != nil {
-		path = s.cfg.ResumePath
+	if cfg := s.cfgFor(r); path == "" && cfg != nil {
+		path = cfg.ResumePath
 	}
 	if path == "" {
 		writeError(w, http.StatusBadRequest, "no resume path configured")
 		return
 	}
 
-	ai := resume.AIOptionsFromConfig(s.cfg)
+	ai := resume.AIOptionsFromConfig(s.cfgFor(r))
 	result := resume.AnalyzeFull(path, ai)
 
 	// Cache the analysis result so subsequent GETs return it.
@@ -264,14 +263,15 @@ func (s *Server) handleDeleteResumeProjects(w http.ResponseWriter, r *http.Reque
 
 // handleGetResumeSkills returns the skills list from the config or cached profile.
 func (s *Server) handleGetResumeSkills(w http.ResponseWriter, r *http.Request) {
+	cfg := s.cfgFor(r)
 	// First try config's explicit skills list.
-	if s.cfg != nil && len(s.cfg.Skills) > 0 {
-		writeJSON(w, http.StatusOK, s.cfg.Skills)
+	if cfg != nil && len(cfg.Skills) > 0 {
+		writeJSON(w, http.StatusOK, cfg.Skills)
 		return
 	}
 	// Fall back to skills from the cached analysis profile.
-	if s.cfg != nil && s.cfg.ResumePath != "" {
-		if cached, ok := resume.LoadFreshCache(s.cfg.ResumePath, s.cfg.AIAssist); ok {
+	if cfg != nil && cfg.ResumePath != "" {
+		if cached, ok := resume.LoadFreshCache(cfg.ResumePath, cfg.AIAssist); ok {
 			if cached.Result.Profile != nil && len(cached.Result.Profile.Skills) > 0 {
 				writeJSON(w, http.StatusOK, cached.Result.Profile.Skills)
 				return
@@ -290,11 +290,10 @@ func (s *Server) handlePutResumeSkills(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid skills payload")
 		return
 	}
-	if s.cfg != nil {
-		cfg := s.cfg
+	if cfg := s.cfgFor(r); cfg != nil {
 		cfg.Skills = body.Skills
 		// Persist the config change so it survives restarts.
-		_ = config.Save(cfg)
+		_ = s.saveConfigFor(r, cfg)
 	}
 	writeJSON(w, http.StatusOK, body.Skills)
 }
@@ -313,13 +312,14 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	ai := resume.AIOptionsFromConfig(s.cfg)
+	cfg := s.cfgFor(r)
+	ai := resume.AIOptionsFromConfig(cfg)
 	if !ai.Enabled {
 		writeError(w, http.StatusBadRequest, "turn on AI Assist in Config first")
 		return
 	}
 
-	resumePath := strings.TrimSpace(s.cfg.ResumePath)
+	resumePath := strings.TrimSpace(cfg.ResumePath)
 	if resumePath == "" {
 		writeError(w, http.StatusBadRequest, "set a resume path in Config first")
 		return
@@ -368,7 +368,7 @@ func (s *Server) handlePostResumeImprove(w http.ResponseWriter, r *http.Request)
 		Profile:    profile,
 		Contact:    contact,
 		Projects:   projects,
-		Skills:     s.cfg.Skills,
+		Skills:     cfg.Skills,
 		TargetRole: body.TargetRole,
 		Formats:    formats,
 		TemplateID: tpl.ID,

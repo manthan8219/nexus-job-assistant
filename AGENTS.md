@@ -29,6 +29,8 @@
 | `internal/store` | SQLite persistence (applications, sessions) |
 | `internal/companies` | Local employer DB (seeded from `data/companies.json`) |
 | `internal/config` | User config load/save (`~/.nexus/config.json`) |
+| `internal/auth` | Identity verification: Supabase JWT validation, request-context user, Bearer extraction |
+| `internal/userstore` | Per-user data islands (`NEXUS_HOME/users/<userID>/`): bounded lazy registry, LRU eviction, legacy-data claim |
 | `internal/notifier` | Notification channels behind a `Notifier` interface (Discord, Telegram, …) |
 | `internal/scraper` | Job-page scraping |
 | `internal/enrich` | Re-fetches a job description from a stored provider URL (Greenhouse, Lever) for re-analysis |

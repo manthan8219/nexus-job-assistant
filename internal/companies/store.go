@@ -50,6 +50,19 @@ func OpenDefaultEmbedded() (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	return openEmbedded(path)
+}
+
+// OpenEmbeddedAt opens (or creates) a company DB at path, seeded from the
+// embedded catalogs only (no network fetch). Per-user islands use it so each
+// user's footprint database is offline-seeded.
+func OpenEmbeddedAt(path string) (*DB, error) {
+	return openEmbedded(path)
+}
+
+// openEmbedded opens a company DB at path and seeds only the embedded
+// catalogs — no network fetch.
+func openEmbedded(path string) (*DB, error) {
 	db, err := Open(path)
 	if err != nil {
 		return nil, err
