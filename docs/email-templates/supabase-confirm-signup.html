@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:v="urn:schemas-microsoft-com:vml"
+      xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <title>Confirm your Nexus account</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style>
+    /* Mobile: make the card fluid and the button full-width. */
+    @media screen and (max-width: 480px) {
+      .container { width: 100% !important; }
+      .gutter    { padding: 28px 24px !important; }
+      .btn       { display: block !important; width: 100% !important;
+                   box-sizing: border-box !important; }
+    }
+    /* Dark mode: deepen the page background; the card itself stays light. */
+    @media (prefers-color-scheme: dark) {
+      body      { background-color: #16131F !important; }
+      .page-bg  { background-color: #16131F !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F1EEF9;-webkit-text-size-adjust:100%;">
+  <table role="presentation" class="page-bg" width="100%" cellspacing="0"
+         cellpadding="0" border="0" style="background-color:#F1EEF9;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <table role="presentation" class="container" width="600" cellspacing="0"
+               cellpadding="0" border="0" style="width:600px;max-width:600px;">
+
+          <!-- ══ Header: brand strip ══ -->
+          <tr>
+            <td align="center" bgcolor="#6D28D9"
+                style="background-color:#6D28D9;border-radius:14px 14px 0 0;padding:26px 32px;">
+              <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+                          font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;line-height:1.2;">⚡ Nexus</div>
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;
+                          color:rgba(255,255,255,0.85);letter-spacing:2px;text-transform:uppercase;
+                          margin-top:6px;line-height:1.4;">Automated job applier</div>
+            </td>
+          </tr>
+
+          <!-- ══ Body: card ══ -->
+          <tr>
+            <td class="gutter" bgcolor="#ffffff"
+                style="background-color:#ffffff;border-radius:0 0 14px 14px;padding:40px 44px 40px;">
+
+              <h1 style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:26px;font-weight:800;
+                         color:#0F172A;line-height:1.3;text-align:center;">Confirm your email</h1>
+              <p style="margin:0 0 26px;font-family:Arial,Helvetica,sans-serif;font-size:14px;
+                        color:#8A7FA8;text-align:center;line-height:1.5;">One click and your Nexus account is ready.</p>
+
+              <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;
+                        line-height:1.7;color:#475569;">Hi {{ .Email }},</p>
+              <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;
+                        line-height:1.7;color:#475569;">
+                thanks for signing up for <strong style="color:#0F172A;">Nexus</strong> — your automated
+                job-search copilot. To activate your account, just confirm your email address below.
+              </p>
+
+              <!-- ══ CTA button (bulletproof for Outlook) ══ -->
+              <table role="presentation" align="center" cellspacing="0" cellpadding="0"
+                     border="0" style="margin:32px auto 6px;">
+                <tr>
+                  <td align="center">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml"
+                                 xmlns:w="urn:schemas-microsoft-com:office:word"
+                                 href="{{ .ConfirmationURL }}" style="height:52px;v-text-anchor:middle;width:250px;"
+                                 arcsize="12%" stroke="f" fillcolor="#7C3AED">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:Arial,sans-serif;font-size:16px;font-weight:bold;">Confirm my email</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <a class="btn" href="{{ .ConfirmationURL }}"
+                       style="background-color:#7C3AED;border-radius:8px;color:#ffffff;display:inline-block;
+                              font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:700;
+                              line-height:1.2;padding:16px 36px;text-decoration:none;">Confirm my email</a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:16px 0 28px;font-family:Arial,Helvetica,sans-serif;font-size:13px;
+                        line-height:1.7;color:#6B7280;text-align:center;">
+                Button not showing up? Copy and paste this link into your browser:<br>
+                <a href="{{ .ConfirmationURL }}" style="color:#6D28D9;font-weight:700;word-break:break-all;">{{ .ConfirmationURL }}</a>
+              </p>
+
+              <hr style="border:none;border-top:1px solid #EEF0F4;margin:0 0 20px;">
+
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13px;
+                        line-height:1.7;color:#6B7280;text-align:center;">
+                🔒 This link expires in 24 hours. If it expires, just sign in again and we'll send a fresh one.
+              </p>
+            </td>
+          </tr>
+
+          <!-- ══ Footer ══ -->
+          <tr>
+            <td style="padding:22px 32px 8px;text-align:center;">
+              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                        line-height:1.6;color:#6B7280;">
+                You received this email because an account was created on Nexus with {{ .Email }}.
+                If that wasn't you, you can safely ignore this — the account won't be activated.
+              </p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;
+                        line-height:1.6;color:#9CA3AF;">
+                Nexus · Automated Job Applier ·
+                <a href="{{ .SiteURL }}" style="color:#9CA3AF;text-decoration:underline;">{{ .SiteURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
