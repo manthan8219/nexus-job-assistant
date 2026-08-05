@@ -21,7 +21,7 @@ func TestHandlePostRun(t *testing.T) {
 	})
 
 	t.Run("conflict when already running", func(t *testing.T) {
-		s := &Server{status: StatusRunning}
+		s := &Server{runState: runState{status: StatusRunning}}
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/run", strings.NewReader(`{"dryRun":true,"autoApply":false}`))
 		s.handlePostRun(rec, req)
@@ -66,7 +66,7 @@ func TestHandlePostRunApplySelected(t *testing.T) {
 	})
 
 	t.Run("conflict when already running", func(t *testing.T) {
-		s := &Server{cfg: &config.Config{ApplyConsent: true}, status: StatusRunning}
+		s := &Server{cfg: &config.Config{ApplyConsent: true}, runState: runState{status: StatusRunning}}
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/run/apply-selected",
 			strings.NewReader(`{"ids":[1]}`))
@@ -78,7 +78,7 @@ func TestHandlePostRunApplySelected(t *testing.T) {
 }
 
 func TestHandleDeleteRun(t *testing.T) {
-	s := &Server{status: StatusRunning}
+	s := &Server{runState: runState{status: StatusRunning}}
 	rec := httptest.NewRecorder()
 	s.handleDeleteRun(rec, httptest.NewRequest(http.MethodDelete, "/api/run", nil))
 	if rec.Code != http.StatusOK {

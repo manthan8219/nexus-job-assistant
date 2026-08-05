@@ -346,39 +346,48 @@ func (s *Server) handleGetOutreachLog(w http.ResponseWriter, r *http.Request) {
 
 // handlePostNotifyTest sends a test notification to all configured channels.
 func (s *Server) handlePostNotifyTest(w http.ResponseWriter, r *http.Request) {
-	if s.notifier == nil || len(s.notifier) == 0 {
+	mn := s.notifier
+	if s.userState(r) != nil {
+		mn = notifiersFromConfig(s.cfgFor(r))
+	}
+	if len(mn) == 0 {
 		writeError(w, http.StatusBadRequest, "no notification channels configured")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"sent": len(s.notifier)})
+	writeJSON(w, http.StatusOK, map[string]any{"sent": len(mn)})
 }
 
 // handlePostNotifySummary sends a run summary / daily digest through every
-// configured channel, built from the live mission counters. This is the
-// web-side trigger for the same digest the TUI scheduler emits.
+// configured channel, built from the requesting user's live run counters. This
+// is the web-side trigger for the same digest the TUI scheduler emits.
 func (s *Server) handlePostNotifySummary(w http.ResponseWriter, r *http.Request) {
-	if s.notifier == nil || len(s.notifier) == 0 {
+	mn := s.notifier
+	if s.userState(r) != nil {
+		mn = notifiersFromConfig(s.cfgFor(r))
+	}
+	if len(mn) == 0 {
 		writeError(w, http.StatusBadRequest, "no notification channels configured")
 		return
 	}
 
-	s.mu.RLock()
+	rs := s.runFor(r)
+	rs.mu.RLock()
 	ev := notifier.Event{
 		Kind:         notifier.EventDailySummary,
 		Timestamp:    time.Now(),
-		Found:        s.foundCount,
-		TotalApplied: s.applied,
-		TotalFailed:  s.failed,
-		TotalSkipped: s.skipped,
-		RunDuration:  time.Since(s.lastJobAt),
+		Found:        rs.foundCount,
+		TotalApplied: rs.applied,
+		TotalFailed:  rs.failed,
+		TotalSkipped: rs.skipped,
+		RunDuration:  time.Since(rs.lastJobAt),
 	}
-	s.mu.RUnlock()
+	rs.mu.RUnlock()
 	if ev.RunDuration < 0 {
 		ev.RunDuration = 0
 	}
 
-	errs := s.notifier.Send(r.Context(), ev)
-	sent := len(s.notifier) - len(errs)
+	errs := mn.Send(r.Context(), ev)
+	sent := len(mn) - len(errs)
 	if sent <= 0 && len(errs) > 0 {
 		writeError(w, http.StatusInternalServerError, "send summary: "+errs[0].Error())
 		return

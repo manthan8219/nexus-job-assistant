@@ -40,5 +40,5 @@ func TestScheduleDailyRunsCancelled(t *testing.T) {
 	s := &Server{}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	s.scheduleDailyRuns(ctx) // must return immediately on a cancelled ctx
+	s.scheduleDailyRuns(ctx, &s.runState) // must return immediately on a cancelled ctx
 }

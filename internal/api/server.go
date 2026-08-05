@@ -54,30 +54,18 @@ type DashRecent struct {
 type Server struct {
 	cfg   *config.Config
 	store *store.Store
-	eng   *engine.Engine
+	eng   *engine.Engine // legacy single-user engine
 	addr  string
 
-	mu        sync.RWMutex
-	status    RunStatus
-	errMsg    string
-	dryRun    bool
-	autoApply bool
-	lastJob   string
-	lastJobAt time.Time
+	// runState is the legacy single-user run state (auth off / tests).
+	// Multi-tenant mode keeps one runState per user in s.runs.
+	runState
 
-	providerProgress map[string]ProviderStatus
-	foundCount       int
-	liveFeed         []DashRecent
-	recent           []DashRecent
-	applied          int
-	skipped          int
-	failed           int
-	appliedToday     int
-	logLines         []string
-	cancel           context.CancelFunc
-	notifier         notifier.MultiNotifier
-	companies        *companies.DB // company footprint store (~/.nexus/companies.db)
-	contacts         *contacts.DB  // saved OSINT contacts store (~/.nexus/contacts.db)
+	mu sync.RWMutex // guards config reads/writes
+
+	notifier  notifier.MultiNotifier
+	companies *companies.DB // company footprint store (~/.nexus/companies.db)
+	contacts  *contacts.DB  // saved OSINT contacts store (~/.nexus/contacts.db)
 
 	// auth verifies identity tokens from the configured provider. Nil means
 	// auth is disabled and the API runs in legacy unauthenticated mode.
@@ -86,9 +74,16 @@ type Server struct {
 	// when auth is disabled (legacy single-user layout).
 	users *userstore.Registry
 
-	notifyMu     sync.Mutex
-	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
-	sseHeartbeat time.Duration              // interval between periodic snapshot pushes
+	// runs holds one run state per authenticated user (multi-tenant mode).
+	runsMu sync.Mutex
+	runs   map[string]*runState
+
+	// loopCtx/stopLoops own the per-user scheduler goroutines (multi-tenant
+	// mode); created in New, cancelled in ListenAndServe shutdown.
+	loopCtx   context.Context
+	stopLoops context.CancelFunc
+
+	sseHeartbeat time.Duration // interval between periodic snapshot pushes
 
 	// worker is the always-on outreach pipeline (find contact → AI draft →
 	// ready) that runs in API mode. Nil when no store is available.
@@ -101,17 +96,7 @@ type Server struct {
 
 // New creates an API server.
 func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *Server {
-	discordURL, tgToken, tgChatID, channels := cfg.NotifyFields()
-	mn := notifier.FromConfig(&notifier.NotifyConfig{
-		DiscordWebhookURL:  discordURL,
-		TelegramBotToken:   tgToken,
-		TelegramChatID:     tgChatID,
-		EnabledChannels:    channels,
-		Email:              cfg.Email,
-		GmailAppPassword:   cfg.GmailAppPassword,
-		EmailNotifications: cfg.EmailNotifications,
-		EmailPerJob:        cfg.EmailPerJob,
-	})
+	mn := notifiersFromConfig(cfg)
 	// Open the companies store best-effort (embedded catalogs only — no
 	// network); handlers degrade gracefully if nil.
 	cdb, _ := companies.OpenDefaultEmbedded()
@@ -123,10 +108,6 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 			_ = st.SaveOutreachLog(e)
 		})
 	}
-	// Always-on outreach worker (KAN-15): in API mode the worker drives the
-	// find-contact → AI-draft → ready pipeline for every recorded application,
-	// gated on consent + auto-queue like the TUI pipeline. The worker reads the
-	// in-memory config so API-mode edits apply without a disk reload.
 	// Multi-tenant islands: when auth is enabled every authenticated request
 	// resolves to its own data directory under NEXUS_HOME/users/<userID> and
 	// NEXUS_ADMIN_EMAILS may claim the legacy single-user data once; otherwise
@@ -137,23 +118,32 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		ureg = userstore.NewRegistry(filepath.Join(nexusdir.Home(), "users"), adminEmails(), 0)
 	}
 
+	loopCtx, stopLoops := context.WithCancel(context.Background())
 	return &Server{
-		cfg:              cfg,
-		store:            st,
-		eng:              eng,
-		addr:             addr,
-		status:           StatusIdle,
-		providerProgress: make(map[string]ProviderStatus),
-		liveFeed:         make([]DashRecent, 0),
-		recent:           make([]DashRecent, 0),
-		notifier:         mn,
-		companies:        cdb,
-		contacts:         ktdb,
-		auth:             authV,
-		users:            ureg,
-		worker:           wireOutreachWorker(cfg, st, eng),
-		subscribers:      make(map[chan struct{}]struct{}),
-		sseHeartbeat:     15 * time.Second,
+		cfg:   cfg,
+		store: st,
+		eng:   eng,
+		addr:  addr,
+		runState: runState{
+			cfg:              cfg,
+			apps:             st,
+			status:           StatusIdle,
+			providerProgress: make(map[string]ProviderStatus),
+			liveFeed:         make([]DashRecent, 0),
+			recent:           make([]DashRecent, 0),
+			logLines:         make([]string, 0),
+			subscribers:      make(map[chan struct{}]struct{}),
+		},
+		notifier:     mn,
+		companies:    cdb,
+		contacts:     ktdb,
+		auth:         authV,
+		users:        ureg,
+		worker:       wireOutreachWorker(cfg, st, eng),
+		runs:         make(map[string]*runState),
+		loopCtx:      loopCtx,
+		stopLoops:    stopLoops,
+		sseHeartbeat: 15 * time.Second,
 	}
 }
 
@@ -197,11 +187,16 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 		_ = httpServer.Shutdown(shutdownCtx)
 	}()
 
-	// Daily safe dry-run scheduler (runs even when no browser is open).
-	go s.scheduleDailyRuns(ctx)
+	// Daily safe dry-run scheduler + inbox scan run even when no browser is
+	// open. Per-user loops (multi-tenant mode) are owned by loopCtx and stop
+	// with the server.
+	if s.stopLoops != nil {
+		defer s.stopLoops()
+	}
+	go s.scheduleDailyRuns(ctx, &s.runState)
 
 	// Inbox hiring-email scan scheduler (configurable interval; 0 = off).
-	go s.scheduleInboxScan(ctx)
+	go s.scheduleInboxScan(ctx, &s.runState)
 
 	// Supabase connection check - log once at startup so storage/DB wiring
 	// problems surface immediately instead of failing later mid-run.
@@ -352,12 +347,5 @@ func supabaseBool(skipped, ok bool) string {
 	}
 }
 
-// logLine adds a line to the in-memory log buffer (capped at 1000).
-func (s *Server) logLine(line string) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if len(s.logLines) > 1000 {
-		s.logLines = s.logLines[len(s.logLines)-500:]
-	}
-	s.logLines = append(s.logLines, line)
-}
+// logLine is defined in runstate.go as the legacy alias to the embedded run
+// state's capped log buffer (multi-tenant states log through runState.appendLog).

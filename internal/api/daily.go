@@ -41,9 +41,11 @@ func parseHHMM(s string) (int, int) {
 }
 
 // scheduleDailyRuns fires one safe dry-run per day at the configured time while
-// the API server is up. Dry runs never submit applications, so no additional
-// consent is involved; the run respects the same caps/delays as any run.
-func (s *Server) scheduleDailyRuns(ctx context.Context) {
+// the API server is up, for the given run state (legacy state in single-user
+// mode; one per user in multi-tenant mode). Dry runs never submit applications,
+// so no additional consent is involved; the run respects the same caps/delays
+// as any run.
+func (s *Server) scheduleDailyRuns(ctx context.Context, rs *runState) {
 	ticker := time.NewTicker(dailyTickInterval)
 	defer ticker.Stop()
 
@@ -54,19 +56,26 @@ func (s *Server) scheduleDailyRuns(ctx context.Context) {
 			return
 		case now := <-ticker.C:
 			s.mu.RLock()
-			enabled := s.cfg != nil && s.cfg.DailyRunEnabled
-			at := ""
-			if s.cfg != nil {
-				at = s.cfg.DailyRunAt
+			cfg := rs.cfg
+			if cfg == nil {
+				cfg = s.cfg
 			}
-			busy := s.status == StatusRunning
+			at := ""
+			var enabled bool
+			if cfg != nil {
+				enabled = cfg.DailyRunEnabled
+				at = cfg.DailyRunAt
+			}
 			s.mu.RUnlock()
+			rs.mu.RLock()
+			busy := rs.status == StatusRunning
+			rs.mu.RUnlock()
 
 			if shouldFireDaily(now, at, lastFiredDay, enabled, busy) {
 				lastFiredDay = now.Format("2006-01-02")
-				s.logLine("⏰ scheduled daily dry-run firing")
-				if err := s.startEngineRun(true, false, nil); err != nil {
-					s.logLine("⏰ scheduled dry-run skipped: " + err.Error())
+				rs.appendLog("⏰ scheduled daily dry-run firing")
+				if err := s.launchRun(rs, nil, true, false, nil); err != nil {
+					rs.appendLog("⏰ scheduled dry-run skipped: " + err.Error())
 				}
 			}
 		}

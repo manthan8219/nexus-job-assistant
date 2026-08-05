@@ -14,9 +14,10 @@ type LogLine struct {
 func (s *Server) handleGetLogs(w http.ResponseWriter, r *http.Request) {
 	filter := r.URL.Query().Get("filter")
 
-	s.mu.RLock()
-	lines := s.logLines
-	s.mu.RUnlock()
+	rs := s.runFor(r)
+	rs.mu.RLock()
+	lines := rs.logLines
+	rs.mu.RUnlock()
 	// Always emit a JSON array (not `null`) even when the buffer is empty.
 	if lines == nil {
 		lines = []string{}
@@ -37,9 +38,10 @@ func (s *Server) handleGetLogs(w http.ResponseWriter, r *http.Request) {
 
 // handleDeleteLogs clears the in-memory log buffer.
 func (s *Server) handleDeleteLogs(w http.ResponseWriter, r *http.Request) {
-	s.mu.Lock()
-	s.logLines = nil
-	s.mu.Unlock()
+	rs := s.runFor(r)
+	rs.mu.Lock()
+	rs.logLines = nil
+	rs.mu.Unlock()
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 
