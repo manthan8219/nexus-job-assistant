@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
+	"github.com/manthan8219/nexus-job-assistant/internal/pgutil"
 )
 
 // ApplyTo merges non-zero overrides into cfg. Zero values (empty string, false,
@@ -78,13 +79,13 @@ func ApplyToConfig(ctx context.Context, cfg *config.Config) error {
 	}
 	db, err := sql.Open("pgx", cfg.DatabaseURL)
 	if err != nil {
-		return err
+		return pgutil.WrapConnectError(err, cfg.DatabaseURL)
 	}
 	defer db.Close()
 
 	st := NewStore(db, []byte(os.Getenv(SettingsMasterKeyEnv)))
 	if err := st.EnsureSchema(ctx); err != nil {
-		return err
+		return pgutil.WrapConnectError(err, cfg.DatabaseURL)
 	}
 	over, err := st.Load(ctx)
 	if err != nil {

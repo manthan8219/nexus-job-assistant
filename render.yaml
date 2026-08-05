@@ -34,6 +34,9 @@ services:
         sync: false
       - key: NEXUS_DATABASE_URL
         sync: false
+        # IMPORTANT: URL-encode special characters in the password if any - e.g.
+        # % -> %%25 and / -> %%2F. An un-encoded password breaks the URL parse
+        # with a confusing "hostname resolving error / failed to parse as URL".
       - key: NEXUS_SUPABASE_SERVICE_KEY
         sync: false
       - key: NEXUS_SETTINGS_MASTER_KEY
