@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/manthan8219/nexus-job-assistant/internal/aiprovider"
+	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 // AIModelsResponse is the list of model IDs a provider exposes.
@@ -35,7 +36,7 @@ func (s *Server) handleGetAIModels(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "provider is required")
 		return
 	}
-	key, baseURL := s.aiProviderCreds(provider)
+	key, baseURL := aiProviderCreds(s.cfgFor(r), provider)
 	if trimmed := strings.TrimSpace(body.Key); trimmed != "" {
 		key = trimmed
 	}
@@ -53,29 +54,29 @@ func (s *Server) handleGetAIModels(w http.ResponseWriter, r *http.Request) {
 
 // aiProviderCreds returns the configured API key and base URL for a provider.
 // Anthropic uses its native /v1/models endpoint; the rest are OpenAI-compatible.
-func (s *Server) aiProviderCreds(provider string) (key, baseURL string) {
-	if s.cfg == nil {
+func aiProviderCreds(cfg *config.Config, provider string) (key, baseURL string) {
+	if cfg == nil {
 		return "", ""
 	}
 	switch provider {
 	case "anthropic":
-		return s.cfg.AnthropicKey, "https://api.anthropic.com/v1"
+		return cfg.AnthropicKey, "https://api.anthropic.com/v1"
 	case "openai":
-		return s.cfg.OpenAIKey, aiprovider.BaseURL("openai")
+		return cfg.OpenAIKey, aiprovider.BaseURL("openai")
 	case "google":
-		return s.cfg.GoogleKey, aiprovider.BaseURL("google")
+		return cfg.GoogleKey, aiprovider.BaseURL("google")
 	case "deepseek":
-		return s.cfg.DeepSeekKey, aiprovider.BaseURL("deepseek")
+		return cfg.DeepSeekKey, aiprovider.BaseURL("deepseek")
 	case "groq":
-		return s.cfg.GroqKey, aiprovider.BaseURL("groq")
+		return cfg.GroqKey, aiprovider.BaseURL("groq")
 	case "mistral":
-		return s.cfg.MistralKey, aiprovider.BaseURL("mistral")
+		return cfg.MistralKey, aiprovider.BaseURL("mistral")
 	case "together":
-		return s.cfg.TogetherKey, aiprovider.BaseURL("together")
+		return cfg.TogetherKey, aiprovider.BaseURL("together")
 	case "openrouter":
-		return s.cfg.OpenRouterKey, aiprovider.BaseURL("openrouter")
+		return cfg.OpenRouterKey, aiprovider.BaseURL("openrouter")
 	case "xai":
-		return s.cfg.XAIKey, aiprovider.BaseURL("xai")
+		return cfg.XAIKey, aiprovider.BaseURL("xai")
 	}
 	return "", ""
 }

@@ -261,16 +261,23 @@ func LoadFrom(path string) (*Config, error) {
 	return cfg, nil
 }
 
+// Save writes cfg to the default config location (~/.nexus/config.json),
+// creating the directory if needed.
 func Save(cfg *Config) error {
 	dir, err := Dir()
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(dir, 0700); err != nil {
+	return SaveTo(cfg, filepath.Join(dir, "config.json"))
+}
+
+// SaveTo writes cfg as indented JSON to path, creating parent directories
+// (0700) and the file with 0600. Per-user islands use it to keep each user's
+// config in their own directory without touching the process-level env.
+func SaveTo(cfg *Config, path string) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-
-	path := filepath.Join(dir, "config.json")
 	data, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
 		return err

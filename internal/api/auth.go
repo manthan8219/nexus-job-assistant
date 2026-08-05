@@ -50,7 +50,18 @@ func (s *Server) withAuth(next http.Handler) http.Handler {
 			writeError(w, http.StatusUnauthorized, "unauthorized")
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(auth.WithUser(r.Context(), u)))
+		ctx := auth.WithUser(r.Context(), u)
+		if s.users != nil {
+			// Multi-tenant mode: resolve (lazily opening) the user's island so
+			// every handler reads/writes that user's own data.
+			st, err := s.users.For(u.ID, u.Email)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "user data unavailable")
+				return
+			}
+			ctx = withUserState(ctx, st)
+		}
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 

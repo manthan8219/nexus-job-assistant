@@ -16,7 +16,7 @@ type NotifierChannel struct {
 // handleGetNotifyChannels returns available notification channels.
 func (s *Server) handleGetNotifyChannels(w http.ResponseWriter, r *http.Request) {
 	avail := notifier.Available()
-	enabled := s.cfg.NotifyChannels
+	enabled := s.cfgFor(r).NotifyChannels
 	enabledSet := make(map[string]bool, len(enabled))
 	for _, ch := range enabled {
 		enabledSet[ch] = true

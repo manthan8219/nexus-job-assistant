@@ -2,14 +2,12 @@ package api
 
 import (
 	"net/http"
-
-	"github.com/manthan8219/nexus-job-assistant/internal/config"
 )
 
 // handleGetConfig returns the current Nexus config.
 func (s *Server) handleGetConfig(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
-	cfg := s.cfg
+	cfg := s.cfgFor(r)
 	s.mu.RUnlock()
 
 	writeJSON(w, http.StatusOK, configToNexusConfig(cfg))
@@ -24,8 +22,9 @@ func (s *Server) handlePutConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	s.mu.Lock()
-	applyNexusConfig(s.cfg, &incoming)
-	if err := config.Save(s.cfg); err != nil {
+	cfg := s.cfgFor(r)
+	applyNexusConfig(cfg, &incoming)
+	if err := s.saveConfigFor(r, cfg); err != nil {
 		s.mu.Unlock()
 		writeError(w, http.StatusInternalServerError, "save config: "+err.Error())
 		return
@@ -51,7 +50,7 @@ func (s *Server) handlePatchConfig(w http.ResponseWriter, r *http.Request) {
 	if patch.AutoApply != nil {
 		s.autoApply = *patch.AutoApply
 	}
-	if err := config.Save(s.cfg); err != nil {
+	if err := s.saveConfigFor(r, s.cfgFor(r)); err != nil {
 		s.mu.Unlock()
 		writeError(w, http.StatusInternalServerError, "save config: "+err.Error())
 		return
@@ -65,7 +64,7 @@ func (s *Server) handlePatchConfig(w http.ResponseWriter, r *http.Request) {
 // handleGetConfigComplete returns profile completion status.
 func (s *Server) handleGetConfigComplete(w http.ResponseWriter, r *http.Request) {
 	s.mu.RLock()
-	cfg := s.cfg
+	cfg := s.cfgFor(r)
 	s.mu.RUnlock()
 
 	var missing []string

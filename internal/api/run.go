@@ -123,7 +123,7 @@ func (s *Server) handlePostRunApplySelected(w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "no job ids provided")
 		return
 	}
-	if s.cfg == nil || !s.cfg.ApplyConsent {
+	if cfg := s.cfgFor(r); cfg == nil || !cfg.ApplyConsent {
 		writeError(w, http.StatusBadRequest, "give Apply Consent in Config before applying")
 		return
 	}

@@ -52,17 +52,18 @@ type PullProgress struct {
 // pullProgressMap stores ongoing pull progress per model name.
 var pullProgressMap sync.Map
 
-// llmBaseURL returns the Ollama base URL from config or default.
-func (s *Server) llmBaseURL() string {
-	if s.cfg != nil && s.cfg.LocalLLMURL != "" {
-		return s.cfg.LocalLLMURL
+// llmBaseURLFor returns the Ollama base URL from the request's config or the
+// localhost default.
+func (s *Server) llmBaseURLFor(r *http.Request) string {
+	if cfg := s.cfgFor(r); cfg != nil && cfg.LocalLLMURL != "" {
+		return cfg.LocalLLMURL
 	}
 	return "http://localhost:11434"
 }
 
 // handleLLMStatus returns the status of the local LLM runtime (Ollama).
 func (s *Server) handleLLMStatus(w http.ResponseWriter, r *http.Request) {
-	baseURL := s.llmBaseURL()
+	baseURL := s.llmBaseURLFor(r)
 	ctx, cancel := context.WithTimeout(r.Context(), 8*time.Second)
 	defer cancel()
 
@@ -133,7 +134,7 @@ func (s *Server) handleLLMPull(w http.ResponseWriter, r *http.Request) {
 	pp := &PullProgress{Model: key, Status: "starting", Message: "Starting download..."}
 	pullProgressMap.Store(key, pp)
 
-	baseURL := s.llmBaseURL()
+	baseURL := s.llmBaseURLFor(r)
 	client := localllm.NewClient(baseURL)
 
 	// Start pull in background

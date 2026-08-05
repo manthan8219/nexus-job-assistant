@@ -89,9 +89,10 @@ func (s *Server) handleGetCompanies(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	country := r.URL.Query().Get("country")
 
+	cdb := s.companiesFor(r)
 	items := make([]Company, 0)
-	if s.companies != nil {
-		list, err := s.companies.Search(q, country, 200)
+	if cdb != nil {
+		list, err := cdb.Search(q, country, 200)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "search companies: "+err.Error())
 			return
@@ -102,8 +103,8 @@ func (s *Server) handleGetCompanies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	counts := map[string]int{}
-	if s.store != nil {
-		if raw, err := s.store.CompanyJobCounts(); err == nil {
+	if st := s.storeFor(r); st != nil {
+		if raw, err := st.CompanyJobCounts(); err == nil {
 			for name, n := range raw {
 				counts[companyKey(name)] = n
 			}
@@ -119,7 +120,8 @@ func (s *Server) handleGetCompanies(w http.ResponseWriter, r *http.Request) {
 
 // handlePutCompany adds or edits a company in the persisted store.
 func (s *Server) handlePutCompany(w http.ResponseWriter, r *http.Request) {
-	if s.companies == nil {
+	cdb := s.companiesFor(r)
+	if cdb == nil {
 		writeError(w, http.StatusInternalServerError, "companies store not available")
 		return
 	}
@@ -151,13 +153,13 @@ func (s *Server) handlePutCompany(w http.ResponseWriter, r *http.Request) {
 		Source:        "manual",
 		UpdatedAt:     time.Now().UTC(),
 	}
-	if err := s.companies.Upsert(c); err != nil {
+	if err := cdb.Upsert(c); err != nil {
 		writeError(w, http.StatusInternalServerError, "save company: "+err.Error())
 		return
 	}
 
 	// Reload to pick up the generated id, then return the frontend shape.
-	found, err := s.companies.Search(name, "", 1)
+	found, err := cdb.Search(name, "", 1)
 	if err == nil && len(found) > 0 {
 		writeJSON(w, http.StatusOK, companyToFrontend(found[0]))
 		return
@@ -168,15 +170,16 @@ func (s *Server) handlePutCompany(w http.ResponseWriter, r *http.Request) {
 // handlePostCompaniesRefresh upserts the embedded catalog and returns the
 // number of companies upserted.
 func (s *Server) handlePostCompaniesRefresh(w http.ResponseWriter, r *http.Request) {
-	if s.companies == nil {
+	cdb := s.companiesFor(r)
+	if cdb == nil {
 		writeError(w, http.StatusInternalServerError, "companies store not available")
 		return
 	}
 	n := 0
-	if c, err := s.companies.ImportNexusEmbeddedBoards(); err == nil {
+	if c, err := cdb.ImportNexusEmbeddedBoards(); err == nil {
 		n += c
 	}
-	if c, err := s.companies.ImportIndiaEmployers(); err == nil {
+	if c, err := cdb.ImportIndiaEmployers(); err == nil {
 		n += c
 	}
 	writeJSON(w, http.StatusOK, n)
@@ -184,7 +187,8 @@ func (s *Server) handlePostCompaniesRefresh(w http.ResponseWriter, r *http.Reque
 
 // handleGetCompanyJobs returns recorded applications for a company.
 func (s *Server) handleGetCompanyJobs(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
@@ -193,7 +197,7 @@ func (s *Server) handleGetCompanyJobs(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "company name is required")
 		return
 	}
-	apps, err := s.store.ListByCompany(name)
+	apps, err := st.ListByCompany(name)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list company jobs: "+err.Error())
 		return
@@ -241,11 +245,12 @@ func (s *Server) handleGetContactsSearch(w http.ResponseWriter, r *http.Request)
 
 // handleGetContactsSaved lists saved contacts, optionally filtered by ?q=.
 func (s *Server) handleGetContactsSaved(w http.ResponseWriter, r *http.Request) {
-	if s.contacts == nil {
+	kt := s.contactsFor(r)
+	if kt == nil {
 		writeJSON(w, http.StatusOK, []osint.Contact{})
 		return
 	}
-	items, err := s.contacts.List(r.URL.Query().Get("q"))
+	items, err := kt.List(r.URL.Query().Get("q"))
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list contacts: "+err.Error())
 		return
@@ -258,7 +263,8 @@ func (s *Server) handleGetContactsSaved(w http.ResponseWriter, r *http.Request) 
 
 // handlePutContactsSaved saves a contact (upsert) and returns the stored row.
 func (s *Server) handlePutContactsSaved(w http.ResponseWriter, r *http.Request) {
-	if s.contacts == nil {
+	kt := s.contactsFor(r)
+	if kt == nil {
 		writeError(w, http.StatusInternalServerError, "contacts store unavailable")
 		return
 	}
@@ -271,7 +277,7 @@ func (s *Server) handlePutContactsSaved(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "email or linkedIn is required")
 		return
 	}
-	saved, err := s.contacts.Save(c)
+	saved, err := kt.Save(c)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "save contact: "+err.Error())
 		return
@@ -281,7 +287,8 @@ func (s *Server) handlePutContactsSaved(w http.ResponseWriter, r *http.Request) 
 
 // handleDeleteContactsSaved deletes a saved contact by id.
 func (s *Server) handleDeleteContactsSaved(w http.ResponseWriter, r *http.Request) {
-	if s.contacts == nil {
+	kt := s.contactsFor(r)
+	if kt == nil {
 		writeError(w, http.StatusInternalServerError, "contacts store unavailable")
 		return
 	}
@@ -290,7 +297,7 @@ func (s *Server) handleDeleteContactsSaved(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "invalid contact id")
 		return
 	}
-	if err := s.contacts.Delete(id); err != nil {
+	if err := kt.Delete(id); err != nil {
 		writeError(w, http.StatusNotFound, err.Error())
 		return
 	}

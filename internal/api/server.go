@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -17,10 +18,12 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/contacts"
 	"github.com/manthan8219/nexus-job-assistant/internal/deliverability"
 	"github.com/manthan8219/nexus-job-assistant/internal/engine"
+	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 	"github.com/manthan8219/nexus-job-assistant/internal/supabase"
+	"github.com/manthan8219/nexus-job-assistant/internal/userstore"
 )
 
 // RunStatus mirrors the engine lifecycle.
@@ -79,6 +82,9 @@ type Server struct {
 	// auth verifies identity tokens from the configured provider. Nil means
 	// auth is disabled and the API runs in legacy unauthenticated mode.
 	auth *auth.Verifier
+	// users resolves each authenticated request to its own data island; nil
+	// when auth is disabled (legacy single-user layout).
+	users *userstore.Registry
 
 	notifyMu     sync.Mutex
 	subscribers  map[chan struct{}]struct{} // mission-stream wake-up channels
@@ -121,6 +127,16 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 	// find-contact → AI-draft → ready pipeline for every recorded application,
 	// gated on consent + auto-queue like the TUI pipeline. The worker reads the
 	// in-memory config so API-mode edits apply without a disk reload.
+	// Multi-tenant islands: when auth is enabled every authenticated request
+	// resolves to its own data directory under NEXUS_HOME/users/<userID> and
+	// NEXUS_ADMIN_EMAILS may claim the legacy single-user data once; otherwise
+	// the legacy process-level layout is used unchanged.
+	authV := auth.NewFromEnv()
+	var ureg *userstore.Registry
+	if authV != nil {
+		ureg = userstore.NewRegistry(filepath.Join(nexusdir.Home(), "users"), adminEmails(), 0)
+	}
+
 	return &Server{
 		cfg:              cfg,
 		store:            st,
@@ -133,7 +149,8 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 		notifier:         mn,
 		companies:        cdb,
 		contacts:         ktdb,
-		auth:             auth.NewFromEnv(),
+		auth:             authV,
+		users:            ureg,
 		worker:           wireOutreachWorker(cfg, st, eng),
 		subscribers:      make(map[chan struct{}]struct{}),
 		sseHeartbeat:     15 * time.Second,

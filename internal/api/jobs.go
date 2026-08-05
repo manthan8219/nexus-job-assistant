@@ -39,12 +39,13 @@ type Application struct {
 
 // handleGetJobs returns all applications, optionally filtered by query.
 func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
 
-	apps, err := s.store.List()
+	apps, err := st.List()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list applications: "+err.Error())
 		return
@@ -68,7 +69,7 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 	// application can carry a reply-probability score (KAN-19). Thin history
 	// simply scores lower — never fails the request.
 	providerReply := map[string]int{}
-	if snap, snapErr := s.store.AnalyticsSnapshot(); snapErr == nil && snap != nil {
+	if snap, snapErr := st.AnalyticsSnapshot(); snapErr == nil && snap != nil {
 		for _, p := range snap.PerProvider {
 			providerReply[p.Provider] = p.ReplyProbability
 		}
@@ -89,7 +90,8 @@ func (s *Server) handleGetJobs(w http.ResponseWriter, r *http.Request) {
 // handlePostJobs records a manually-added job into the review queue
 // (the frontend "Add a job" flow).
 func (s *Server) handlePostJobs(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
@@ -120,7 +122,7 @@ func (s *Server) handlePostJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	now := time.Now().UTC()
-	if err := s.store.Insert(store.Application{
+	if err := st.Insert(store.Application{
 		Provider:  provider,
 		Company:   input.Company,
 		Role:      input.Role,
@@ -137,7 +139,7 @@ func (s *Server) handlePostJobs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Reload to pick up the generated id, then return the frontend shape.
-	apps, err := s.store.List()
+	apps, err := st.List()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "list applications: "+err.Error())
 		return
@@ -169,7 +171,8 @@ func parsePathID(r *http.Request) (int64, bool) {
 
 // handlePatchJobOutcome cycles the outcome of an application.
 func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
@@ -188,7 +191,7 @@ func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.SetOutcome(id, store.Outcome(body.Outcome)); err != nil {
+	if err := st.SetOutcome(id, store.Outcome(body.Outcome)); err != nil {
 		writeError(w, http.StatusInternalServerError, "set outcome: "+err.Error())
 		return
 	}
@@ -198,7 +201,8 @@ func (s *Server) handlePatchJobOutcome(w http.ResponseWriter, r *http.Request) {
 // handlePostApplicationApproved marks/unmarks an application for a real apply
 // (the review-queue approve → apply flow).
 func (s *Server) handlePostApplicationApproved(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
@@ -217,7 +221,7 @@ func (s *Server) handlePostApplicationApproved(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if err := s.store.SetApproved(id, body.Approved); err != nil {
+	if err := st.SetApproved(id, body.Approved); err != nil {
 		writeError(w, http.StatusInternalServerError, "set approved: "+err.Error())
 		return
 	}
@@ -227,7 +231,8 @@ func (s *Server) handlePostApplicationApproved(w http.ResponseWriter, r *http.Re
 // handlePostJobDismiss marks a queued job as dismissed (skipped) so it leaves
 // the review queue (the frontend "Dismiss" action).
 func (s *Server) handlePostJobDismiss(w http.ResponseWriter, r *http.Request) {
-	if s.store == nil {
+	st := s.storeFor(r)
+	if st == nil {
 		writeError(w, http.StatusInternalServerError, "store not available")
 		return
 	}
@@ -238,7 +243,7 @@ func (s *Server) handlePostJobDismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := s.store.SetStatus(id, store.StatusSkipped, "dismissed by user"); err != nil {
+	if err := st.SetStatus(id, store.StatusSkipped, "dismissed by user"); err != nil {
 		if strings.Contains(err.Error(), "no application") {
 			writeError(w, http.StatusNotFound, "application not found")
 			return
@@ -247,7 +252,7 @@ func (s *Server) handlePostJobDismiss(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Clear any pending approval so the job can never be applied later.
-	_ = s.store.SetApproved(id, false)
+	_ = st.SetApproved(id, false)
 	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
 

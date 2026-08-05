@@ -66,8 +66,8 @@ func (s *Server) handleGetUsage(w http.ResponseWriter, r *http.Request) {
 		CollectedAt: time.Now().UTC().Format(time.RFC3339),
 		AIMode:      "off",
 	}
-	if s.cfg != nil && s.cfg.AIAssist {
-		usage.AIMode = s.cfg.AIProvider
+	if cfg := s.cfgFor(r); cfg != nil && cfg.AIAssist {
+		usage.AIMode = cfg.AIProvider
 	}
 	writeJSON(w, http.StatusOK, usage)
 }
