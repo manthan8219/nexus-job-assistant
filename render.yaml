@@ -32,6 +32,15 @@ services:
         value: /tmp/nexus
       - key: NEXUS_SUPABASE_URL
         sync: false
+        # Auth (optional): set the JWT secret to enable the web login wall and
+        # per-user data islands; NEXUS_ADMIN_EMAILS claims legacy data once;
+        # NEXUS_ALLOWED_ORIGINS is the CORS allow-list for the dashboard.
+      - key: NEXUS_SUPABASE_JWT_SECRET
+        sync: false
+      - key: NEXUS_ADMIN_EMAILS
+        sync: false
+      - key: NEXUS_ALLOWED_ORIGINS
+        sync: false
       - key: NEXUS_DATABASE_URL
         sync: false
         # IMPORTANT: URL-encode special characters in the password if any - e.g.

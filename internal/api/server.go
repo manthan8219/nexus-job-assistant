@@ -85,6 +85,10 @@ type Server struct {
 
 	sseHeartbeat time.Duration // interval between periodic snapshot pushes
 
+	// allowedOrigins is the CORS allow-list from NEXUS_ALLOWED_ORIGINS; empty
+	// means any origin (legacy local-development behavior).
+	allowedOrigins []string
+
 	// worker is the always-on outreach pipeline (find contact → AI draft →
 	// ready) that runs in API mode. Nil when no store is available.
 	worker *outreach.Worker
@@ -134,16 +138,17 @@ func New(cfg *config.Config, st *store.Store, eng *engine.Engine, addr string) *
 			logLines:         make([]string, 0),
 			subscribers:      make(map[chan struct{}]struct{}),
 		},
-		notifier:     mn,
-		companies:    cdb,
-		contacts:     ktdb,
-		auth:         authV,
-		users:        ureg,
-		worker:       wireOutreachWorker(cfg, st, eng),
-		runs:         make(map[string]*runState),
-		loopCtx:      loopCtx,
-		stopLoops:    stopLoops,
-		sseHeartbeat: 15 * time.Second,
+		notifier:       mn,
+		companies:      cdb,
+		contacts:       ktdb,
+		auth:           authV,
+		users:          ureg,
+		worker:         wireOutreachWorker(cfg, st, eng),
+		runs:           make(map[string]*runState),
+		loopCtx:        loopCtx,
+		stopLoops:      stopLoops,
+		sseHeartbeat:   15 * time.Second,
+		allowedOrigins: parseOrigins(os.Getenv("NEXUS_ALLOWED_ORIGINS")),
 	}
 }
 
