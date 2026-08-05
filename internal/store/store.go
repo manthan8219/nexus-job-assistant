@@ -11,6 +11,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib" // register the pgx driver
 	"github.com/manthan8219/nexus-job-assistant/internal/config"
 	"github.com/manthan8219/nexus-job-assistant/internal/nexusdir"
+	"github.com/manthan8219/nexus-job-assistant/internal/pgutil"
 	_ "modernc.org/sqlite"
 )
 
@@ -192,12 +193,12 @@ CREATE INDEX IF NOT EXISTS idx_outreach_log_company ON outreach_log(company);
 func OpenPG(dsn string) (*Store, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
-		return nil, err
+		return nil, pgutil.WrapConnectError(err, dsn)
 	}
 	db.SetMaxOpenConns(5)
 	if _, err := db.Exec(pgDDL); err != nil {
 		db.Close()
-		return nil, err
+		return nil, pgutil.WrapConnectError(err, dsn)
 	}
 	return &Store{db: db}, nil
 }
