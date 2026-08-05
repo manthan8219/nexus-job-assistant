@@ -15,6 +15,7 @@ import (
 	"github.com/manthan8219/nexus-job-assistant/internal/inbox"
 	"github.com/manthan8219/nexus-job-assistant/internal/notifier"
 	"github.com/manthan8219/nexus-job-assistant/internal/outreach"
+	"github.com/manthan8219/nexus-job-assistant/internal/settings"
 	"github.com/manthan8219/nexus-job-assistant/internal/store"
 	"github.com/manthan8219/nexus-job-assistant/internal/ui"
 )
@@ -286,10 +287,26 @@ func runEngine(cfg *config.Config, opts engineOpts) {
 }
 
 func loadConfig(path string) (*config.Config, error) {
+	var (
+		cfg *config.Config
+		err error
+	)
 	if path != "" {
-		return config.LoadFrom(path)
+		cfg, err = config.LoadFrom(path)
+	} else {
+		cfg, err = config.Load()
 	}
-	return config.Load()
+	if err != nil {
+		return nil, err
+	}
+	// Supabase user_settings (incl. the AES-encrypted Gmail app password) is
+	// loaded on top of the config file/env; DB values win. A missing or
+	// unreadable settings row never fails startup - the app keeps working on
+	// file/env values (graceful degradation).
+	if err := settings.ApplyToConfig(context.Background(), cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "settings: %v (continuing with file/env config)\n", err)
+	}
+	return cfg, nil
 }
 
 func runTestNotify(cfg *config.Config) {
