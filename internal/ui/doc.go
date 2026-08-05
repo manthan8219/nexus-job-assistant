@@ -1,4 +1,4 @@
-// Package ui is the Bubble Tea TUI for Nexus. The root AppModel owns every
+// Package ui is the Bubble Tea TUI for JobPilot. The root AppModel owns every
 // tab (Dashboard, Config, Resume, Jobs/History, Companies, Outreach,
 // Contacts, Logs), the chrome header/footer/body renderers, and tab
 // switching. The Update dispatcher lives in app_update.go and async commands

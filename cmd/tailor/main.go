@@ -4,7 +4,7 @@
 // Usage:
 //
 //	go run ./cmd/tailor --jd job.txt --company Acme --title "Backend Engineer"
-//	go run ./cmd/tailor --url <tracked-job-url>   # job already seen by Nexus
+//	go run ./cmd/tailor --url <tracked-job-url>   # job already seen by JobPilot
 package main
 
 import (
@@ -25,7 +25,7 @@ import (
 
 func main() {
 	jdPath := flag.String("jd", "", "path to a job-description text file")
-	jobURL := flag.String("url", "", "URL of a job Nexus has already seen (fills title/company/JD from the DB)")
+	jobURL := flag.String("url", "", "URL of a job JobPilot has already seen (fills title/company/JD from the DB)")
 	company := flag.String("company", "", "company name (overrides --url)")
 	title := flag.String("title", "", "job title (overrides --url)")
 	location := flag.String("location", "", "job location (optional)")
@@ -65,7 +65,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "warning: work context unavailable: %v\n", err)
 	}
 
-	fmt.Printf("⚡ Nexus Tailor — %s @ %s\n", job.Title, job.Company)
+	fmt.Printf("⚡ JobPilot Tailor — %s @ %s\n", job.Title, job.Company)
 	if strings.TrimSpace(job.Description) == "" {
 		fmt.Println("   (no job description — tailoring from title/company only)")
 	}
@@ -137,7 +137,7 @@ func buildJob(jobURL, jdPath, company, title, location string, remote bool) (pro
 			}
 		}
 		if job.URL == "" {
-			return job, fmt.Errorf("job URL not found in the Nexus database — run the engine first, or pass --jd/--company/--title")
+			return job, fmt.Errorf("job URL not found in the JobPilot database — run the engine first, or pass --jd/--company/--title")
 		}
 	}
 	if jdPath != "" {

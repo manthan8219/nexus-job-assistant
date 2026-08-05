@@ -66,6 +66,6 @@ func (m FormModel) renderResumeLibraryTeaser() string {
 		latest = latest[:63] + "…"
 	}
 	return "\n    " + lipgloss.NewStyle().Foreground(lipgloss.Color(colorGreen)).Render(
-		fmt.Sprintf("Nexus generated (%d)  ·  focus field to pick  ·  latest: %s", len(vers), latest),
+		fmt.Sprintf("JobPilot generated (%d)  ·  focus field to pick  ·  latest: %s", len(vers), latest),
 	)
 }

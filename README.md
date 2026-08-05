@@ -1,10 +1,10 @@
-# ⚡ Nexus — Automated Job Applier
+# ⚡ JobPilot — Automated Job Applier
 
 [![CI](https://github.com/manthan8219/nexus-job-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/manthan8219/nexus-job-assistant/actions/workflows/ci.yml)
 [![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![Version](https://img.shields.io/badge/version-0.1.0-6D28D9)](./main.go)
 
-Nexus is a Go CLI/TUI that automates the boring part of a job search: it searches
+JobPilot is a Go CLI/TUI that automates the boring part of a job search: it searches
 **38+ job boards**, scores jobs against your résumé, **applies for you** (with your
 explicit consent and rate limits), and runs a full **recruiter outreach pipeline**
 (find a contact → draft an email → send → follow up → detect replies) — all from
@@ -69,7 +69,7 @@ hands control back to you.
 
 ## How it works (architecture)
 
-Nexus follows a strict layering (see [`AGENTS.md`](./AGENTS.md) for the full
+JobPilot follows a strict layering (see [`AGENTS.md`](./AGENTS.md) for the full
 constitution):
 
 ```
@@ -99,7 +99,7 @@ ui  →  engine  →  provider / store  →  textutil / geo
   go run ./cmd/pwinstall
   ```
 - **Ollama** (optional) — to use a local LLM for fit-scoring, cover letters, and
-  outreach drafting. Nexus detects your hardware and recommends a model.
+  outreach drafting. JobPilot detects your hardware and recommends a model.
 - **Remote LLM API key** (optional) — Anthropic, OpenAI, Google Gemini, DeepSeek,
   Groq, Mistral, Together AI, OpenRouter, or xAI, if you prefer API mode.
 
@@ -203,7 +203,7 @@ to tab mode, `ctrl+z` background, `ctrl+c` quit.
 
 ## Configuration
 
-The primary way to configure Nexus is the **Config tab in the TUI** — it writes
+The primary way to configure JobPilot is the **Config tab in the TUI** — it writes
 `~/.nexus/config.json` automatically. You can also edit the JSON directly. Key
 fields:
 
@@ -231,7 +231,7 @@ fields:
 
 ## Job boards
 
-Nexus ships 38+ provider packages under `internal/provider/`. Each is an isolated
+JobPilot ships 38+ provider packages under `internal/provider/`. Each is an isolated
 plugin — one board failing never aborts the run.
 
 <details>
@@ -258,7 +258,7 @@ and merged per-region by the engine. Add a board by following
 | **Local** | Ollama running locally | Fit-scoring, cover letters, answers, outreach drafts/reviews — fully private |
 | **API** | One API key — Anthropic, OpenAI, Google, DeepSeek, Groq, Mistral, Together, OpenRouter, or xAI | Same features via a remote model (the first key set wins: Anthropic → OpenAI → Google → DeepSeek → Groq → Mistral → Together → OpenRouter → xAI) |
 
-Nexus uses the [`eino`](https://github.com/cloudwego/eino) agent framework. The
+JobPilot uses the [`eino`](https://github.com/cloudwego/eino) agent framework. The
 local mode detects your hardware (CPU/RAM/GPU) and recommends a fitting model.
 Every remote provider (except Anthropic) is reached through its
 OpenAI-compatible chat-completions endpoint — no extra SDKs to install.
@@ -306,14 +306,14 @@ Everything lives under `~/.nexus/`:
 | `~/.nexus/sessions/` | Browser-automation sessions |
 | `~/.nexus/resumes/` | Generated/tailored PDF résumés |
 
-- **No telemetry.** Nexus does not phone home.
+- **No telemetry.** JobPilot does not phone home.
 - **Secrets stay local** — API keys, tokens, and webhook URLs are read from
   `config.json` and never logged. `config.json`, `*.db`, and `.env` are gitignored.
 - **Never commit** `~/.nexus` contents or résumés.
 
 ## User accounts & authentication
 
-Nexus authenticates through an identity provider (Supabase Auth) instead of
+JobPilot authenticates through an identity provider (Supabase Auth) instead of
 storing passwords. When auth is enabled, the web dashboard sits behind a login
 wall (email + password or magic link) and every API request carries the user's
 session token; the backend verifies the token and routes each user to their own
@@ -362,7 +362,7 @@ This tool acts **on your behalf**, so the guardrails are strict (see
   you can never apply to the same job twice.
 - **Dry-run is honest** — `--dry-run` guarantees zero submissions: no "harmless"
   POSTs in dry-run paths.
-- **CAPTCHA = hard stop** — Nexus never attempts to solve or evade a CAPTCHA or
+- **CAPTCHA = hard stop** — JobPilot never attempts to solve or evade a CAPTCHA or
   anti-bot challenge. It halts the automated flow and surfaces it for you to
   complete manually.
 - **AI answer grounding** — any AI-generated answer containing a number, date,
@@ -450,7 +450,7 @@ safety invariants). Install the optional pre-push hook:
 
 ## Disclaimer
 
-Nexus automates applying to jobs and emailing recruiters **on your behalf**.
+JobPilot automates applying to jobs and emailing recruiters **on your behalf**.
 You are responsible for reviewing what it submits, respecting each employer's
 and platform's Terms of Service, and using the rate limits and consent controls
 responsibly. The tool is provided as-is, without warranty.

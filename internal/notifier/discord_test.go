@@ -145,11 +145,11 @@ func TestDiscord_EmptyWebhook_IsNoop(t *testing.T) {
 
 func TestDiscord_UsernameOverride(t *testing.T) {
 	d := NewDiscordNotifier("https://discord.com/api/webhooks/xxx")
-	d.SetUsername("Nexus Bot")
+	d.SetUsername("JobPilot Bot")
 	ev := Event{Kind: EventCustom, Message: "hello"}
 	payload := d.buildPayload(ev)
-	if payload.Username != "Nexus Bot" {
-		t.Fatalf("expected username 'Nexus Bot', got: %s", payload.Username)
+	if payload.Username != "JobPilot Bot" {
+		t.Fatalf("expected username 'JobPilot Bot', got: %s", payload.Username)
 	}
 }
 

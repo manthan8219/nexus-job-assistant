@@ -1,7 +1,7 @@
 # Supabase Auth Email Templates (Confirm signup)
 
 Branded HTML + plain-text fallback for the Supabase Auth **"Confirm signup"**
-(and "Confirm signup link") email templates, matching the Nexus violet identity
+(and "Confirm signup link") email templates, matching the JobPilot violet identity
 (`#6D28D9` / `#7C3AED`). These are pasted into the Supabase Dashboard — they are
 not rendered by this repo.
 
@@ -31,7 +31,7 @@ with Gmail:
 | Port | `465` (SSL) |
 | Username | full Gmail address (`you@gmail.com`) |
 | Password | a 16-char **app password** (Google Account → Security → App passwords; requires 2-Step Verification) |
-| Sender name | `Nexus` |
+| Sender name | `JobPilot` |
 | Sender email | the *same* Gmail address as Username |
 
 Deliverability error codes: `535` = bad credentials (app password, must match
@@ -61,10 +61,10 @@ HTML there; the button href stays `{{ .ConfirmationURL }}`.
 
 | Subject | Notes |
 |---|---|
-| **Confirm your Nexus account** | recommended — clean, short, no spammy words |
-| **⚡ Activate your Nexus account** | boldest; the ⚡ can marginally affect deliverability scoring |
-| **One quick click to activate your Nexus account** | friendly/frictionless angle |
-| **Verify your email for Nexus** | most generic of the four, still fine |
+| **Confirm your JobPilot account** | recommended — clean, short, no spammy words |
+| **⚡ Activate your JobPilot account** | boldest; the ⚡ can marginally affect deliverability scoring |
+| **One quick click to activate your JobPilot account** | friendly/frictionless angle |
+| **Verify your email for JobPilot** | most generic of the four, still fine |
 
 ---
 

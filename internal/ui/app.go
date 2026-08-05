@@ -334,7 +334,7 @@ func (m AppModel) View() string {
 
 func (m AppModel) renderChromeHeader() string {
 	var b strings.Builder
-	b.WriteString(appTitleStyle.Render("⚡ Nexus"))
+	b.WriteString(appTitleStyle.Render("⚡ JobPilot"))
 	if m.chromeNav {
 		b.WriteString("  " + lipgloss.NewStyle().Foreground(lipgloss.Color(colorOrange)).Bold(true).Render("TAB MODE"))
 	}

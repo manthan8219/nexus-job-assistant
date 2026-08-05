@@ -20,7 +20,7 @@ recruiting benchmarks). Treat exact numbers as directional, not gospel.
 | LinkedIn note acceptance | ~20–30% | 40%+ | — |
 | Referred candidate → hire | ~5–10x more likely than cold applicant | | |
 
-### Findings that matter for Nexus
+### Findings that matter for JobPilot
 1. **Personalization is the #1 lever.** Backlinko's 12M-email study found
    personalized *bodies* improved response ~33%, and personalized subject lines
    help meaningfully. Mail-merge `{{company}}` is the bare minimum — recruiters
@@ -56,9 +56,9 @@ recruiting benchmarks). Treat exact numbers as directional, not gospel.
 
 ---
 
-## 2. Gap analysis — current Nexus implementation vs. best practice
+## 2. Gap analysis — current JobPilot implementation vs. best practice
 
-| Area | What Nexus does today | Gap | Evidence in code |
+| Area | What JobPilot does today | Gap | Evidence in code |
 |---|---|---|---|
 | Message content | Static `{{var}}` mail-merge templates | No per-company/per-contact AI personalization, even though Ollama + Anthropic/OpenAI infra exists | `internal/outreach/draft.go`, `internal/localllm/generate.go` |
 | Default templates | "I recently applied... would welcome any guidance" | Generic, no value prop, no specific hook, weak CTA | `ready.go: DefaultEmailBody` |
@@ -177,7 +177,7 @@ looking for. — {{full_name}}
 
 Selection % = (fit of jobs picked) x (ATS pass rate) x (human screen rate) x (referral boost).
 
-| Lever | Mechanism | Nexus change |
+| Lever | Mechanism | JobPilot change |
 |---|---|---|
 | Pick better jobs | Only apply where fit ≥ threshold; deprioritize old postings (>2–3 weeks = often already in late rounds) | `MinFitScore` gate + posted-date sort |
 | Pass the ATS | Mirror JD keywords (exact terms, e.g. "Kubernetes" not "k8s") in resume summary/skills; standard headings; no tables/columns in the PDF | Per-JD resume variant (P2 #11) |

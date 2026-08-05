@@ -2,7 +2,7 @@
 //
 //  1. OpenJobs public dataset (hire countries + ATS links)
 //
-//  2. Nexus embedded board lists (Greenhouse/Lever/Ashby/…)
+//  2. JobPilot embedded board lists (Greenhouse/Lever/Ashby/…)
 //
 //     go run ./cmd/companies-seed
 //     go run ./cmd/companies-seed -country India
@@ -20,7 +20,7 @@ func main() {
 	country := flag.String("country", "", "after seed, print companies for this country")
 	limit := flag.Int("limit", 20, "max companies to print when -country is set")
 	url := flag.String("url", companies.OpenJobsDefaultURL, "OpenJobs JSON URL")
-	skipOpenJobs := flag.Bool("skip-openjobs", false, "only import Nexus board lists")
+	skipOpenJobs := flag.Bool("skip-openjobs", false, "only import JobPilot board lists")
 	skipBoards := flag.Bool("skip-boards", false, "only import OpenJobs")
 	skipYC := flag.Bool("skip-yc", false, "skip Y Combinator company directory import")
 	flag.Parse()
@@ -40,12 +40,12 @@ func main() {
 		fmt.Printf("  upserted %d rows from OpenJobs\n", n)
 	}
 	if !*skipBoards {
-		fmt.Println("Source 2/4 — Nexus embedded ATS board lists…")
+		fmt.Println("Source 2/4 — JobPilot embedded ATS board lists…")
 		n, err := db.ImportNexusEmbeddedBoards()
 		if err != nil {
 			fail(err)
 		}
-		fmt.Printf("  upserted %d rows from Nexus boards\n", n)
+		fmt.Printf("  upserted %d rows from JobPilot boards\n", n)
 	}
 	fmt.Println("Source 3/4 — India priority employers (Microsoft, Google, Flipkart, …)…")
 	n, err := db.ImportIndiaEmployers()
@@ -68,7 +68,7 @@ func main() {
 
 	if *country == "" {
 		fmt.Println("Try: go run ./cmd/companies-seed -country India")
-		fmt.Println("Or open the Companies tab in Nexus to search / add startups.")
+		fmt.Println("Or open the Companies tab in JobPilot to search / add startups.")
 		return
 	}
 	list, err := db.FindByCountryLimit(*country, *limit)

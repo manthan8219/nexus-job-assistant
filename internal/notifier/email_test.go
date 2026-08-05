@@ -90,7 +90,7 @@ func TestEmailNotifierSend(t *testing.T) {
 
 	select {
 	case msg := <-messages:
-		if !strings.Contains(msg, "Subject: ⚡ Nexus run complete") {
+		if !strings.Contains(msg, "Subject: ⚡ JobPilot run complete") {
 			t.Errorf("missing subject in:\n%s", msg)
 		}
 		for _, want := range []string{"Applied:", "Failed:", "Skipped:", "Duration:"} {
@@ -119,14 +119,14 @@ func TestEmailNotifierRender(t *testing.T) {
 	}{
 		{ev: Event{Kind: EventJobApplied, JobTitle: "Engineer", Company: "Acme"}, wantSub: "✅ Applied: Engineer @ Acme", wantOK: true},
 		{ev: Event{Kind: EventJobFailed, JobTitle: "Engineer", Company: "Acme", Reason: "captcha"}, wantSub: "❌ Application failed: Engineer", wantOK: true},
-		{ev: Event{Kind: EventRunComplete, TotalApplied: 3}, wantSub: "⚡ Nexus run complete", wantOK: true},
-		{ev: Event{Kind: EventDailySummary, TotalApplied: 3, TotalFailed: 1, TotalSkipped: 2}, wantSub: "📊 Nexus daily summary", wantOK: true},
-		{ev: Event{Kind: EventWeeklySummary, TotalApplied: 10, TotalFailed: 2, TotalSkipped: 5}, wantSub: "📊 Nexus weekly summary", wantOK: true},
+		{ev: Event{Kind: EventRunComplete, TotalApplied: 3}, wantSub: "⚡ JobPilot run complete", wantOK: true},
+		{ev: Event{Kind: EventDailySummary, TotalApplied: 3, TotalFailed: 1, TotalSkipped: 2}, wantSub: "📊 JobPilot daily summary", wantOK: true},
+		{ev: Event{Kind: EventWeeklySummary, TotalApplied: 10, TotalFailed: 2, TotalSkipped: 5}, wantSub: "📊 JobPilot weekly summary", wantOK: true},
 		{ev: Event{Kind: EventCustom, Title: "Test", Message: "hi"}, wantSub: "Test", wantOK: true},
 		{ev: Event{Kind: EventReplyReceived, ReplyFrom: "jane@acme.com", ReplySubject: "Re: intro"}, wantSub: "📩 Reply received: Re: intro", wantOK: true},
 		{ev: Event{Kind: EventRunStarted}, wantSub: "", wantOK: false},
 		{ev: Event{Kind: EventCAPTCHA, JobTitle: "Engineer", Company: "Acme", CAPTCHAURL: "https://acme.example.com/job/1"}, wantSub: "⛔ CAPTCHA — complete manually to continue", wantOK: true},
-		{ev: Event{Kind: EventError, Message: "boom"}, wantSub: "🚨 Nexus error", wantOK: true},
+		{ev: Event{Kind: EventError, Message: "boom"}, wantSub: "🚨 JobPilot error", wantOK: true},
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.ev.Kind), func(t *testing.T) {
@@ -203,7 +203,7 @@ func TestEmailNotifierRichBodies(t *testing.T) {
 }
 
 // TestEmailNotifierSendDailySummary verifies the daily-summary email that the
-// dashboard's "notify summary" action delivers: subject "📊 Nexus daily
+// dashboard's "notify summary" action delivers: subject "📊 JobPilot daily
 // summary" with the Applied/Failed/Skipped body line.
 func TestEmailNotifierSendDailySummary(t *testing.T) {
 	addr, messages := fakeSMTPServer(t)
@@ -222,7 +222,7 @@ func TestEmailNotifierSendDailySummary(t *testing.T) {
 
 	select {
 	case msg := <-messages:
-		if !strings.Contains(msg, "Subject: 📊 Nexus daily summary") {
+		if !strings.Contains(msg, "Subject: 📊 JobPilot daily summary") {
 			t.Errorf("missing subject in:\n%s", msg)
 		}
 		for _, want := range []string{"Applied:", "Failed:", "Skipped:", "Generated:"} {
@@ -251,7 +251,7 @@ func TestEmailNotifierDigestListsJobs(t *testing.T) {
 			{Title: "Platform", Company: "Gamma", URL: "https://gamma.example.com/3", Status: "failed", Reason: "captcha"},
 		},
 	})
-	if sub != "⚡ Nexus run complete" {
+	if sub != "⚡ JobPilot run complete" {
 		t.Errorf("subject = %q", sub)
 	}
 	for _, want := range []string{"✓ Applied:", "Engineer @ Acme", "https://acme.example.com/1", "Backend @ Beta", "✗ Needs manual action:", "Platform @ Gamma", "reason: captcha", "https://gamma.example.com/3"} {
@@ -310,7 +310,7 @@ func TestEmailNotifierInstantAlerts(t *testing.T) {
 	}{
 		{"captcha", Event{Kind: EventCAPTCHA, JobTitle: "Engineer", Company: "Acme", CAPTCHAURL: "https://acme.example.com/1"}, "⛔ CAPTCHA — complete manually to continue"},
 		{"reply", Event{Kind: EventReplyReceived, ReplyFrom: "jane@acme.com", ReplySubject: "Re: intro"}, "📩 Reply received: Re: intro"},
-		{"error", Event{Kind: EventError, Message: "engine init failed"}, "🚨 Nexus error"},
+		{"error", Event{Kind: EventError, Message: "engine init failed"}, "🚨 JobPilot error"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			addr, messages := fakeSMTPServer(t)
@@ -361,7 +361,7 @@ func TestEmailNotifierHTMLBody(t *testing.T) {
 			t.Errorf("message has no HTML part:\n%.400s", msg)
 		}
 		for _, want := range []string{
-			"<!DOCTYPE html>", "⚡ Nexus — Run complete",
+			"<!DOCTYPE html>", "⚡ JobPilot — Run complete",
 			"scraped", "applied", "failed",
 			"https://acme.example.com/1", "href=", "<body", "text/html",
 			"Engineer &amp; Analyst", // escaped

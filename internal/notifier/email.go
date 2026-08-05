@@ -163,11 +163,11 @@ func (e *EmailNotifier) render(ev Event) (subject, body string) {
 			subject = fmt.Sprintf("⚡ Daily job digest — %d jobs found", dailyMatchCount(ev))
 			body = e.renderDryRunComplete(ev)
 		} else {
-			subject = "⚡ Nexus run complete"
+			subject = "⚡ JobPilot run complete"
 			body = e.renderRunComplete(ev)
 		}
 	case EventDailySummary, EventWeeklySummary:
-		subject = "📊 Nexus " + strings.ReplaceAll(string(ev.Kind), "_", " ")
+		subject = "📊 JobPilot " + strings.ReplaceAll(string(ev.Kind), "_", " ")
 		body = e.renderSummary(ev)
 	case EventCAPTCHA:
 		subject = "⛔ CAPTCHA — complete manually to continue"
@@ -179,12 +179,12 @@ func (e *EmailNotifier) render(ev Event) (subject, body string) {
 		}
 		body = e.renderReply(ev)
 	case EventError:
-		subject = "🚨 Nexus error"
+		subject = "🚨 JobPilot error"
 		body = e.renderError(ev)
 	case EventCustom:
 		subject = ev.Title
 		if subject == "" {
-			subject = "⚡ Nexus"
+			subject = "⚡ JobPilot"
 		}
 		body = ev.Message
 	default:
@@ -196,7 +196,7 @@ func (e *EmailNotifier) render(ev Event) (subject, body string) {
 // renderApplied builds a detailed "applied" email with the job's key facts.
 func (e *EmailNotifier) renderApplied(ev Event) string {
 	var b strings.Builder
-	b.WriteString("Nexus applied to this job:\n\n")
+	b.WriteString("JobPilot applied to this job:\n\n")
 	line(&b, "Job", ev.JobTitle)
 	line(&b, "Company", ev.Company)
 	line(&b, "Location", ev.Location)
@@ -214,7 +214,7 @@ func (e *EmailNotifier) renderApplied(ev Event) string {
 // to finish the application manually.
 func (e *EmailNotifier) renderFailed(ev Event) string {
 	var b strings.Builder
-	b.WriteString("Nexus could not apply to this job:\n\n")
+	b.WriteString("JobPilot could not apply to this job:\n\n")
 	line(&b, "Job", ev.JobTitle)
 	line(&b, "Company", ev.Company)
 	line(&b, "Location", ev.Location)
@@ -230,7 +230,7 @@ func (e *EmailNotifier) renderFailed(ev Event) string {
 // listing each applied and failed job.
 func (e *EmailNotifier) renderRunComplete(ev Event) string {
 	var b strings.Builder
-	b.WriteString("Nexus finished searching and applying.\n\n")
+	b.WriteString("JobPilot finished searching and applying.\n\n")
 	line(&b, "Scraped", fmt.Sprintf("%d", ev.Found))
 	line(&b, "Applied", fmt.Sprintf("%d", ev.TotalApplied))
 	line(&b, "Failed", fmt.Sprintf("%d", ev.TotalFailed))
@@ -260,7 +260,7 @@ func (e *EmailNotifier) renderDryRunComplete(ev Event) string {
 // renderSummary builds a daily / weekly digest.
 func (e *EmailNotifier) renderSummary(ev Event) string {
 	var b strings.Builder
-	b.WriteString("Nexus run summary\n\n")
+	b.WriteString("JobPilot run summary\n\n")
 	if ev.Found > 0 {
 		line(&b, "Scraped", fmt.Sprintf("%d", ev.Found))
 	}
@@ -289,7 +289,7 @@ func dailyMatchCount(ev Event) int {
 // manually (CAPTCHA / anti-bot compliance, AGENTS.md 14).
 func (e *EmailNotifier) renderCaptcha(ev Event) string {
 	var b strings.Builder
-	b.WriteString("Nexus hit a CAPTCHA while automating this job and stopped:\n\n")
+	b.WriteString("JobPilot hit a CAPTCHA while automating this job and stopped:\n\n")
 	line(&b, "Job", ev.JobTitle)
 	line(&b, "Company", ev.Company)
 	line(&b, "Reason", ev.Reason)
@@ -309,7 +309,7 @@ func (e *EmailNotifier) renderReply(ev Event) string {
 	b.WriteString("Someone replied to your outreach / application:\n\n")
 	line(&b, "From", ev.ReplyFrom)
 	line(&b, "Subject", ev.ReplySubject)
-	b.WriteString("\n  Open Nexus → Outreach to review it and continue the conversation.\n")
+	b.WriteString("\n  Open JobPilot → Outreach to review it and continue the conversation.\n")
 	return b.String()
 }
 
@@ -322,7 +322,7 @@ func (e *EmailNotifier) renderError(ev Event) string {
 	if msg == "" {
 		msg = "unknown error"
 	}
-	return "Nexus hit a problem:\n\n  " + msg + "\n"
+	return "JobPilot hit a problem:\n\n  " + msg + "\n"
 }
 
 // appendJobLists writes the per-job sections (applied / needs-manual-action /
@@ -417,7 +417,7 @@ func ago(t time.Time) string {
 // sections; alert kinds render as a simpler attention card.
 
 const (
-	htmlAccent   = "#4F46E5" // indigo — Nexus brand
+	htmlAccent   = "#4F46E5" // indigo — JobPilot brand
 	htmlApplied  = "#059669" // green
 	htmlFailed   = "#DC2626" // red
 	htmlSkipped  = "#64748B" // slate
@@ -467,7 +467,7 @@ func (e *EmailNotifier) renderHTML(ev Event) string {
 	case EventJobFailed:
 		return htmlJobCard(ev, false)
 	case EventCAPTCHA:
-		return htmlAlertDoc("⛔ CAPTCHA", "Nexus hit a CAPTCHA and stopped. Complete it manually to continue.",
+		return htmlAlertDoc("⛔ CAPTCHA", "JobPilot hit a CAPTCHA and stopped. Complete it manually to continue.",
 			ev.JobTitle, ev.Company, ev.Reason, firstURL(ev.CAPTCHAURL, ev.JobURL))
 	case EventReplyReceived:
 		return htmlAlertDoc("📩 Reply received", "Someone replied to your outreach or application.",
@@ -480,9 +480,9 @@ func (e *EmailNotifier) renderHTML(ev Event) string {
 		if msg == "" {
 			msg = "unknown error"
 		}
-		return htmlAlertDoc("🚨 Nexus error", "Nexus hit a problem while running.", "", "", msg, "")
+		return htmlAlertDoc("🚨 JobPilot error", "JobPilot hit a problem while running.", "", "", msg, "")
 	case EventCustom:
-		return htmlAlertDoc("⚡ Nexus", ev.Message, "", "", "", "")
+		return htmlAlertDoc("⚡ JobPilot", ev.Message, "", "", "", "")
 	default:
 		return ""
 	}
@@ -561,7 +561,7 @@ func htmlDigestDoc(titleLabel string, ts time.Time, stats []statCard, sections [
 	b.WriteString("<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"background:" + htmlBodyBG + ";padding:24px 0;\"><tr><td align=\"center\"><table role=\"presentation\" width=\"600\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);\">")
 
 	fmt.Fprintf(&b, "<tr><td style=\"background:%s;padding:22px 28px;\">", htmlAccent)
-	fmt.Fprintf(&b, "<div style=\"color:#ffffff;font-size:19px;font-weight:700;\">⚡ Nexus — %s</div>", esc(titleLabel))
+	fmt.Fprintf(&b, "<div style=\"color:#ffffff;font-size:19px;font-weight:700;\">⚡ JobPilot — %s</div>", esc(titleLabel))
 	fmt.Fprintf(&b, "<div style=\"color:#C7D2FE;font-size:13px;margin-top:4px;\">%s</div></td></tr>",
 		esc(ts.Format("Monday, Jan 2, 2006")))
 
@@ -585,7 +585,7 @@ func htmlDigestDoc(titleLabel string, ts time.Time, stats []statCard, sections [
 	}
 
 	b.WriteString("<tr><td style=\"background:" + htmlCardBG + ";border-top:1px solid " + htmlBorder + ";padding:14px 28px;\">")
-	b.WriteString("<div style=\"font-size:12px;color:#9CA3AF;\">Sent by Nexus Job Assistant — your daily job-search nudge. Reply to this email or open the app to adjust notifications.</div>")
+	b.WriteString("<div style=\"font-size:12px;color:#9CA3AF;\">Sent by JobPilot Job Assistant — your daily job-search nudge. Reply to this email or open the app to adjust notifications.</div>")
 	b.WriteString("</td></tr></table></td></tr></table></body></html>")
 	return b.String()
 }
@@ -645,11 +645,11 @@ func htmlJobRow(b *strings.Builder, r htmlRow) {
 func htmlJobCard(ev Event, applied bool) string {
 	accent := htmlApplied
 	label := "Applied"
-	verb := "Nexus applied to this job"
+	verb := "JobPilot applied to this job"
 	if !applied {
 		accent = htmlFailed
 		label = "Failed"
-		verb = "Nexus could not apply to this job"
+		verb = "JobPilot could not apply to this job"
 	}
 	var b strings.Builder
 	b.WriteString("<!DOCTYPE html><html><head><meta charset=\"utf-8\"></head><body style=\"margin:0;padding:0;background:" + htmlBodyBG + ";font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;\">")

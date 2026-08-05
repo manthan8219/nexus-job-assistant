@@ -2,7 +2,7 @@ CONFIRM YOUR NEXUS ACCOUNT
 
 Hi {{ .Email }},
 
-Thanks for signing up for Nexus — your automated job-search
+Thanks for signing up for JobPilot — your automated job-search
 copilot. One click and your account is ready:
 
 {{ .ConfirmationURL }}
@@ -13,5 +13,5 @@ and we will send a fresh one.
 If you did not create this account, you can safely ignore this
 email — the account will not be activated.
 
-— The Nexus team
+— The JobPilot team
 {{ .SiteURL }}
