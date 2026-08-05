@@ -13,6 +13,19 @@ services:
       - nexus-data:/home/nexus/.nexus
     environment:
       - NEXUS_CONFIG_PATH=/home/nexus/.nexus/config.json
+      # Auth (optional): set the JWT secret OR the JWKS URL in a .env next to
+      # this file (or the shell) to enable the login wall + per-user islands.
+      # NEXUS_SUPABASE_URL enables the issuer-claim check; NEXUS_ALLOWED_ORIGINS
+      # is the CORS allow-list for the dashboard origin.
+      - NEXUS_SUPABASE_URL=${NEXUS_SUPABASE_URL:-}
+      - NEXUS_SUPABASE_JWT_SECRET=${NEXUS_SUPABASE_JWT_SECRET:-}
+      - NEXUS_SUPABASE_JWKS_URL=${NEXUS_SUPABASE_JWKS_URL:-}
+      - NEXUS_ADMIN_EMAILS=${NEXUS_ADMIN_EMAILS:-}
+      - NEXUS_ALLOWED_ORIGINS=${NEXUS_ALLOWED_ORIGINS:-}
+      - NEXUS_DATABASE_URL=${NEXUS_DATABASE_URL:-}
+      - NEXUS_SUPABASE_SERVICE_KEY=${NEXUS_SUPABASE_SERVICE_KEY:-}
+      - NEXUS_GMAIL_APP_PASSWORD=${NEXUS_GMAIL_APP_PASSWORD:-}
+      - NEXUS_EMAIL=${NEXUS_EMAIL:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
@@ -22,10 +35,17 @@ services:
       start_period: 10s
 
   # ── React Frontend (self-contained image: static bundle + nginx proxy) ──
+  # VITE_* vars are baked into the bundle at build time — pass them through
+  # build.args from a .env next to this file (or the shell) so the deployed
+  # frontend includes the Supabase login wall.
   ui:
     build:
       context: ./terminal-job-ui
       dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL:-}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     image: nexus-ui
     container_name: nexus-ui
     ports:
